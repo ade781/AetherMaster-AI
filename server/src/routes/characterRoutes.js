@@ -5,6 +5,7 @@ const {
   getCharacterById,
   getCatalog,
   createCharacter,
+  updateCharacter,
   toggleEquipItem,
   castSpell,
   toggleCondition,
@@ -21,6 +22,7 @@ router.route('/')
 
 router.route('/:id')
   .get(getCharacterById)
+  .put(updateCharacter)
   .delete(deleteCharacter);
 
 router.post('/:id/equip', toggleEquipItem);

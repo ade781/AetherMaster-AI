@@ -238,6 +238,19 @@ exports.modifyHp = async (req, res) => {
   }
 };
 
+// @desc    Update Character attributes (HP, Gold, Inventory, etc.)
+exports.updateCharacter = async (req, res) => {
+  try {
+    const character = await Character.findByPk(req.params.id);
+    if (!character) return res.status(404).json({ success: false, message: 'Karakter tidak ditemukan' });
+
+    await character.update(req.body);
+    return res.json({ success: true, message: 'Karakter berhasil diperbarui', data: character });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Gagal memperbarui karakter', error: error.message });
+  }
+};
+
 // @desc    Level Up
 exports.levelUpCharacter = async (req, res) => {
   try {
@@ -246,7 +259,9 @@ exports.levelUpCharacter = async (req, res) => {
 
     const nextLevel = character.level + 1;
     const conMod = calcMod(character.constitution);
-    const newMaxHp = character.maxHp + Math.max(1, 6 + conMod);
+    const hpGain = Math.max(1, 6 + conMod);
+    const newMaxHp = character.maxHp + hpGain;
+    const newHp = character.currentHp + hpGain;
 
     let spellSlots = { ...character.spellSlots };
     if (nextLevel >= 2) spellSlots.level1 = { max: 3, current: 3 };
@@ -255,7 +270,7 @@ exports.levelUpCharacter = async (req, res) => {
     await character.update({
       level: nextLevel,
       maxHp: newMaxHp,
-      currentHp: newCurrentHp = character.currentHp + Math.max(1, 6 + conMod),
+      currentHp: newHp,
       spellSlots,
       proficiencyBonus: nextLevel >= 5 ? 3 : 2,
     });
