@@ -1,0 +1,22 @@
+{
+  "short_name": "AetherMaster",
+  "name": "AetherMaster AI — Virtual Tabletop & AI Dungeon Master",
+  "description": "Virtual Tabletop D&D 5E modern yang ditenagai AI Dungeon Master dengan simulasi dadu 3D, pertarungan taktis, dan labirin roguelike.",
+  "icons": [
+    {
+      "src": "https://api.dicebear.com/7.x/adventurer/svg?seed=AetherMaster",
+      "type": "image/svg+xml",
+      "sizes": "192x192"
+    },
+    {
+      "src": "https://api.dicebear.com/7.x/adventurer/svg?seed=AetherMaster",
+      "type": "image/svg+xml",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#090a0f",
+  "theme_color": "#090a0f",
+  "display": "standalone",
+  "orientation": "any"
+}
