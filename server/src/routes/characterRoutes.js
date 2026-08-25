@@ -3,23 +3,29 @@ const router = express.Router();
 const {
   getAllCharacters,
   getCharacterById,
+  getCatalog,
   createCharacter,
-  updateCharacter,
+  toggleEquipItem,
+  castSpell,
+  toggleCondition,
   modifyHp,
   levelUpCharacter,
   deleteCharacter,
 } = require('../controllers/characterController');
 
-// Open-access character endpoints
+router.get('/catalog', getCatalog);
+
 router.route('/')
   .get(getAllCharacters)
   .post(createCharacter);
 
 router.route('/:id')
   .get(getCharacterById)
-  .put(updateCharacter)
   .delete(deleteCharacter);
 
+router.post('/:id/equip', toggleEquipItem);
+router.post('/:id/cast', castSpell);
+router.post('/:id/condition', toggleCondition);
 router.patch('/:id/hp', modifyHp);
 router.post('/:id/levelup', levelUpCharacter);
 

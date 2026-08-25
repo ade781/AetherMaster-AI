@@ -1,5 +1,9 @@
 import React, { useState } from 'react';
-import { Shield, Heart, Zap, Sparkles, Sword, Award, Trash2, ArrowLeft, Plus, Minus } from 'lucide-react';
+import { EquipmentSlots } from './EquipmentSlots';
+import { InventoryManager } from '../inventory/InventoryManager';
+import { SpellbookManager } from '../spells/SpellbookManager';
+import { ConditionTracker } from './ConditionTracker';
+import { Shield, Heart, Zap, Sparkles, Sword, Award, Trash2, ArrowLeft, Layers, BookOpen, Package } from 'lucide-react';
 
 export const CharacterSheet = ({ character, onBack, onUpdate, onDelete, onQuickRoll }) => {
   const [currentHp, setCurrentHp] = useState(character.currentHp);
@@ -7,6 +11,7 @@ export const CharacterSheet = ({ character, onBack, onUpdate, onDelete, onQuickR
   const [hpInput, setHpInput] = useState('');
   const [levelUpLoading, setLevelUpLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [activeTab, setActiveTab] = useState('inventory'); // 'inventory' | 'spells'
 
   const calcMod = (score) => Math.floor((score - 10) / 2);
   const formatMod = (score) => {
@@ -51,6 +56,57 @@ export const CharacterSheet = ({ character, onBack, onUpdate, onDelete, onQuickR
       console.error('Gagal level up', err);
     } finally {
       setLevelUpLoading(false);
+    }
+  };
+
+  const handleEquipToggle = async (item, slot, action) => {
+    try {
+      const res = await fetch(`/api/characters/${character.id}/equip`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item, slot, action }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        if (onUpdate) onUpdate(data.data);
+      }
+    } catch (err) {
+      console.error('Gagal equip item', err);
+    }
+  };
+
+  const handleCastSpell = async (spell) => {
+    try {
+      const res = await fetch(`/api/characters/${character.id}/cast`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ spellId: spell.id, level: spell.level }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMessage(`Mantra ${spell.name} berhasil dirapalkan!`);
+        if (onUpdate) onUpdate({ ...character, spellSlots: data.data.spellSlots });
+      } else {
+        alert(data.message);
+      }
+    } catch (err) {
+      console.error('Gagal rapalkan mantra', err);
+    }
+  };
+
+  const handleToggleCondition = async (condition) => {
+    try {
+      const res = await fetch(`/api/characters/${character.id}/condition`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ condition }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        if (onUpdate) onUpdate({ ...character, conditions: data.data.conditions });
+      }
+    } catch (err) {
+      console.error('Gagal update kondisi', err);
     }
   };
 
@@ -126,13 +182,13 @@ export const CharacterSheet = ({ character, onBack, onUpdate, onDelete, onQuickR
           )}
         </div>
 
-        {/* Core Vitals Badges */}
+        {/* Core Vitals Badges (With Dynamic AC & Speed Sync) */}
         <div className="flex gap-3">
           <div className="text-center bg-sky-950/40 border border-sky-600/40 rounded-xl px-4 py-2">
             <div className="text-[10px] text-sky-300 font-bold uppercase flex items-center justify-center gap-1">
               <Shield size={12} /> ARMOR (AC)
             </div>
-            <div className="text-xl font-black font-cinzel text-slate-100 mt-0.5">
+            <div className="text-xl font-black font-cinzel text-sky-300 mt-0.5">
               {character.armorClass}
             </div>
           </div>
@@ -141,7 +197,7 @@ export const CharacterSheet = ({ character, onBack, onUpdate, onDelete, onQuickR
             <div className="text-[10px] text-emerald-300 font-bold uppercase flex items-center justify-center gap-1">
               <Zap size={12} /> KECEPATAN
             </div>
-            <div className="text-xl font-black font-cinzel text-slate-100 mt-0.5">
+            <div className="text-xl font-black font-cinzel text-emerald-300 mt-0.5">
               {character.speed}ft
             </div>
           </div>
@@ -150,14 +206,20 @@ export const CharacterSheet = ({ character, onBack, onUpdate, onDelete, onQuickR
             <div className="text-[10px] text-fantasy-gold font-bold uppercase flex items-center justify-center gap-1">
               <Award size={12} /> PROFISIENSI
             </div>
-            <div className="text-xl font-black font-cinzel text-slate-100 mt-0.5">
+            <div className="text-xl font-black font-cinzel text-amber-300 mt-0.5">
               +{character.proficiencyBonus || 2}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Grid Split: Left = Abilities, Right = Live HP & Inventory */}
+      {/* Conditions & Buffs Tracker */}
+      <ConditionTracker
+        conditions={character.conditions || []}
+        onToggleCondition={handleToggleCondition}
+      />
+
+      {/* Grid Split: Abilities & Live HP */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Left Column: Ability Scores */}
         <div className="glass-card rounded-2xl p-5 border border-fantasy-border">
@@ -192,18 +254,14 @@ export const CharacterSheet = ({ character, onBack, onUpdate, onDelete, onQuickR
               </div>
             ))}
           </div>
-          <div className="text-[11px] text-slate-400 text-center mt-3 bg-slate-900/40 p-2 rounded-lg border border-slate-800/50">
-            💡 Tips: Klik atribut apa saja untuk otomatis menghitung modifier dan siap di-roll di Kotak Dadu 3D!
-          </div>
         </div>
 
-        {/* Right Column: Live HP & Inventory */}
+        {/* Right Column: Live HP */}
         <div className="glass-card rounded-2xl p-5 border border-fantasy-border">
           <h3 className="font-cinzel text-rose-400 font-bold text-base mb-4 flex items-center gap-2">
             <Heart size={18} /> Kondisi Darah (Live HP Tracker)
           </h3>
 
-          {/* HP Bar */}
           <div className="mb-4">
             <div className="flex justify-between items-baseline mb-1.5">
               <span className="text-xs text-slate-400 font-medium">Kesehatan Saat Ini</span>
@@ -221,8 +279,7 @@ export const CharacterSheet = ({ character, onBack, onUpdate, onDelete, onQuickR
             </div>
           </div>
 
-          {/* HP Adjustment Controls */}
-          <div className="flex gap-2 mb-4">
+          <div className="flex gap-2">
             <input
               type="number"
               value={hpInput}
@@ -245,27 +302,55 @@ export const CharacterSheet = ({ character, onBack, onUpdate, onDelete, onQuickR
               Heal (Sembuh)
             </button>
           </div>
-
-          {/* Inventory Preview */}
-          <div className="pt-3 border-t border-slate-800">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-xs font-cinzel font-bold text-fantasy-gold">Kantong & Inventaris</span>
-              <span className="text-xs font-semibold text-fantasy-gold">💰 {character.gold || 0} Koin Emas</span>
-            </div>
-            <div className="space-y-1.5 max-h-32 overflow-y-auto">
-              {Array.isArray(character.inventory) && character.inventory.length > 0 ? (
-                character.inventory.map((item, idx) => (
-                  <div key={idx} className="text-xs bg-slate-900/60 p-2 rounded-lg border border-slate-800/60 flex justify-between items-center text-slate-300">
-                    <span>{item.name}</span>
-                    <span className="text-slate-500 font-mono">x{item.quantity || 1}</span>
-                  </div>
-                ))
-              ) : (
-                <div className="text-xs text-slate-500 italic">Tas inventaris saat ini kosong.</div>
-              )}
-            </div>
-          </div>
         </div>
+      </div>
+
+      {/* Equipment Slots Section */}
+      <EquipmentSlots
+        character={character}
+        onEquipToggle={handleEquipToggle}
+      />
+
+      {/* Tab Switcher: Inventory vs Spellbook */}
+      <div className="space-y-4">
+        <div className="flex border-b border-slate-800 gap-4">
+          <button
+            type="button"
+            onClick={() => setActiveTab('inventory')}
+            className={`font-cinzel font-bold text-xs uppercase pb-2 flex items-center gap-1.5 transition-all border-b-2 ${
+              activeTab === 'inventory'
+                ? 'border-fantasy-gold text-fantasy-gold'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Package size={15} /> Tas Inventaris ({character.inventory?.length || 0})
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('spells')}
+            className={`font-cinzel font-bold text-xs uppercase pb-2 flex items-center gap-1.5 transition-all border-b-2 ${
+              activeTab === 'spells'
+                ? 'border-purple-400 text-purple-300'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <BookOpen size={15} /> Buku Mantra ({character.spells?.length || 0})
+          </button>
+        </div>
+
+        {activeTab === 'inventory' ? (
+          <InventoryManager
+            inventory={character.inventory || []}
+            onEquipItem={handleEquipToggle}
+            gold={character.gold || 0}
+          />
+        ) : (
+          <SpellbookManager
+            spells={character.spells || []}
+            spellSlots={character.spellSlots || {}}
+            onCastSpell={handleCastSpell}
+          />
+        )}
       </div>
     </div>
   );
