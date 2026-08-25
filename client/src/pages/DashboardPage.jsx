@@ -10,13 +10,16 @@ import { MerchantShop } from '../components/economy/MerchantShop';
 import { CraftingStation } from '../components/crafting/CraftingStation';
 import { CampfireRest } from '../components/campfire/CampfireRest';
 import { RoguelikeDungeonCrawler } from '../components/dungeon/RoguelikeDungeonCrawler';
+import { StoryChronicleNovelizer } from '../components/chronicle/StoryChronicleNovelizer';
+import { HallOfFame } from '../components/legacy/HallOfFame';
+import { DmDeveloperConsole } from '../components/console/DmDeveloperConsole';
 import { DiceBox } from '../components/dice/DiceBox';
-import { Shield, Plus, Sparkles, Play, BookOpen, User, Map, Swords, Hammer, Store, FlaskConical, Flame, Compass, RefreshCw } from 'lucide-react';
+import { Shield, Plus, Sparkles, Play, BookOpen, User, Map, Swords, Hammer, Store, FlaskConical, Flame, Compass, Trophy, Scroll, RefreshCw } from 'lucide-react';
 
 export const DashboardPage = () => {
   const [characters, setCharacters] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeView, setActiveView] = useState('list'); // 'list' | 'create' | 'sheet' | 'stories' | 'play' | 'map' | 'combat' | 'studio' | 'shop' | 'craft' | 'camp' | 'dungeon'
+  const [activeView, setActiveView] = useState('list'); // 'list' | 'create' | 'sheet' | 'stories' | 'play' | 'map' | 'combat' | 'studio' | 'shop' | 'craft' | 'camp' | 'dungeon' | 'chronicle' | 'hall'
   const [selectedCharacter, setSelectedCharacter] = useState(null);
   const [selectedStory, setSelectedStory] = useState(null);
 
@@ -99,6 +102,30 @@ export const DashboardPage = () => {
 
         {/* View Toggle Tabs */}
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveView('chronicle')}
+            className={`font-cinzel font-bold text-xs px-3 py-1.5 rounded-xl border flex items-center gap-1 transition-all ${
+              activeView === 'chronicle'
+                ? 'bg-amber-950/80 text-fantasy-gold border-fantasy-gold shadow-gold-glow'
+                : 'bg-slate-900/80 text-slate-300 border-slate-700/70 hover:border-fantasy-gold/50'
+            }`}
+          >
+            <Scroll size={13} className="text-amber-400" /> Buku Novel
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveView('hall')}
+            className={`font-cinzel font-bold text-xs px-3 py-1.5 rounded-xl border flex items-center gap-1 transition-all ${
+              activeView === 'hall'
+                ? 'bg-amber-950/80 text-fantasy-gold border-fantasy-gold shadow-gold-glow'
+                : 'bg-slate-900/80 text-slate-300 border-slate-700/70 hover:border-fantasy-gold/50'
+            }`}
+          >
+            <Trophy size={13} className="text-amber-400" /> Aula Pahlawan
+          </button>
+
           <button
             type="button"
             onClick={() => setActiveView('dungeon')}
@@ -222,6 +249,16 @@ export const DashboardPage = () => {
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px] gap-6 items-start">
           {/* Main Dynamic View Area */}
           <div>
+            {activeView === 'chronicle' && (
+              <StoryChronicleNovelizer
+                character={selectedCharacter || { name: 'Petualang Pengembara', race: 'Manusia', characterClass: 'Pendekar', level: 1 }}
+                story={selectedStory}
+              />
+            )}
+
+            {activeView === 'hall' && (
+              <HallOfFame characters={characters} />
+            )}
             {activeView === 'dungeon' && (
               <RoguelikeDungeonCrawler
                 character={selectedCharacter || { id: 'temp_char', name: 'Petualang Pengembara', currentHp: 15, maxHp: 15, gold: 20 }}
@@ -438,6 +475,12 @@ export const DashboardPage = () => {
           </aside>
         </div>
       </main>
+
+      {/* Floating DM Developer & Macro Console */}
+      <DmDeveloperConsole
+        character={selectedCharacter || { id: 'temp_char', name: 'Petualang Pengembara', currentHp: 15, maxHp: 15, gold: 20 }}
+        onUpdateCharacter={handleCharacterUpdated}
+      />
     </div>
   );
 };
