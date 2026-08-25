@@ -1,0 +1,13 @@
+{
+  "name": "aethermaster-ai",
+  "version": "1.0.0",
+  "description": "AI Dungeon Master & Virtual Tabletop RPG",
+  "scripts": {
+    "dev:server": "npm run dev --prefix server",
+    "dev:client": "npm run dev --prefix client",
+    "install:all": "npm install --prefix server && npm install --prefix client"
+  },
+  "keywords": ["rpg", "dnd5e", "ai-dungeon-master", "vtt", "threejs"],
+  "author": "",
+  "license": "ISC"
+}
