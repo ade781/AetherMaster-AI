@@ -25,22 +25,26 @@ Tugasmu:
 exports.generateAdventureResponse = async ({ character, story, history, lastAction, rollResult, apiKey }) => {
   const activeKey = apiKey && apiKey.trim() !== '' ? apiKey : process.env.GEMINI_API_KEY;
 
-  // 1. If Google Gemini API Key is available, call Gemini 3.6 Flash
+  // 1. If Google Gemini API Key is available, call Gemini 3.6 Flash with 8s Timeout
   if (activeKey && activeKey.trim() !== '') {
     try {
       const prompt = `Karakter Pemain: ${character.name} (Ras: ${character.race}, Kelas: ${character.characterClass}, Level: ${character.level}, HP: ${character.currentHp}/${character.maxHp}, AC: ${character.armorClass}).
-Modul Cerita: ${story.title} - ${story.description}
-Riwayat Singkat: ${JSON.stringify(history.slice(-4))}
+Modul Cerita: ${story?.title || 'Petualangan Aetheria'} - ${story?.description || 'Eksplorasi alam fantasi'}
+Riwayat Singkat: ${JSON.stringify((history || []).slice(-4))}
 Aksi Terakhir Pemain: "${lastAction}"
 Hasil Lemparan Dadu Terakhir: ${rollResult ? JSON.stringify(rollResult) : 'Tidak ada lemparan dadu'}.
 
 Beri respon narasi lanjutan dalam format JSON yang ditentukan.`;
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 detik timeout
 
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${activeKey}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
           body: JSON.stringify({
             contents: [
               { role: 'user', parts: [{ text: SYSTEM_PROMPT + '\n\n' + prompt }] }
@@ -52,18 +56,21 @@ Beri respon narasi lanjutan dalam format JSON yang ditentukan.`;
           }),
         }
       );
+      clearTimeout(timeoutId);
 
-      const data = await response.json();
-      if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
-        const parsed = JSON.parse(data.candidates[0].content.parts[0].text);
-        return parsed;
+      if (response.ok) {
+        const data = await response.json();
+        if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
+          const parsed = JSON.parse(data.candidates[0].content.parts[0].text);
+          return parsed;
+        }
       }
     } catch (err) {
-      console.warn('[AI Gateway] Gemini API call failed, falling back to built-in DM simulator:', err.message);
+      console.warn('[AI Gateway] Gemini API timeout or error, falling back to built-in DM simulator:', err.message);
     }
   }
 
-  // 2. Intelligent Built-in D&D 5E Offline Narrator (No API key required)
+  // 2. Intelligent Built-in D&D 5E Offline Narrator (Guaranteed No Error Fallback)
   return simulateOfflineDM({ character, story, lastAction, rollResult });
 };
 

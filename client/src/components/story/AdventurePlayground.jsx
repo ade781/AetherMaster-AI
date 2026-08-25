@@ -178,9 +178,24 @@ export const AdventurePlayground = ({ character, story, onExit, onUpdateCharacte
         if (onUpdateCharacter && updatedChar) {
           onUpdateCharacter(updatedChar);
         }
+      } else {
+        const errorDmMsg = {
+          id: Date.now() + 1,
+          sender: 'dm',
+          text: `⚠️ [Koneksi Dungeon Master]: ${data.message || 'Terjadi gangguan sesaat. Kamu tetap bisa melanjutkan petualanganmu!'}`,
+          timestamp: new Date().toLocaleTimeString('id-ID'),
+        };
+        setMessages(prev => [...prev, errorDmMsg]);
       }
     } catch (err) {
       console.error('Adventure action error:', err);
+      const offlineDmMsg = {
+        id: Date.now() + 1,
+        sender: 'dm',
+        text: '⚠️ [Dungeon Master]: Koneksi jaringan internet terputus sesaat. Simulator cadangan offline telah mengamankan petualanganmu.',
+        timestamp: new Date().toLocaleTimeString('id-ID'),
+      };
+      setMessages(prev => [...prev, offlineDmMsg]);
     } finally {
       setIsAiTyping(false);
     }
