@@ -139,9 +139,10 @@ export const DashboardPage = () => {
 
             {activeView === 'play' && selectedStory && (
               <AdventurePlayground
-                character={selectedCharacter || { name: 'Petualang Pengembara', currentHp: 12, maxHp: 12, armorClass: 12 }}
+                character={selectedCharacter || { id: 'temp_char', name: 'Petualang Pengembara', currentHp: 12, maxHp: 12, armorClass: 12, gold: 15 }}
                 story={selectedStory}
                 onExit={() => setActiveView('stories')}
+                onUpdateCharacter={handleCharacterUpdated}
               />
             )}
 
