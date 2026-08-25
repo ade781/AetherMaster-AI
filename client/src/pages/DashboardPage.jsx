@@ -3,8 +3,9 @@ import { CharacterCreator } from '../components/character/CharacterCreator';
 import { CharacterSheet } from '../components/character/CharacterSheet';
 import { StorySelector } from '../components/story/StorySelector';
 import { AdventurePlayground } from '../components/story/AdventurePlayground';
+import { WorldMapExplorer } from '../components/map/WorldMapExplorer';
 import { DiceBox } from '../components/dice/DiceBox';
-import { Shield, Plus, Sparkles, Play, BookOpen, User, RefreshCw } from 'lucide-react';
+import { Shield, Plus, Sparkles, Play, BookOpen, User, Map, RefreshCw } from 'lucide-react';
 
 export const DashboardPage = () => {
   const [characters, setCharacters] = useState([]);
@@ -93,6 +94,18 @@ export const DashboardPage = () => {
         <div className="flex items-center gap-2 sm:gap-3">
           <button
             type="button"
+            onClick={() => setActiveView('map')}
+            className={`font-cinzel font-bold text-xs px-3.5 py-2 rounded-xl border flex items-center gap-1.5 transition-all ${
+              activeView === 'map'
+                ? 'bg-amber-950/80 text-fantasy-gold border-fantasy-gold shadow-gold-glow'
+                : 'bg-slate-900/80 text-slate-300 border-slate-700/70 hover:border-fantasy-gold/50'
+            }`}
+          >
+            <Map size={14} className="text-fantasy-gold" /> Peta Wilayah
+          </button>
+
+          <button
+            type="button"
             onClick={() => setActiveView('stories')}
             className={`font-cinzel font-bold text-xs px-3.5 py-2 rounded-xl border flex items-center gap-1.5 transition-all ${
               activeView === 'stories' || activeView === 'play'
@@ -130,6 +143,14 @@ export const DashboardPage = () => {
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px] gap-6 items-start">
           {/* Main Dynamic View Area */}
           <div>
+            {activeView === 'map' && (
+              <WorldMapExplorer
+                onTravelLocation={(loc) => {
+                  setActiveView('stories');
+                }}
+              />
+            )}
+
             {activeView === 'stories' && (
               <StorySelector
                 selectedCharacter={selectedCharacter}

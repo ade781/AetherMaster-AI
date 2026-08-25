@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Shield, Sparkles, Send, Dices, ArrowLeft, Volume2, VolumeX, Mic, MicOff, Key, Coins, Heart, AlertCircle } from 'lucide-react';
+import { VisualNovelStage } from './VisualNovelStage';
+import { audioEngine } from '../../services/audioEngine';
+import { Shield, Sparkles, Send, Dices, ArrowLeft, Volume2, VolumeX, Mic, MicOff, Key, Coins, Heart, AlertCircle, Music } from 'lucide-react';
 
 export const AdventurePlayground = ({ character, story, onExit, onUpdateCharacter }) => {
   const [messages, setMessages] = useState([
@@ -13,11 +15,15 @@ export const AdventurePlayground = ({ character, story, onExit, onUpdateCharacte
   const [inputAction, setInputAction] = useState('');
   const [isAiTyping, setIsAiTyping] = useState(false);
   const [suggestedChoices, setSuggestedChoices] = useState(story.initialChoices.map(c => c.text));
-  const [activeRollRequest, setActiveRollRequest] = useState(null); // { type, dc, reason }
+  const [activeRollRequest, setActiveRollRequest] = useState(null);
   const [apiKey, setApiKey] = useState(localStorage.getItem('aether_gemini_key') || '');
   const [showKeyModal, setShowKeyModal] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isAmbientPlaying, setIsAmbientPlaying] = useState(false);
+  const [currentSceneKey, setCurrentSceneKey] = useState(
+    story.id.includes('frost') ? 'mountain' : story.id.includes('shadow') ? 'forest' : story.id.includes('boar') ? 'tavern' : 'dungeon'
+  );
   const [mutationNotice, setMutationNotice] = useState(null);
 
   const chatEndRef = useRef(null);
@@ -25,6 +31,17 @@ export const AdventurePlayground = ({ character, story, onExit, onUpdateCharacte
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isAiTyping]);
+
+  // Toggle Ambient Audio
+  const toggleAmbientMusic = () => {
+    if (isAmbientPlaying) {
+      audioEngine.stopAmbient();
+      setIsAmbientPlaying(false);
+    } else {
+      audioEngine.startAmbient('mystery');
+      setIsAmbientPlaying(true);
+    }
+  };
 
   // Web Speech API: Text-to-Speech (TTS)
   const speakText = (text) => {
@@ -90,6 +107,15 @@ export const AdventurePlayground = ({ character, story, onExit, onUpdateCharacte
 
   // Process Action to Backend AI DM
   const executeAction = async (actionText, rollResult = null) => {
+    // Sound FX
+    if (actionText.toLowerCase().includes('serang') || actionText.toLowerCase().includes('pedang')) {
+      audioEngine.playSwordClash();
+    } else if (actionText.toLowerCase().includes('mantra') || actionText.toLowerCase().includes('sihir')) {
+      audioEngine.playSpellCast();
+    } else {
+      audioEngine.playDiceRoll();
+    }
+
     const userMsg = {
       id: Date.now(),
       sender: 'player',
@@ -133,9 +159,12 @@ export const AdventurePlayground = ({ character, story, onExit, onUpdateCharacte
           setActiveRollRequest(aiResponse.requestedRoll);
         }
 
-        // Live Mutation Feedback Notification
+        // Live Mutation Feedback Notification & SFX
         if (aiResponse.mutation) {
           const mut = aiResponse.mutation;
+          if (mut.goldChange > 0) audioEngine.playCoinDrop();
+          if (mut.hpChange < 0) audioEngine.playSwordClash();
+
           if (mut.hpChange !== 0 || mut.goldChange !== 0 || mut.itemGained) {
             setMutationNotice({
               hp: mut.hpChange,
@@ -146,7 +175,6 @@ export const AdventurePlayground = ({ character, story, onExit, onUpdateCharacte
           }
         }
 
-        // Update parent character state
         if (onUpdateCharacter && updatedChar) {
           onUpdateCharacter(updatedChar);
         }
@@ -159,6 +187,7 @@ export const AdventurePlayground = ({ character, story, onExit, onUpdateCharacte
   };
 
   const handleResolveRoll = (dieResult) => {
+    audioEngine.playDiceRoll();
     executeAction(`Hasil lemparan D20: ${dieResult.total}`, {
       ...dieResult,
       dc: activeRollRequest?.dc || 12,
@@ -174,12 +203,22 @@ export const AdventurePlayground = ({ character, story, onExit, onUpdateCharacte
 
   return (
     <div className="space-y-4">
+      {/* Visual Novel Scenery Stage with Weather Particles */}
+      <VisualNovelStage
+        story={story}
+        currentScene={currentSceneKey}
+        character={character}
+      />
+
       {/* Top Session Bar */}
-      <div className="flex flex-wrap justify-between items-center bg-slate-900/90 border border-fantasy-border p-4 rounded-2xl gap-3 shadow-lg">
+      <div className="flex flex-wrap justify-between items-center bg-slate-900/90 border border-fantasy-border p-3.5 rounded-2xl gap-3 shadow-lg">
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={onExit}
+            onClick={() => {
+              audioEngine.stopAmbient();
+              onExit();
+            }}
             className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all text-xs font-bold font-cinzel flex items-center gap-1.5"
           >
             <ArrowLeft size={16} /> Keluar Sesi
@@ -192,8 +231,21 @@ export const AdventurePlayground = ({ character, story, onExit, onUpdateCharacte
           </div>
         </div>
 
-        {/* Live Vitals and Settings */}
-        <div className="flex items-center gap-3">
+        {/* Ambient audio toggle & Vitals */}
+        <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={toggleAmbientMusic}
+            className={`text-xs px-2.5 py-1.5 rounded-lg border flex items-center gap-1.5 transition-all ${
+              isAmbientPlaying
+                ? 'bg-purple-950/80 text-purple-300 border-purple-500 shadow-sm'
+                : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200'
+            }`}
+            title="Audio Musik Ambient Web Audio API"
+          >
+            <Music size={13} /> {isAmbientPlaying ? 'Musik Aktif 🎵' : 'Musik Mati'}
+          </button>
+
           <button
             type="button"
             onClick={() => setShowKeyModal(true)}
@@ -202,18 +254,13 @@ export const AdventurePlayground = ({ character, story, onExit, onUpdateCharacte
             }`}
             title="Pengaturan API Key LLM"
           >
-            <Key size={13} /> {apiKey ? 'Gemini 1.5 Aktif' : 'Mode Offline Cerdas'}
+            <Key size={13} /> {apiKey ? 'Gemini 1.5' : 'Offline DM'}
           </button>
 
-          <div className="text-right">
+          <div className="text-right pl-2 border-l border-slate-800">
             <div className="text-xs font-bold text-slate-200">{character.name}</div>
             <div className="text-[11px] text-rose-400 font-semibold">{character.currentHp}/{character.maxHp} HP • 💰 {character.gold || 0} GP</div>
           </div>
-          <img
-            src={character.avatarUrl || `https://api.dicebear.com/7.x/adventurer/svg?seed=${character.name}`}
-            alt={character.name}
-            className="w-9 h-9 rounded-xl border border-fantasy-gold"
-          />
         </div>
       </div>
 
@@ -234,7 +281,7 @@ export const AdventurePlayground = ({ character, story, onExit, onUpdateCharacte
       )}
 
       {/* Main Narrative Feed Box */}
-      <div className="glass-card rounded-2xl p-5 border border-fantasy-border/80 h-[500px] flex flex-col justify-between overflow-hidden shadow-2xl">
+      <div className="glass-card rounded-2xl p-5 border border-fantasy-border/80 h-[460px] flex flex-col justify-between overflow-hidden shadow-2xl">
         {/* Messages Stream */}
         <div className="flex-1 overflow-y-auto space-y-4 pr-2">
           {messages.map((msg) => (
