@@ -132,7 +132,8 @@ export const AdventurePlayground = ({ character, story, onExit, onUpdateCharacte
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          characterId: character.id,
+          characterId: character?.id,
+          characterData: character,
           story,
           history: messages.slice(-6).map(m => ({ role: m.sender === 'dm' ? 'model' : 'user', text: m.text })),
           lastAction: actionText,

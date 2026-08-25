@@ -6,43 +6,57 @@ const { generateAdventureResponse } = require('../services/aiGateway');
 // @access  Public
 exports.handleAdventureAction = async (req, res) => {
   try {
-    const { characterId, story, history = [], lastAction, rollResult, apiKey } = req.body;
+    const { characterId, characterData, story, history = [], lastAction, rollResult, apiKey } = req.body;
 
-    const character = await Character.findByPk(characterId);
-    if (!character) {
-      return res.status(404).json({ success: false, message: 'Karakter tidak ditemukan' });
+    let character = null;
+    if (characterId && typeof characterId === 'number') {
+      character = await Character.findByPk(characterId);
+    } else if (characterId && typeof characterId === 'string' && !characterId.startsWith('temp_')) {
+      character = await Character.findByPk(characterId);
     }
+
+    // Use character from DB or fallback to payload/default
+    const activeChar = character ? character.toJSON() : (characterData || {
+      id: characterId || 1,
+      name: 'Petualang Pengembara',
+      race: 'Manusia',
+      characterClass: 'Pendekar',
+      level: 1,
+      currentHp: 15,
+      maxHp: 15,
+      armorClass: 13,
+      gold: 20,
+      inventory: [],
+    });
 
     // Call AI Dungeon Master Service
     const aiResponse = await generateAdventureResponse({
-      character: character.toJSON(),
-      story,
+      character: activeChar,
+      story: story || { title: 'Makam Kuno Eldoria', description: 'Petualangan fantasi D&D 5E' },
       history,
       lastAction,
       rollResult,
       apiKey,
     });
 
-    // Execute Live State Mutation on Database (Function Calling)
-    let updatedHp = character.currentHp;
-    let updatedGold = character.gold || 0;
-    let updatedInventory = [...(character.inventory || [])];
+    // Execute Live State Mutation on Database if record exists
+    let updatedHp = activeChar.currentHp;
+    let updatedGold = activeChar.gold || 0;
+    let updatedInventory = [...(activeChar.inventory || [])];
 
-    if (aiResponse.mutation) {
+    if (aiResponse && aiResponse.mutation) {
       // HP Mutation (Damage / Heal)
-      if (aiResponse.mutation.hpChange !== 0) {
+      if (typeof aiResponse.mutation.hpChange === 'number' && aiResponse.mutation.hpChange !== 0) {
         if (aiResponse.mutation.hpChange < 0) {
-          // Take damage
           const dmg = Math.abs(aiResponse.mutation.hpChange);
           updatedHp = Math.max(0, updatedHp - dmg);
         } else {
-          // Heal
-          updatedHp = Math.min(character.maxHp, updatedHp + aiResponse.mutation.hpChange);
+          updatedHp = Math.min(activeChar.maxHp, updatedHp + aiResponse.mutation.hpChange);
         }
       }
 
       // Gold Mutation
-      if (aiResponse.mutation.goldChange && aiResponse.mutation.goldChange !== 0) {
+      if (typeof aiResponse.mutation.goldChange === 'number' && aiResponse.mutation.goldChange !== 0) {
         updatedGold = Math.max(0, updatedGold + aiResponse.mutation.goldChange);
       }
 
@@ -58,11 +72,13 @@ exports.handleAdventureAction = async (req, res) => {
         });
       }
 
-      await character.update({
-        currentHp: updatedHp,
-        gold: updatedGold,
-        inventory: updatedInventory,
-      });
+      if (character) {
+        await character.update({
+          currentHp: updatedHp,
+          gold: updatedGold,
+          inventory: updatedInventory,
+        });
+      }
     }
 
     return res.json({
@@ -70,12 +86,13 @@ exports.handleAdventureAction = async (req, res) => {
       data: {
         aiResponse,
         character: {
-          id: character.id,
+          id: activeChar.id,
+          name: activeChar.name,
           currentHp: updatedHp,
-          maxHp: character.maxHp,
+          maxHp: activeChar.maxHp,
           gold: updatedGold,
           inventory: updatedInventory,
-          armorClass: character.armorClass,
+          armorClass: activeChar.armorClass,
         }
       }
     });
