@@ -23,8 +23,10 @@ Tugasmu:
 }`;
 
 exports.generateAdventureResponse = async ({ character, story, history, lastAction, rollResult, apiKey }) => {
-  // 1. If user provided Google Gemini API Key, call Gemini 1.5 Flash
-  if (apiKey && apiKey.trim() !== '') {
+  const activeKey = apiKey && apiKey.trim() !== '' ? apiKey : process.env.GEMINI_API_KEY;
+
+  // 1. If Google Gemini API Key is available, call Gemini 3.6 Flash
+  if (activeKey && activeKey.trim() !== '') {
     try {
       const prompt = `Karakter Pemain: ${character.name} (Ras: ${character.race}, Kelas: ${character.characterClass}, Level: ${character.level}, HP: ${character.currentHp}/${character.maxHp}, AC: ${character.armorClass}).
 Modul Cerita: ${story.title} - ${story.description}
@@ -35,7 +37,7 @@ Hasil Lemparan Dadu Terakhir: ${rollResult ? JSON.stringify(rollResult) : 'Tidak
 Beri respon narasi lanjutan dalam format JSON yang ditentukan.`;
 
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${activeKey}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
