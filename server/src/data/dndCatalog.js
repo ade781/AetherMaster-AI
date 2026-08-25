@@ -10,7 +10,29 @@ const BASE_ITEMS = [
   { id: 'boots_of_speed', name: 'Sepatu Pengembara Angin', type: 'boots', slot: 'boots', speedBonus: 5, weight: 2, value: 80, desc: 'Sepatu kulit ringan yang meningkatkan kecepatan langkah +5 kaki.' },
   { id: 'healing_potion', name: 'Ramuan Pemulih (Healing Potion)', type: 'consumable', healDice: '2d4+2', weight: 0.5, value: 50, desc: 'Cairan merah berkilau yang memulihkan 2d4+2 HP saat diminum.' },
   { id: 'torch', name: 'Obor Minyak', type: 'item', weight: 1, value: 0.1, desc: 'Menerangi area sekitar 20 kaki selama 1 jam.' },
-  { id: 'rations', name: 'Ransum Makanan (1 Hari)', type: 'item', weight: 2, value: 0.5, desc: 'Bekal makanan kering untuk perjalanan jauh.' }
+  { id: 'rations', name: 'Ransum Makanan (1 Hari)', type: 'item', weight: 2, value: 0.5, desc: 'Bekal makanan kering untuk perjalanan jauh.' },
+  // Bahan Mentah Crafting & Alkimia
+  { id: 'herb_bloodleaf', name: 'Daun Daun Merah Darah (Bloodleaf)', type: 'ingredient', weight: 0.1, value: 5, desc: 'Tanaman obat langka beraroma manis penumbuh jaringan darah.' },
+  { id: 'flask_water', name: 'Botol Kaca Berisi Air Murni', type: 'ingredient', weight: 0.5, value: 2, desc: 'Wadah kaca media dasar racikan alkimia.' },
+  { id: 'iron_ore', name: 'Bongkahan Bijih Besi Padat', type: 'ingredient', weight: 5, value: 8, desc: 'Logam mentah berkilau untuk ditempa menjadi senjata/armor.' },
+  { id: 'venom_sac', name: 'Kantung Racun Ular Makam', type: 'ingredient', weight: 0.2, value: 12, desc: 'Cairan beracun hijau pekat untuk melapisi mata pedang.' }
+];
+
+const CRAFTING_RECIPES = [
+  {
+    id: 'recipe_heal',
+    name: 'Ramuan Pemulih Darah (Healing Potion)',
+    resultItem: { id: 'healing_potion', name: 'Ramuan Pemulih (Healing Potion)', type: 'consumable', healDice: '2d4+2', weight: 0.5, value: 50, desc: 'Cairan merah berkilau yang memulihkan 2d4+2 HP saat diminum.' },
+    materials: ['herb_bloodleaf', 'flask_water'],
+    desc: 'Campuran daun bloodleaf yang diseduh ke dalam botol air murni.'
+  },
+  {
+    id: 'recipe_shield',
+    name: 'Perisai Kayu Berpaku Besi (Shield)',
+    resultItem: { id: 'shield', name: 'Perisai Kayu Berpaku (Shield)', type: 'shield', slot: 'offHand', acBonus: 2, weight: 6, value: 10, desc: 'Perisai bundar yang memberi tambahan +2 Armor Class.' },
+    materials: ['iron_ore', 'torch'],
+    desc: 'Menempa lempengan besi menjadi pelindung perisai tangguh.'
+  }
 ];
 
 const BASE_SPELLS = [
@@ -31,6 +53,7 @@ const BASE_CONDITIONS = [
 
 module.exports = {
   BASE_ITEMS,
+  CRAFTING_RECIPES,
   BASE_SPELLS,
   BASE_CONDITIONS
 };

@@ -6,13 +6,17 @@ import { AdventurePlayground } from '../components/story/AdventurePlayground';
 import { WorldMapExplorer } from '../components/map/WorldMapExplorer';
 import { BattleGridMap } from '../components/combat/BattleGridMap';
 import { CampaignStudio } from '../components/studio/CampaignStudio';
+import { MerchantShop } from '../components/economy/MerchantShop';
+import { CraftingStation } from '../components/crafting/CraftingStation';
+import { CampfireRest } from '../components/campfire/CampfireRest';
+import { RoguelikeDungeonCrawler } from '../components/dungeon/RoguelikeDungeonCrawler';
 import { DiceBox } from '../components/dice/DiceBox';
-import { Shield, Plus, Sparkles, Play, BookOpen, User, Map, Swords, Hammer, RefreshCw } from 'lucide-react';
+import { Shield, Plus, Sparkles, Play, BookOpen, User, Map, Swords, Hammer, Store, FlaskConical, Flame, Compass, RefreshCw } from 'lucide-react';
 
 export const DashboardPage = () => {
   const [characters, setCharacters] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeView, setActiveView] = useState('list'); // 'list' | 'create' | 'sheet' | 'stories' | 'play' | 'map' | 'combat' | 'studio'
+  const [activeView, setActiveView] = useState('list'); // 'list' | 'create' | 'sheet' | 'stories' | 'play' | 'map' | 'combat' | 'studio' | 'shop' | 'craft' | 'camp' | 'dungeon'
   const [selectedCharacter, setSelectedCharacter] = useState(null);
   const [selectedStory, setSelectedStory] = useState(null);
 
@@ -94,73 +98,121 @@ export const DashboardPage = () => {
         </div>
 
         {/* View Toggle Tabs */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveView('dungeon')}
+            className={`font-cinzel font-bold text-xs px-3 py-1.5 rounded-xl border flex items-center gap-1 transition-all ${
+              activeView === 'dungeon'
+                ? 'bg-amber-950/80 text-fantasy-gold border-fantasy-gold shadow-gold-glow'
+                : 'bg-slate-900/80 text-slate-300 border-slate-700/70 hover:border-fantasy-gold/50'
+            }`}
+          >
+            <Compass size={13} className="text-amber-400" /> Labirin Acak
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveView('camp')}
+            className={`font-cinzel font-bold text-xs px-3 py-1.5 rounded-xl border flex items-center gap-1 transition-all ${
+              activeView === 'camp'
+                ? 'bg-amber-950/80 text-fantasy-gold border-fantasy-gold shadow-gold-glow'
+                : 'bg-slate-900/80 text-slate-300 border-slate-700/70 hover:border-fantasy-gold/50'
+            }`}
+          >
+            <Flame size={13} className="text-amber-400" /> Perkemahan
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveView('craft')}
+            className={`font-cinzel font-bold text-xs px-3 py-1.5 rounded-xl border flex items-center gap-1 transition-all ${
+              activeView === 'craft'
+                ? 'bg-purple-950/80 text-purple-300 border-purple-500 shadow-arcane-glow'
+                : 'bg-slate-900/80 text-slate-300 border-slate-700/70 hover:border-purple-500/50'
+            }`}
+          >
+            <FlaskConical size={13} className="text-purple-400" /> Alkimia
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveView('shop')}
+            className={`font-cinzel font-bold text-xs px-3 py-1.5 rounded-xl border flex items-center gap-1 transition-all ${
+              activeView === 'shop'
+                ? 'bg-amber-950/80 text-fantasy-gold border-fantasy-gold shadow-gold-glow'
+                : 'bg-slate-900/80 text-slate-300 border-slate-700/70 hover:border-fantasy-gold/50'
+            }`}
+          >
+            <Store size={13} className="text-fantasy-gold" /> Pasar Toko
+          </button>
+
           <button
             type="button"
             onClick={() => setActiveView('studio')}
-            className={`font-cinzel font-bold text-xs px-3.5 py-2 rounded-xl border flex items-center gap-1.5 transition-all ${
+            className={`font-cinzel font-bold text-xs px-3 py-1.5 rounded-xl border flex items-center gap-1 transition-all ${
               activeView === 'studio'
                 ? 'bg-purple-950/80 text-purple-300 border-purple-500 shadow-arcane-glow'
                 : 'bg-slate-900/80 text-slate-300 border-slate-700/70 hover:border-purple-500/50'
             }`}
           >
-            <Hammer size={14} className="text-purple-400" /> Creator Studio
+            <Hammer size={13} className="text-purple-400" /> Creator Studio
           </button>
 
           <button
             type="button"
             onClick={() => setActiveView('combat')}
-            className={`font-cinzel font-bold text-xs px-3.5 py-2 rounded-xl border flex items-center gap-1.5 transition-all ${
+            className={`font-cinzel font-bold text-xs px-3 py-1.5 rounded-xl border flex items-center gap-1 transition-all ${
               activeView === 'combat'
                 ? 'bg-rose-950/80 text-rose-300 border-rose-500 shadow-crimson-glow'
                 : 'bg-slate-900/80 text-slate-300 border-slate-700/70 hover:border-rose-500/50'
             }`}
           >
-            <Swords size={14} className="text-rose-400" /> Mode Tempur (Grid)
+            <Swords size={13} className="text-rose-400" /> Mode Tempur
           </button>
 
           <button
             type="button"
             onClick={() => setActiveView('map')}
-            className={`font-cinzel font-bold text-xs px-3.5 py-2 rounded-xl border flex items-center gap-1.5 transition-all ${
+            className={`font-cinzel font-bold text-xs px-3 py-1.5 rounded-xl border flex items-center gap-1 transition-all ${
               activeView === 'map'
                 ? 'bg-amber-950/80 text-fantasy-gold border-fantasy-gold shadow-gold-glow'
                 : 'bg-slate-900/80 text-slate-300 border-slate-700/70 hover:border-fantasy-gold/50'
             }`}
           >
-            <Map size={14} className="text-fantasy-gold" /> Peta Wilayah
+            <Map size={13} className="text-fantasy-gold" /> Peta
           </button>
 
           <button
             type="button"
             onClick={() => setActiveView('stories')}
-            className={`font-cinzel font-bold text-xs px-3.5 py-2 rounded-xl border flex items-center gap-1.5 transition-all ${
+            className={`font-cinzel font-bold text-xs px-3 py-1.5 rounded-xl border flex items-center gap-1 transition-all ${
               activeView === 'stories' || activeView === 'play'
                 ? 'bg-amber-950/80 text-fantasy-gold border-fantasy-gold shadow-gold-glow'
                 : 'bg-slate-900/80 text-slate-300 border-slate-700/70 hover:border-fantasy-gold/50'
             }`}
           >
-            <BookOpen size={14} className="text-fantasy-gold" /> Modul Cerita
+            <BookOpen size={13} className="text-fantasy-gold" /> Modul Cerita
           </button>
 
           <button
             type="button"
             onClick={() => setActiveView('list')}
-            className={`font-cinzel font-bold text-xs px-3.5 py-2 rounded-xl border flex items-center gap-1.5 transition-all ${
+            className={`font-cinzel font-bold text-xs px-3 py-1.5 rounded-xl border flex items-center gap-1 transition-all ${
               activeView === 'list' || activeView === 'sheet'
                 ? 'bg-amber-950/80 text-fantasy-gold border-fantasy-gold shadow-gold-glow'
                 : 'bg-slate-900/80 text-slate-300 border-slate-700/70 hover:border-fantasy-gold/50'
             }`}
           >
-            <User size={14} className="text-fantasy-gold" /> Daftar Pahlawan
+            <User size={13} className="text-fantasy-gold" /> Pahlawan
           </button>
 
           <button
             type="button"
             onClick={() => setActiveView('create')}
-            className="bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-cinzel font-bold text-xs uppercase px-4 py-2 rounded-xl shadow-gold-glow flex items-center gap-1.5 transition-all"
+            className="bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-cinzel font-bold text-xs uppercase px-3 py-1.5 rounded-xl shadow-gold-glow flex items-center gap-1 transition-all"
           >
-            <Plus size={14} /> Karakter Baru
+            <Plus size={13} /> Baru
           </button>
         </div>
       </header>
@@ -170,6 +222,34 @@ export const DashboardPage = () => {
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px] gap-6 items-start">
           {/* Main Dynamic View Area */}
           <div>
+            {activeView === 'dungeon' && (
+              <RoguelikeDungeonCrawler
+                character={selectedCharacter || { id: 'temp_char', name: 'Petualang Pengembara', currentHp: 15, maxHp: 15, gold: 20 }}
+                onUpdateCharacter={handleCharacterUpdated}
+              />
+            )}
+
+            {activeView === 'camp' && (
+              <CampfireRest
+                character={selectedCharacter || { id: 'temp_char', name: 'Petualang Pengembara', currentHp: 10, maxHp: 15 }}
+                onUpdateCharacter={handleCharacterUpdated}
+              />
+            )}
+
+            {activeView === 'craft' && (
+              <CraftingStation
+                character={selectedCharacter || { id: 'temp_char', name: 'Petualang Pengembara', inventory: [] }}
+                onUpdateCharacter={handleCharacterUpdated}
+              />
+            )}
+
+            {activeView === 'shop' && (
+              <MerchantShop
+                character={selectedCharacter || { id: 'temp_char', name: 'Petualang Pengembara', gold: 50, inventory: [] }}
+                onUpdateCharacter={handleCharacterUpdated}
+              />
+            )}
+
             {activeView === 'studio' && (
               <CampaignStudio />
             )}
