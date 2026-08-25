@@ -4,13 +4,14 @@ import { CharacterSheet } from '../components/character/CharacterSheet';
 import { StorySelector } from '../components/story/StorySelector';
 import { AdventurePlayground } from '../components/story/AdventurePlayground';
 import { WorldMapExplorer } from '../components/map/WorldMapExplorer';
+import { BattleGridMap } from '../components/combat/BattleGridMap';
 import { DiceBox } from '../components/dice/DiceBox';
-import { Shield, Plus, Sparkles, Play, BookOpen, User, Map, RefreshCw } from 'lucide-react';
+import { Shield, Plus, Sparkles, Play, BookOpen, User, Map, Swords, RefreshCw } from 'lucide-react';
 
 export const DashboardPage = () => {
   const [characters, setCharacters] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeView, setActiveView] = useState('list'); // 'list' | 'create' | 'sheet' | 'stories' | 'play'
+  const [activeView, setActiveView] = useState('list'); // 'list' | 'create' | 'sheet' | 'stories' | 'play' | 'map' | 'combat'
   const [selectedCharacter, setSelectedCharacter] = useState(null);
   const [selectedStory, setSelectedStory] = useState(null);
 
@@ -25,7 +26,7 @@ export const DashboardPage = () => {
         }
       }
     } catch (err) {
-      console.error('Gagal mengambil daftar karakter', err);
+      console.error('Gagal mengambil karakter', err);
     } finally {
       setLoading(false);
     }
@@ -42,8 +43,10 @@ export const DashboardPage = () => {
   };
 
   const handleCharacterUpdated = (updatedChar) => {
-    setCharacters(prev => prev.map(c => c.id === updatedChar.id ? updatedChar : c));
-    setSelectedCharacter(updatedChar);
+    setCharacters(prev => prev.map(c => (c.id === updatedChar.id ? updatedChar : c)));
+    if (selectedCharacter?.id === updatedChar.id) {
+      setSelectedCharacter(updatedChar);
+    }
   };
 
   const handleDeleteCharacter = async (charId) => {
@@ -74,24 +77,35 @@ export const DashboardPage = () => {
   return (
     <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100 font-outfit">
       {/* Top Navbar */}
-      <header className="bg-slate-950/95 border-b border-fantasy-border/80 backdrop-blur-md sticky top-0 z-40 px-6 py-3.5 flex justify-between items-center shadow-lg">
-        <div
-          onClick={() => setActiveView('list')}
-          className="flex items-center gap-3 cursor-pointer group"
-        >
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-gold-glow group-hover:scale-105 transition-transform">
-            <Shield size={20} className="text-slate-950" />
+      <header className="border-b border-fantasy-border/80 bg-slate-900/90 backdrop-blur-md px-6 py-4 flex flex-wrap justify-between items-center gap-4 sticky top-0 z-40 shadow-xl">
+        <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveView('stories')}>
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center shadow-gold-glow">
+            <Shield className="text-slate-950" size={24} />
           </div>
           <div>
-            <h1 className="font-cinzel text-fantasy-gold text-lg font-black tracking-wider leading-none">
-              AetherMaster AI
+            <h1 className="font-cinzel text-fantasy-gold text-lg sm:text-xl font-black tracking-wider leading-none">
+              AETHERMASTER AI
             </h1>
-            <span className="text-[10px] text-slate-400 font-medium">Virtual Tabletop & AI Dungeon Master</span>
+            <p className="text-[10px] text-slate-400 font-medium tracking-widest uppercase mt-0.5">
+              Virtual Tabletop & AI Dungeon Master D&D 5E
+            </p>
           </div>
         </div>
 
-        {/* Top Nav Actions */}
+        {/* View Toggle Tabs */}
         <div className="flex items-center gap-2 sm:gap-3">
+          <button
+            type="button"
+            onClick={() => setActiveView('combat')}
+            className={`font-cinzel font-bold text-xs px-3.5 py-2 rounded-xl border flex items-center gap-1.5 transition-all ${
+              activeView === 'combat'
+                ? 'bg-rose-950/80 text-rose-300 border-rose-500 shadow-crimson-glow'
+                : 'bg-slate-900/80 text-slate-300 border-slate-700/70 hover:border-rose-500/50'
+            }`}
+          >
+            <Swords size={14} className="text-rose-400" /> Mode Tempur (Grid)
+          </button>
+
           <button
             type="button"
             onClick={() => setActiveView('map')}
@@ -143,6 +157,14 @@ export const DashboardPage = () => {
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px] gap-6 items-start">
           {/* Main Dynamic View Area */}
           <div>
+            {activeView === 'combat' && (
+              <BattleGridMap
+                character={selectedCharacter || { id: 'temp_char', name: 'Petualang Pengembara', currentHp: 15, maxHp: 15, armorClass: 13, strength: 14, proficiencyBonus: 2, gold: 20, experience: 0 }}
+                onExitCombat={() => setActiveView('stories')}
+                onUpdateCharacter={handleCharacterUpdated}
+              />
+            )}
+
             {activeView === 'map' && (
               <WorldMapExplorer
                 onTravelLocation={(loc) => {
