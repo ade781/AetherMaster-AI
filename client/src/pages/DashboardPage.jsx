@@ -5,13 +5,14 @@ import { StorySelector } from '../components/story/StorySelector';
 import { AdventurePlayground } from '../components/story/AdventurePlayground';
 import { WorldMapExplorer } from '../components/map/WorldMapExplorer';
 import { BattleGridMap } from '../components/combat/BattleGridMap';
+import { CampaignStudio } from '../components/studio/CampaignStudio';
 import { DiceBox } from '../components/dice/DiceBox';
-import { Shield, Plus, Sparkles, Play, BookOpen, User, Map, Swords, RefreshCw } from 'lucide-react';
+import { Shield, Plus, Sparkles, Play, BookOpen, User, Map, Swords, Hammer, RefreshCw } from 'lucide-react';
 
 export const DashboardPage = () => {
   const [characters, setCharacters] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeView, setActiveView] = useState('list'); // 'list' | 'create' | 'sheet' | 'stories' | 'play' | 'map' | 'combat'
+  const [activeView, setActiveView] = useState('list'); // 'list' | 'create' | 'sheet' | 'stories' | 'play' | 'map' | 'combat' | 'studio'
   const [selectedCharacter, setSelectedCharacter] = useState(null);
   const [selectedStory, setSelectedStory] = useState(null);
 
@@ -96,6 +97,18 @@ export const DashboardPage = () => {
         <div className="flex items-center gap-2 sm:gap-3">
           <button
             type="button"
+            onClick={() => setActiveView('studio')}
+            className={`font-cinzel font-bold text-xs px-3.5 py-2 rounded-xl border flex items-center gap-1.5 transition-all ${
+              activeView === 'studio'
+                ? 'bg-purple-950/80 text-purple-300 border-purple-500 shadow-arcane-glow'
+                : 'bg-slate-900/80 text-slate-300 border-slate-700/70 hover:border-purple-500/50'
+            }`}
+          >
+            <Hammer size={14} className="text-purple-400" /> Creator Studio
+          </button>
+
+          <button
+            type="button"
             onClick={() => setActiveView('combat')}
             className={`font-cinzel font-bold text-xs px-3.5 py-2 rounded-xl border flex items-center gap-1.5 transition-all ${
               activeView === 'combat'
@@ -157,6 +170,10 @@ export const DashboardPage = () => {
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px] gap-6 items-start">
           {/* Main Dynamic View Area */}
           <div>
+            {activeView === 'studio' && (
+              <CampaignStudio />
+            )}
+
             {activeView === 'combat' && (
               <BattleGridMap
                 character={selectedCharacter || { id: 'temp_char', name: 'Petualang Pengembara', currentHp: 15, maxHp: 15, armorClass: 13, strength: 14, proficiencyBonus: 2, gold: 20, experience: 0 }}
