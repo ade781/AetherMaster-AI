@@ -5,6 +5,7 @@ require('dotenv').config();
 const { connectDB } = require('./config/database');
 const characterRoutes = require('./routes/characterRoutes');
 const adventureRoutes = require('./routes/adventureRoutes');
+const campaignRoutes = require('./routes/campaignRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -14,12 +15,13 @@ app.use(cors({
   origin: '*',
   credentials: true,
 }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // API Routes
 app.use('/api/characters', characterRoutes);
 app.use('/api/adventure', adventureRoutes);
+app.use('/api/campaigns', campaignRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -27,7 +29,7 @@ app.get('/api/health', (req, res) => {
     status: 'online',
     system: 'AetherMaster AI Backend',
     database: process.env.DB_NAME || 'ai_dungeon_vtt',
-    version: '2.0.0 (Phase 3 AI DM Enabled)',
+    version: '3.0.0 (Phase 6 Creator Studio Active)',
     timestamp: new Date().toISOString(),
   });
 });
