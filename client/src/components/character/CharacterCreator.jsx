@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Shield, Heart, Zap, Sparkles, ChevronRight, Check, Dice5, User } from 'lucide-react';
+import { Shield, Sparkles, ChevronRight, Check, Dice5, User, Swords, Heart, Zap, ArrowLeft } from 'lucide-react';
+import { audioEngine } from '../../services/audioEngine';
 
 const RACES = [
   { name: 'Manusia (Human)', bonuses: { strength: 1, dexterity: 1, constitution: 1, intelligence: 1, wisdom: 1, charisma: 1 }, speed: 30, desc: 'Ambisius, serba bisa, dan cepat beradaptasi di segala medan.' },
@@ -11,12 +12,12 @@ const RACES = [
 ];
 
 const CLASSES = [
-  { name: 'Fighter (Pendekar)', hitDie: 10, primary: 'Strength', armorProf: 'Semua Armor & Perisai', desc: 'Ahli tempur senjata jarak dekat, ahli taktik perang berdisiplin tinggi.' },
-  { name: 'Wizard (Penyihir)', hitDie: 6, primary: 'Intelligence', armorProf: 'Tanpa Armor', desc: 'Sarjana sihir misterius yang mempelajari mantra kuno pengubah realitas.' },
-  { name: 'Rogue (Pengelana Bayangan)', hitDie: 8, primary: 'Dexterity', armorProf: 'Armor Ringan', desc: 'Ahli menyusup, membobol kunci, dan melancarkan serangan mematikan dari bayangan (Sneak Attack).' },
-  { name: 'Cleric (Pendeta Suci)', hitDie: 8, primary: 'Wisdom', armorProf: 'Armor Sedang & Perisai', desc: 'Pengabdi dewa agung yang dianugerahi mukjizat penyembuh dan penghukum kejahatan.' },
-  { name: 'Paladin (Ksatria Suci)', hitDie: 10, primary: 'Strength & Charisma', armorProf: 'Semua Armor & Perisai', desc: 'Ksatria pembawa sumpah suci yang memadukan keahlian pedang dengan sihir keadilan.' },
-  { name: 'Barbarian (Petarung Liar)', hitDie: 12, primary: 'Strength & Constitution', armorProf: 'Armor Ringan/Sedang', desc: 'Pejuang primal liar berdaya tahan luar biasa yang mengamuk dalam pertempuran (Rage).' }
+  { name: 'Fighter (Pendekar)', hitDie: 10, primary: 'Strength', desc: 'Ahli tempur senjata jarak dekat, ahli taktik perang berdisiplin tinggi.' },
+  { name: 'Wizard (Penyihir)', hitDie: 6, primary: 'Intelligence', desc: 'Sarjana sihir misterius yang mempelajari mantra kuno pengubah realitas.' },
+  { name: 'Rogue (Pengelana Bayangan)', hitDie: 8, primary: 'Dexterity', desc: 'Ahli menyusup, membobol kunci, dan melancarkan serangan mematikan dari bayangan.' },
+  { name: 'Cleric (Pendeta Suci)', hitDie: 8, primary: 'Wisdom', desc: 'Pengabdi dewa agung yang dianugerahi mukjizat penyembuh dan penghukum kejahatan.' },
+  { name: 'Paladin (Ksatria Suci)', hitDie: 10, primary: 'Strength & Charisma', desc: 'Ksatria pembawa sumpah suci yang memadukan keahlian pedang dengan sihir keadilan.' },
+  { name: 'Barbarian (Petarung Liar)', hitDie: 12, primary: 'Strength & Constitution', desc: 'Pejuang primal liar berdaya tahan luar biasa yang mengamuk dalam pertempuran.' }
 ];
 
 const BACKGROUNDS = ['Prajurit Kerajaan (Soldier)', 'Pelayan Kuil (Acolyte)', 'Buronan Kriminal (Criminal)', 'Cendekiawan (Sage)', 'Bangsawan (Noble)', 'Pahlawan Desa (Folk Hero)', 'Penjelajah Rimba (Outlander)'];
@@ -26,7 +27,7 @@ const ALIGNMENTS = [
   'Lawful Evil (Tertib Jahat)', 'Neutral Evil (Netral Jahat)', 'Chaotic Evil (Bebas Jahat)'
 ];
 
-export const CharacterCreator = ({ onCreated, onCancel }) => {
+export const CharacterCreator = ({ onCreated, isFirstTime = false, onCancel }) => {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -58,35 +59,29 @@ export const CharacterCreator = ({ onCreated, onCancel }) => {
     return m >= 0 ? `+${m}` : `${m}`;
   };
 
-  const finalCon = getFinalScore('constitution');
-  const finalHp = Math.max(1, selectedClass.hitDie + calcMod(finalCon));
-  const finalDex = getFinalScore('dexterity');
-  const finalAc = 10 + calcMod(finalDex);
-
-  const handleScoreChange = (stat, value) => {
-    const parsed = Math.min(20, Math.max(1, parseInt(value, 10) || 8));
-    setScores(prev => ({ ...prev, [stat]: parsed }));
+  // Roll 4d6 drop lowest
+  const roll4d6DropLowest = () => {
+    const rolls = Array.from({ length: 4 }, () => Math.floor(Math.random() * 6) + 1);
+    rolls.sort((a, b) => a - b);
+    return rolls.slice(1).reduce((sum, val) => sum + val, 0);
   };
 
-  const handleRollRandomScores = () => {
-    const rollStat = () => {
-      const rolls = [1, 2, 3, 4].map(() => Math.floor(Math.random() * 6) + 1);
-      rolls.sort((a, b) => a - b);
-      return rolls[1] + rolls[2] + rolls[3];
-    };
+  const handleRandomizeStats = () => {
+    audioEngine.playDiceRoll();
     setScores({
-      strength: rollStat(),
-      dexterity: rollStat(),
-      constitution: rollStat(),
-      intelligence: rollStat(),
-      wisdom: rollStat(),
-      charisma: rollStat(),
+      strength: roll4d6DropLowest(),
+      dexterity: roll4d6DropLowest(),
+      constitution: roll4d6DropLowest(),
+      intelligence: roll4d6DropLowest(),
+      wisdom: roll4d6DropLowest(),
+      charisma: roll4d6DropLowest(),
     });
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e) => {
+    if (e) e.preventDefault();
     if (!name.trim()) {
-      setError('Harap masukkan nama karakter pahlawanmu!');
+      setError('Nama karakter pahlawan wajib diisi!');
       setStep(1);
       return;
     }
@@ -94,327 +89,323 @@ export const CharacterCreator = ({ onCreated, onCancel }) => {
     setLoading(true);
     setError('');
 
-    try {
-      const payload = {
-        name,
-        race: selectedRace.name.split(' (')[0],
-        characterClass: selectedClass.name.split(' (')[0],
-        background,
-        alignment,
-        bio,
-        strength: getFinalScore('strength'),
-        dexterity: getFinalScore('dexterity'),
-        constitution: getFinalScore('constitution'),
-        intelligence: getFinalScore('intelligence'),
-        wisdom: getFinalScore('wisdom'),
-        charisma: getFinalScore('charisma'),
-        speed: selectedRace.speed,
-      };
+    const finalStrength = getFinalScore('strength');
+    const finalDexterity = getFinalScore('dexterity');
+    const finalConstitution = getFinalScore('constitution');
+    const finalIntelligence = getFinalScore('intelligence');
+    const finalWisdom = getFinalScore('wisdom');
+    const finalCharisma = getFinalScore('charisma');
 
-      const response = await fetch('/api/characters', {
+    const conMod = calcMod(finalConstitution);
+    const calculatedMaxHp = Math.max(1, selectedClass.hitDie + conMod);
+    const dexMod = calcMod(finalDexterity);
+    const calculatedAc = 10 + dexMod;
+
+    const payload = {
+      name,
+      race: selectedRace.name.split(' (')[0],
+      characterClass: selectedClass.name.split(' (')[0],
+      background,
+      alignment,
+      strength: finalStrength,
+      dexterity: finalDexterity,
+      constitution: finalConstitution,
+      intelligence: finalIntelligence,
+      wisdom: finalWisdom,
+      charisma: finalCharisma,
+      maxHp: calculatedMaxHp,
+      currentHp: calculatedMaxHp,
+      baseArmorClass: calculatedAc,
+      armorClass: calculatedAc,
+      speed: selectedRace.speed,
+      bio,
+    };
+
+    try {
+      const res = await fetch('/api/characters', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-
-      const data = await response.json();
+      const data = await res.json();
       if (data.success) {
-        if (onCreated) onCreated(data.data);
+        audioEngine.playSpellCast();
+        onCreated(data.data);
       } else {
-        setError(data.message || 'Gagal menyimpan karakter ke database.');
+        setError(data.message || 'Gagal menyimpan karakter');
       }
     } catch (err) {
-      setError('Terjadi kendala jaringan saat menyimpan karakter.');
+      setError('Gagal menghubungi server database');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="glass-card rounded-2xl p-6 sm:p-8 max-w-3xl mx-auto border border-fantasy-border shadow-2xl">
-      {/* Header Wizard Steps */}
-      <div className="flex flex-wrap justify-between items-center pb-5 mb-6 border-b border-slate-800 gap-4">
-        <div>
-          <h2 className="font-cinzel text-fantasy-gold text-2xl font-bold tracking-wide">Tempa Karakter Baru</h2>
-          <p className="text-slate-400 text-xs sm:text-sm mt-0.5">Buat pahlawan D&D 5E siap tempur untuk memulai petualangan</p>
-        </div>
+    <div className="max-w-3xl mx-auto space-y-6">
+      {/* Wizard Header Banner */}
+      <div className="glass-card rounded-2xl p-6 border border-fantasy-border shadow-2xl text-center space-y-2">
+        <span className="text-xs text-fantasy-gold font-bold uppercase tracking-widest">
+          {isFirstTime ? 'LANGKAH 1 DARI 2: INISIALISASI PETUALANG' : 'STUDIO PENEMPAAN KARAKTER'}
+        </span>
+        <h2 className="font-cinzel text-fantasy-gold text-2xl sm:text-3xl font-black">
+          {isFirstTime ? 'Tempa Pahlawan Pertamamu' : 'Buat Karakter Pahlawan Baru'}
+        </h2>
+        <p className="text-slate-300 text-xs sm:text-sm max-w-md mx-auto leading-relaxed">
+          Sebelum memulai petualangan, tentukan identitas, ras, kelas tempur, dan skor kemampuan dasar pahlawanmu.
+        </p>
 
-        {/* Step Indicators */}
-        <div className="flex items-center gap-2">
+        {/* Step Indicator */}
+        <div className="flex justify-center items-center gap-3 pt-3">
           {[
             { num: 1, label: 'Identitas & Ras' },
-            { num: 2, label: 'Atribut Stat' },
-            { num: 3, label: 'Latar Belakang' },
+            { num: 2, label: 'Kelas & Profesi' },
+            { num: 3, label: 'Stat Atribut' },
           ].map((s) => (
-            <button
-              key={s.num}
-              type="button"
-              onClick={() => setStep(s.num)}
-              className={`w-8 h-8 rounded-full font-cinzel font-bold text-xs flex items-center justify-center transition-all ${
-                step === s.num
-                  ? 'bg-fantasy-gold text-slate-950 ring-2 ring-fantasy-gold/50 shadow-gold-glow'
-                  : step > s.num
-                  ? 'bg-amber-950/70 text-fantasy-gold border border-fantasy-gold/40'
-                  : 'bg-slate-800/60 text-slate-500 border border-slate-700/50'
-              }`}
-            >
-              {step > s.num ? <Check size={14} /> : s.num}
-            </button>
+            <div key={s.num} className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setStep(s.num)}
+                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold font-cinzel transition-all ${
+                  step === s.num
+                    ? 'bg-fantasy-gold text-slate-950 shadow-gold-glow scale-110'
+                    : step > s.num
+                    ? 'bg-amber-950 text-amber-300 border border-fantasy-gold/50'
+                    : 'bg-slate-900 text-slate-500 border border-slate-800'
+                }`}
+              >
+                {step > s.num ? '✓' : s.num}
+              </button>
+              <span className={`text-[11px] font-medium hidden sm:inline ${step === s.num ? 'text-fantasy-gold font-bold' : 'text-slate-500'}`}>
+                {s.label}
+              </span>
+              {s.num < 3 && <span className="text-slate-700 hidden sm:inline">—</span>}
+            </div>
           ))}
         </div>
       </div>
 
       {error && (
-        <div className="bg-rose-950/70 border border-rose-600/70 text-rose-300 px-4 py-3 rounded-lg text-sm mb-5 flex items-center gap-2">
-          <span>⚠️ {error}</span>
+        <div className="bg-rose-950/80 border border-rose-600 text-rose-300 px-4 py-3 rounded-xl text-center font-semibold text-xs shadow-md">
+          ⚠️ {error}
         </div>
       )}
 
-      {/* STEP 1: IDENTITY & RACE/CLASS */}
+      {/* STEP 1: Name, Race, Background */}
       {step === 1 && (
-        <div className="space-y-6">
+        <div className="glass-card rounded-2xl p-6 border border-fantasy-border space-y-5">
+          <h3 className="font-cinzel text-fantasy-gold font-bold text-base flex items-center gap-2 pb-2 border-b border-slate-800">
+            <User size={18} /> 1. Identitas & Asal-Usul Ras
+          </h3>
+
           <div>
-            <label className="block text-xs font-cinzel font-bold text-fantasy-gold uppercase tracking-wider mb-2">
-              Nama Pahlawan / Petualang
+            <label className="text-xs text-slate-300 font-bold block mb-1.5">
+              Nama Lengkap Pahlawan <span className="text-rose-400">*</span>
             </label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Contoh: Valthex Shadowveil, Roland Sang Penjelajah"
-              className="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-4 py-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-fantasy-gold focus:ring-1 focus:ring-fantasy-gold transition-all text-base"
-              autoFocus
+              placeholder="Contoh: Valerius Sang Penjaga Cahaya"
+              required
+              className="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-fantasy-gold font-medium"
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Race Selection */}
-            <div>
-              <label className="block text-xs font-cinzel font-bold text-fantasy-gold uppercase tracking-wider mb-2">
-                Pilih Ras Karakter
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                {RACES.map((r) => (
-                  <div
-                    key={r.name}
-                    onClick={() => setSelectedRace(r)}
-                    className={`p-3 rounded-xl cursor-pointer transition-all border ${
-                      selectedRace.name === r.name
-                        ? 'bg-fantasy-gold/15 border-fantasy-gold text-fantasy-gold shadow-md'
-                        : 'bg-slate-900/50 border-slate-800 text-slate-300 hover:border-slate-700 hover:bg-slate-800/40'
-                    }`}
-                  >
-                    <div className="font-semibold text-sm">{r.name.split(' (')[0]}</div>
-                    <div className="text-[11px] text-slate-400 mt-0.5">Kecepatan: {r.speed} kaki</div>
+          <div>
+            <label className="text-xs text-slate-300 font-bold block mb-2">Pilih Ras Karakter:</label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {RACES.map((race) => (
+                <div
+                  key={race.name}
+                  onClick={() => setSelectedRace(race)}
+                  className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
+                    selectedRace.name === race.name
+                      ? 'bg-amber-950/40 border-fantasy-gold shadow-gold-glow'
+                      : 'bg-slate-900/80 border-slate-800 hover:border-slate-700'
+                  }`}
+                >
+                  <div className="flex justify-between items-center">
+                    <span className="font-cinzel font-bold text-xs text-slate-100">{race.name}</span>
+                    <span className="text-[10px] text-amber-400 font-semibold">{race.speed}ft</span>
                   </div>
-                ))}
-              </div>
-              <p className="text-xs text-slate-400 italic mt-2 bg-slate-900/40 p-2.5 rounded-lg border border-slate-800/70">
-                "{selectedRace.desc}"
-              </p>
+                  <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">{race.desc}</p>
+                </div>
+              ))}
             </div>
+          </div>
 
-            {/* Class Selection */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
             <div>
-              <label className="block text-xs font-cinzel font-bold text-fantasy-gold uppercase tracking-wider mb-2">
-                Pilih Kelas (Class)
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                {CLASSES.map((c) => (
-                  <div
-                    key={c.name}
-                    onClick={() => setSelectedClass(c)}
-                    className={`p-3 rounded-xl cursor-pointer transition-all border ${
-                      selectedClass.name === c.name
-                        ? 'bg-purple-950/40 border-purple-500 text-purple-300 shadow-md'
-                        : 'bg-slate-900/50 border-slate-800 text-slate-300 hover:border-slate-700 hover:bg-slate-800/40'
-                    }`}
-                  >
-                    <div className="font-semibold text-sm">{c.name.split(' (')[0]}</div>
-                    <div className="text-[11px] text-slate-400 mt-0.5">Hit Die: d{c.hitDie}</div>
-                  </div>
+              <label className="text-xs text-slate-300 font-bold block mb-1.5">Latar Belakang (Background):</label>
+              <select
+                value={background}
+                onChange={(e) => setBackground(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-fantasy-gold"
+              >
+                {BACKGROUNDS.map((bg) => (
+                  <option key={bg} value={bg}>{bg}</option>
                 ))}
-              </div>
-              <p className="text-xs text-slate-400 italic mt-2 bg-slate-900/40 p-2.5 rounded-lg border border-slate-800/70">
-                "{selectedClass.desc}"
-              </p>
+              </select>
             </div>
+            <div>
+              <label className="text-xs text-slate-300 font-bold block mb-1.5">Pandangan Moral (Alignment):</label>
+              <select
+                value={alignment}
+                onChange={(e) => setAlignment(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-fantasy-gold"
+              >
+                {ALIGNMENTS.map((al) => (
+                  <option key={al} value={al}>{al}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-3">
+            <button
+              type="button"
+              onClick={() => {
+                if (!name.trim()) {
+                  setError('Silakan masukkan nama pahlawan terlebih dahulu!');
+                  return;
+                }
+                setError('');
+                setStep(2);
+              }}
+              className="bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-cinzel font-bold text-xs uppercase px-6 py-2.5 rounded-xl shadow-gold-glow flex items-center gap-1.5 transition-all"
+            >
+              Lanjut: Pilih Kelas <ChevronRight size={16} />
+            </button>
           </div>
         </div>
       )}
 
-      {/* STEP 2: ABILITY SCORES */}
+      {/* STEP 2: Class Selection */}
       {step === 2 && (
-        <div className="space-y-6">
-          <div className="flex flex-wrap justify-between items-center gap-2">
-            <div>
-              <h4 className="font-cinzel text-fantasy-gold font-bold text-base">Kalkulator Atribut D&D 5E</h4>
-              <p className="text-xs text-slate-400">Atur angka dasar atau acak dengan lemparan dadu resmi (4d6 drop lowest)</p>
-            </div>
+        <div className="glass-card rounded-2xl p-6 border border-fantasy-border space-y-5">
+          <h3 className="font-cinzel text-fantasy-gold font-bold text-base flex items-center gap-2 pb-2 border-b border-slate-800">
+            <Swords size={18} /> 2. Pilih Kelas Pertempuran & Spesialisasi
+          </h3>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            {CLASSES.map((cls) => (
+              <div
+                key={cls.name}
+                onClick={() => setSelectedClass(cls)}
+                className={`p-4 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
+                  selectedClass.name === cls.name
+                    ? 'bg-amber-950/40 border-fantasy-gold shadow-gold-glow'
+                    : 'bg-slate-900/80 border-slate-800 hover:border-slate-700'
+                }`}
+              >
+                <div>
+                  <div className="flex justify-between items-center">
+                    <span className="font-cinzel font-bold text-sm text-slate-100">{cls.name}</span>
+                    <span className="text-[10px] bg-rose-950/80 text-rose-300 px-2 py-0.5 rounded border border-rose-800">
+                      Hit Die: d{cls.hitDie}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-2 leading-relaxed">{cls.desc}</p>
+                </div>
+                <div className="text-[10px] text-amber-400 font-semibold mt-3">
+                  Atribut Utama: {cls.primary}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex justify-between pt-3 border-t border-slate-800">
             <button
               type="button"
-              onClick={handleRollRandomScores}
-              className="bg-slate-800 hover:bg-slate-700 text-fantasy-gold text-xs font-cinzel font-bold py-1.5 px-3 rounded-lg border border-fantasy-border flex items-center gap-1.5 transition-all shadow-sm"
+              onClick={() => setStep(1)}
+              className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-cinzel font-bold text-xs px-4 py-2.5 rounded-xl border border-slate-700 flex items-center gap-1.5 transition-all"
             >
-              <Dice5 size={14} /> Acak Stat (4d6 Drop Lowest)
+              <ArrowLeft size={16} /> Kembali
+            </button>
+            <button
+              type="button"
+              onClick={() => setStep(3)}
+              className="bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-cinzel font-bold text-xs uppercase px-6 py-2.5 rounded-xl shadow-gold-glow flex items-center gap-1.5 transition-all"
+            >
+              Lanjut: Tentukan Atribut <ChevronRight size={16} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* STEP 3: Ability Scores & Confirmation */}
+      {step === 3 && (
+        <div className="glass-card rounded-2xl p-6 border border-fantasy-border space-y-5">
+          <div className="flex flex-wrap justify-between items-center pb-2 border-b border-slate-800 gap-2">
+            <h3 className="font-cinzel text-fantasy-gold font-bold text-base flex items-center gap-2">
+              <Zap size={18} /> 3. Skor Atribut Kemampuan D&D 5E
+            </h3>
+            <button
+              type="button"
+              onClick={handleRandomizeStats}
+              className="bg-slate-800 hover:bg-slate-700 text-fantasy-gold font-cinzel font-bold text-xs px-3.5 py-1.5 rounded-xl border border-fantasy-gold/40 flex items-center gap-1.5 transition-all"
+            >
+              <Dice5 size={14} /> Acak Dadu (4d6 Drop Lowest)
             </button>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {[
-              { id: 'strength', label: 'STR (Kekuatan)' },
-              { id: 'dexterity', label: 'DEX (Kelincahan)' },
-              { id: 'constitution', label: 'CON (Daya Tahan)' },
-              { id: 'intelligence', label: 'INT (Kecerdasan)' },
-              { id: 'wisdom', label: 'WIS (Kebijaksanaan)' },
-              { id: 'charisma', label: 'CHA (Kharisma)' },
-            ].map(({ id, label }) => {
-              const finalVal = getFinalScore(id);
-              const bonus = selectedRace.bonuses[id] || 0;
+              { key: 'strength', label: 'Strength (STR)', desc: 'Kekuatan fisik' },
+              { key: 'dexterity', label: 'Dexterity (DEX)', desc: 'Kelincahan & refleks' },
+              { key: 'constitution', label: 'Constitution (CON)', desc: 'Daya tahan tubuh' },
+              { key: 'intelligence', label: 'Intelligence (INT)', desc: 'Pengetahuan sihir' },
+              { key: 'wisdom', label: 'Wisdom (WIS)', desc: 'Kepekaan & persepsi' },
+              { key: 'charisma', label: 'Charisma (CHA)', desc: 'Wibawa & persuasi' },
+            ].map((st) => {
+              const base = scores[st.key];
+              const bonus = selectedRace.bonuses[st.key] || 0;
+              const finalVal = base + bonus;
               return (
-                <div
-                  key={id}
-                  className="bg-slate-900/80 border border-slate-800 rounded-xl p-3 text-center hover:border-slate-700 transition-all flex flex-col justify-between"
-                >
-                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{label.split(' ')[0]}</div>
-                  <input
-                    type="number"
-                    value={scores[id]}
-                    onChange={(e) => handleScoreChange(id, e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg text-center font-bold text-lg text-slate-100 py-1 my-1.5 focus:outline-none focus:border-fantasy-gold"
-                  />
-                  {bonus > 0 && (
-                    <div className="text-[10px] text-emerald-400 font-medium">+{bonus} Ras</div>
-                  )}
-                  <div className={`text-sm font-bold font-cinzel mt-1 ${
-                    calcMod(finalVal) >= 0 ? 'text-fantasy-gold' : 'text-rose-400'
-                  }`}>
-                    Mod: {formatMod(finalVal)}
+                <div key={st.key} className="bg-slate-900/80 p-3.5 rounded-xl border border-slate-800 text-center">
+                  <div className="text-[10px] text-slate-400 font-bold uppercase">{st.label}</div>
+                  <div className="text-xl font-black font-cinzel text-fantasy-gold mt-1">
+                    {finalVal} <small className="text-xs text-amber-300 font-normal">({formatMod(finalVal)})</small>
+                  </div>
+                  <div className="text-[10px] text-slate-500 mt-0.5">
+                    Basis: {base} {bonus > 0 && `+ Ras ${bonus}`}
                   </div>
                 </div>
               );
             })}
           </div>
 
-          {/* Derived Combat Preview */}
-          <div className="grid grid-cols-3 gap-3 bg-slate-950/70 p-4 rounded-xl border border-slate-800/80 text-center">
-            <div>
-              <div className="text-[11px] text-slate-400 font-medium">MAKSIMUM HP</div>
-              <div className="text-2xl font-black font-cinzel text-rose-400">{finalHp}</div>
-              <div className="text-[10px] text-slate-500 mt-0.5">d{selectedClass.hitDie} + MOD CON</div>
-            </div>
-            <div>
-              <div className="text-[11px] text-slate-400 font-medium">ARMOR CLASS (AC)</div>
-              <div className="text-2xl font-black font-cinzel text-sky-400">{finalAc}</div>
-              <div className="text-[10px] text-slate-500 mt-0.5">10 + MOD DEX</div>
-            </div>
-            <div>
-              <div className="text-[11px] text-slate-400 font-medium">KECEPATAN</div>
-              <div className="text-2xl font-black font-cinzel text-emerald-400">{selectedRace.speed} kaki</div>
-              <div className="text-[10px] text-slate-500 mt-0.5">Langkah Normal</div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* STEP 3: BACKGROUND & CONFIRMATION */}
-      {step === 3 && (
-        <div className="space-y-5">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-cinzel font-bold text-fantasy-gold uppercase tracking-wider mb-2">
-                Latar Belakang (Background)
-              </label>
-              <select
-                value={background}
-                onChange={(e) => setBackground(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-fantasy-gold"
-              >
-                {BACKGROUNDS.map((b) => (
-                  <option key={b} value={b} className="bg-slate-900 text-slate-100">{b}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-cinzel font-bold text-fantasy-gold uppercase tracking-wider mb-2">
-                Pilar Moral (Alignment)
-              </label>
-              <select
-                value={alignment}
-                onChange={(e) => setAlignment(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-fantasy-gold"
-              >
-                {ALIGNMENTS.map((a) => (
-                  <option key={a} value={a} className="bg-slate-900 text-slate-100">{a}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
           <div>
-            <label className="block text-xs font-cinzel font-bold text-fantasy-gold uppercase tracking-wider mb-2">
-              Kisah Singkat & Motivasi Karakter
-            </label>
+            <label className="text-xs text-slate-300 font-bold block mb-1.5">Kisah Singkat / Bio Pahlawan (Opsional):</label>
             <textarea
+              rows={2}
               value={bio}
               onChange={(e) => setBio(e.target.value)}
-              placeholder="Ceritakan asal-usul pahlawanmu, sumpah yang dipegang teguh, atau rahasia yang ia bawa..."
-              rows={3}
-              className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-fantasy-gold"
+              placeholder="Ceritakan motivasi atau sumpah yang dipegang pahlawanmu..."
+              className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-slate-100 focus:outline-none focus:border-fantasy-gold leading-relaxed"
             />
           </div>
 
-          <div className="bg-amber-950/20 border border-fantasy-border p-4 rounded-xl">
-            <h5 className="font-cinzel text-fantasy-gold font-bold text-sm mb-1">Ringkasan Konfirmasi Karakter</h5>
-            <div className="text-sm font-semibold text-slate-200">
-              {name || 'Petualang Tanpa Nama'} — Level 1 {selectedRace.name.split(' (')[0]} {selectedClass.name.split(' (')[0]}
-            </div>
-            <div className="text-xs text-slate-400 mt-1">
-              HP: {finalHp} | AC: {finalAc} | STR: {getFinalScore('strength')} | DEX: {getFinalScore('dexterity')} | CON: {getFinalScore('constitution')} | INT: {getFinalScore('intelligence')} | WIS: {getFinalScore('wisdom')} | CHA: {getFinalScore('charisma')}
-            </div>
+          <div className="flex justify-between pt-3 border-t border-slate-800">
+            <button
+              type="button"
+              onClick={() => setStep(2)}
+              className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-cinzel font-bold text-xs px-4 py-2.5 rounded-xl border border-slate-700 flex items-center gap-1.5 transition-all"
+            >
+              <ArrowLeft size={16} /> Kembali
+            </button>
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={loading}
+              className="bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-slate-950 font-cinzel font-bold text-xs uppercase px-8 py-3 rounded-xl shadow-lg flex items-center gap-2 transition-all disabled:opacity-50"
+            >
+              <Check size={18} /> {loading ? 'Menempa Pahlawan...' : 'Selesaikan & Mulai Petualangan'}
+            </button>
           </div>
         </div>
       )}
-
-      {/* Wizard Action Footer */}
-      <div className="flex justify-between items-center mt-8 pt-5 border-t border-slate-800">
-        {step > 1 ? (
-          <button
-            type="button"
-            onClick={() => setStep(step - 1)}
-            className="px-4 py-2 rounded-xl text-slate-400 hover:text-slate-200 text-sm font-medium transition-all"
-          >
-            ← Kembali
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={onCancel}
-            className="px-4 py-2 rounded-xl text-rose-400 hover:text-rose-300 text-sm font-medium transition-all"
-          >
-            Batal
-          </button>
-        )}
-
-        {step < 3 ? (
-          <button
-            type="button"
-            onClick={() => setStep(step + 1)}
-            className="bg-slate-800 hover:bg-slate-700 text-fantasy-gold font-cinzel font-bold text-xs uppercase px-5 py-2.5 rounded-xl border border-fantasy-border flex items-center gap-1.5 transition-all shadow-md"
-          >
-            Lanjut <ChevronRight size={16} />
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={loading}
-            className="bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-cinzel font-bold text-xs uppercase tracking-wider px-6 py-2.5 rounded-xl shadow-gold-glow flex items-center gap-2 transition-all disabled:opacity-50"
-          >
-            {loading ? 'Menyimpan ke Database...' : 'Selesaikan & Tempa Karakter ⚔️'}
-          </button>
-        )}
-      </div>
     </div>
   );
 };

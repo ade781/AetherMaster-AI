@@ -14,27 +14,39 @@ import { StoryChronicleNovelizer } from '../components/chronicle/StoryChronicleN
 import { HallOfFame } from '../components/legacy/HallOfFame';
 import { DmDeveloperConsole } from '../components/console/DmDeveloperConsole';
 import { DiceBox } from '../components/dice/DiceBox';
-import { Shield, Plus, Sparkles, Play, BookOpen, User, Map, Swords, Hammer, Store, FlaskConical, Flame, Compass, Trophy, Scroll, RefreshCw } from 'lucide-react';
+import {
+  Shield, Plus, Sparkles, Play, BookOpen, User, Map, Swords,
+  Hammer, Store, FlaskConical, Flame, Compass, Trophy, Scroll,
+  RefreshCw, Dices, ChevronRight, ArrowLeft
+} from 'lucide-react';
 
 export const DashboardPage = () => {
   const [characters, setCharacters] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeView, setActiveView] = useState('list'); // 'list' | 'create' | 'sheet' | 'stories' | 'play' | 'map' | 'combat' | 'studio' | 'shop' | 'craft' | 'camp' | 'dungeon' | 'chronicle' | 'hall'
   const [selectedCharacter, setSelectedCharacter] = useState(null);
   const [selectedStory, setSelectedStory] = useState(null);
+
+  // Clean Sequential Flow State:
+  // 'onboarding_create' -> 'onboarding_choose_story' -> 'adventure' | 'world'
+  const [appStage, setAppStage] = useState('loading'); // 'onboarding_create' | 'onboarding_choose_story' | 'main'
+  const [mainTab, setMainTab] = useState('adventure'); // 'adventure' | 'sheet' | 'combat' | 'dungeon' | 'shop' | 'craft' | 'camp' | 'map' | 'studio' | 'chronicle' | 'hall'
+  const [showDiceTrayModal, setShowDiceTrayModal] = useState(false);
 
   const fetchCharacters = async () => {
     try {
       const res = await fetch('/api/characters');
       const data = await res.json();
-      if (data.success) {
+      if (data.success && data.data.length > 0) {
         setCharacters(data.data);
-        if (data.data.length > 0 && !selectedCharacter) {
-          setSelectedCharacter(data.data[0]);
-        }
+        setSelectedCharacter(data.data[0]);
+        setAppStage('main');
+      } else {
+        // First time user: Force create character first
+        setAppStage('onboarding_create');
       }
     } catch (err) {
       console.error('Gagal mengambil karakter', err);
+      setAppStage('onboarding_create');
     } finally {
       setLoading(false);
     }
@@ -44,153 +56,146 @@ export const DashboardPage = () => {
     fetchCharacters();
   }, []);
 
+  // STEP 1 COMPLETE: Character Created -> Move to Step 2: Choose Story
   const handleCharacterCreated = (newChar) => {
-    setCharacters(prev => [newChar, ...prev]);
+    setCharacters((prev) => [newChar, ...prev]);
     setSelectedCharacter(newChar);
-    setActiveView('sheet');
+    setAppStage('onboarding_choose_story');
+  };
+
+  // STEP 2 COMPLETE: Story Selected -> Move to Main Adventure Game
+  const handleStorySelected = (story) => {
+    setSelectedStory(story);
+    setAppStage('main');
+    setMainTab('adventure');
   };
 
   const handleCharacterUpdated = (updatedChar) => {
-    setCharacters(prev => prev.map(c => (c.id === updatedChar.id ? updatedChar : c)));
+    setCharacters((prev) => prev.map((c) => (c.id === updatedChar.id ? updatedChar : c)));
     if (selectedCharacter?.id === updatedChar.id) {
       setSelectedCharacter(updatedChar);
     }
   };
 
   const handleDeleteCharacter = async (charId) => {
-    if (!window.confirm('Apakah kamu yakin ingin memusnahkan karakter pahlawan ini?')) return;
+    if (!window.confirm('Apakah Anda yakin ingin menghapus karakter ini?')) return;
     try {
-      await fetch(`/api/characters/${charId}`, {
-        method: 'DELETE',
-      });
-      setCharacters(prev => prev.filter(c => c.id !== charId));
-      if (selectedCharacter?.id === charId) {
+      await fetch(`/api/characters/${charId}`, { method: 'DELETE' });
+      const remaining = characters.filter((c) => c.id !== charId);
+      setCharacters(remaining);
+      if (remaining.length === 0) {
         setSelectedCharacter(null);
+        setAppStage('onboarding_create');
+      } else {
+        setSelectedCharacter(remaining[0]);
       }
-      setActiveView('list');
-    } catch (err) {
-      console.error('Gagal menghapus karakter', err);
-    }
+    } catch (err) {}
   };
 
-  const handleSelectStoryToPlay = (story) => {
-    setSelectedStory(story);
-    // If no character selected, prompt user or auto create default
-    if (!selectedCharacter && characters.length > 0) {
-      setSelectedCharacter(characters[0]);
-    }
-    setActiveView('play');
-  };
+  // Loading State
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-fantasy-gold font-outfit">
+        <Sparkles className="animate-spin mb-4 text-fantasy-gold" size={40} />
+        <h2 className="font-cinzel text-lg font-bold">Mempersiapkan Alam Semesta Aetheria...</h2>
+      </div>
+    );
+  }
 
+  // ONBOARDING STEP 1: Forced Character Creation First
+  if (appStage === 'onboarding_create') {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 font-outfit p-4 sm:p-8 flex flex-col justify-center items-center">
+        <div className="w-full max-w-3xl">
+          <CharacterCreator
+            onCreated={handleCharacterCreated}
+            isFirstTime={true}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // ONBOARDING STEP 2: Forced Story Selection
+  if (appStage === 'onboarding_choose_story') {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 font-outfit p-4 sm:p-8 flex flex-col justify-center items-center">
+        <div className="w-full max-w-4xl space-y-6">
+          <div className="glass-card rounded-2xl p-6 border border-fantasy-border text-center space-y-2">
+            <span className="text-xs text-fantasy-gold font-bold uppercase tracking-widest">
+              LANGKAH 2 DARI 2: TENTUKAN MISI PERDANA
+            </span>
+            <h2 className="font-cinzel text-fantasy-gold text-2xl sm:text-3xl font-black">
+              Pilih Alur Kisah Awal untuk {selectedCharacter?.name}
+            </h2>
+            <p className="text-slate-300 text-xs sm:text-sm max-w-md mx-auto">
+              Setiap petualangan memiliki tantangan, misteri, dan hadiah jarahan yang berbeda.
+            </p>
+          </div>
+
+          <StorySelector
+            selectedCharacter={selectedCharacter}
+            onSelectStory={handleStorySelected}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // MAIN GAME HUB (After Onboarding is Completed)
   return (
     <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100 font-outfit">
-      {/* Top Navbar */}
-      <header className="border-b border-fantasy-border/80 bg-slate-900/90 backdrop-blur-md px-6 py-4 flex flex-wrap justify-between items-center gap-4 sticky top-0 z-40 shadow-xl">
-        <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveView('stories')}>
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center shadow-gold-glow">
-            <Shield className="text-slate-950" size={24} />
+      {/* Clean Top Navigation Bar */}
+      <header className="border-b border-fantasy-border/80 bg-slate-900/90 backdrop-blur-md px-4 sm:px-6 py-3 flex flex-wrap justify-between items-center gap-3 sticky top-0 z-40 shadow-xl">
+        {/* Brand */}
+        <div
+          className="flex items-center gap-2.5 cursor-pointer"
+          onClick={() => setMainTab('adventure')}
+        >
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center shadow-gold-glow">
+            <Shield className="text-slate-950" size={20} />
           </div>
           <div>
-            <h1 className="font-cinzel text-fantasy-gold text-lg sm:text-xl font-black tracking-wider leading-none">
+            <h1 className="font-cinzel text-fantasy-gold text-base sm:text-lg font-black tracking-wider leading-none">
               AETHERMASTER AI
             </h1>
-            <p className="text-[10px] text-slate-400 font-medium tracking-widest uppercase mt-0.5">
-              Virtual Tabletop & AI Dungeon Master D&D 5E
-            </p>
+            <span className="text-[10px] text-slate-400 font-medium tracking-wider uppercase">
+              Virtual Tabletop & AI DM
+            </span>
           </div>
         </div>
 
-        {/* View Toggle Tabs */}
-        <div className="flex flex-wrap items-center gap-2">
+        {/* Primary Feature Tabs */}
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           <button
             type="button"
-            onClick={() => setActiveView('chronicle')}
-            className={`font-cinzel font-bold text-xs px-3 py-1.5 rounded-xl border flex items-center gap-1 transition-all ${
-              activeView === 'chronicle'
+            onClick={() => setMainTab('adventure')}
+            className={`font-cinzel font-bold text-xs px-3 py-1.5 rounded-xl border flex items-center gap-1.5 transition-all ${
+              mainTab === 'adventure'
                 ? 'bg-amber-950/80 text-fantasy-gold border-fantasy-gold shadow-gold-glow'
                 : 'bg-slate-900/80 text-slate-300 border-slate-700/70 hover:border-fantasy-gold/50'
             }`}
           >
-            <Scroll size={13} className="text-amber-400" /> Buku Novel
+            <BookOpen size={13} className="text-fantasy-gold" /> Petualangan AI
           </button>
 
           <button
             type="button"
-            onClick={() => setActiveView('hall')}
-            className={`font-cinzel font-bold text-xs px-3 py-1.5 rounded-xl border flex items-center gap-1 transition-all ${
-              activeView === 'hall'
+            onClick={() => setMainTab('sheet')}
+            className={`font-cinzel font-bold text-xs px-3 py-1.5 rounded-xl border flex items-center gap-1.5 transition-all ${
+              mainTab === 'sheet'
                 ? 'bg-amber-950/80 text-fantasy-gold border-fantasy-gold shadow-gold-glow'
                 : 'bg-slate-900/80 text-slate-300 border-slate-700/70 hover:border-fantasy-gold/50'
             }`}
           >
-            <Trophy size={13} className="text-amber-400" /> Aula Pahlawan
+            <User size={13} className="text-fantasy-gold" /> Lembar Pahlawan
           </button>
 
           <button
             type="button"
-            onClick={() => setActiveView('dungeon')}
-            className={`font-cinzel font-bold text-xs px-3 py-1.5 rounded-xl border flex items-center gap-1 transition-all ${
-              activeView === 'dungeon'
-                ? 'bg-amber-950/80 text-fantasy-gold border-fantasy-gold shadow-gold-glow'
-                : 'bg-slate-900/80 text-slate-300 border-slate-700/70 hover:border-fantasy-gold/50'
-            }`}
-          >
-            <Compass size={13} className="text-amber-400" /> Labirin Acak
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveView('camp')}
-            className={`font-cinzel font-bold text-xs px-3 py-1.5 rounded-xl border flex items-center gap-1 transition-all ${
-              activeView === 'camp'
-                ? 'bg-amber-950/80 text-fantasy-gold border-fantasy-gold shadow-gold-glow'
-                : 'bg-slate-900/80 text-slate-300 border-slate-700/70 hover:border-fantasy-gold/50'
-            }`}
-          >
-            <Flame size={13} className="text-amber-400" /> Perkemahan
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveView('craft')}
-            className={`font-cinzel font-bold text-xs px-3 py-1.5 rounded-xl border flex items-center gap-1 transition-all ${
-              activeView === 'craft'
-                ? 'bg-purple-950/80 text-purple-300 border-purple-500 shadow-arcane-glow'
-                : 'bg-slate-900/80 text-slate-300 border-slate-700/70 hover:border-purple-500/50'
-            }`}
-          >
-            <FlaskConical size={13} className="text-purple-400" /> Alkimia
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveView('shop')}
-            className={`font-cinzel font-bold text-xs px-3 py-1.5 rounded-xl border flex items-center gap-1 transition-all ${
-              activeView === 'shop'
-                ? 'bg-amber-950/80 text-fantasy-gold border-fantasy-gold shadow-gold-glow'
-                : 'bg-slate-900/80 text-slate-300 border-slate-700/70 hover:border-fantasy-gold/50'
-            }`}
-          >
-            <Store size={13} className="text-fantasy-gold" /> Pasar Toko
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveView('studio')}
-            className={`font-cinzel font-bold text-xs px-3 py-1.5 rounded-xl border flex items-center gap-1 transition-all ${
-              activeView === 'studio'
-                ? 'bg-purple-950/80 text-purple-300 border-purple-500 shadow-arcane-glow'
-                : 'bg-slate-900/80 text-slate-300 border-slate-700/70 hover:border-purple-500/50'
-            }`}
-          >
-            <Hammer size={13} className="text-purple-400" /> Creator Studio
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveView('combat')}
-            className={`font-cinzel font-bold text-xs px-3 py-1.5 rounded-xl border flex items-center gap-1 transition-all ${
-              activeView === 'combat'
+            onClick={() => setMainTab('combat')}
+            className={`font-cinzel font-bold text-xs px-3 py-1.5 rounded-xl border flex items-center gap-1.5 transition-all ${
+              mainTab === 'combat'
                 ? 'bg-rose-950/80 text-rose-300 border-rose-500 shadow-crimson-glow'
                 : 'bg-slate-900/80 text-slate-300 border-slate-700/70 hover:border-rose-500/50'
             }`}
@@ -200,9 +205,57 @@ export const DashboardPage = () => {
 
           <button
             type="button"
-            onClick={() => setActiveView('map')}
-            className={`font-cinzel font-bold text-xs px-3 py-1.5 rounded-xl border flex items-center gap-1 transition-all ${
-              activeView === 'map'
+            onClick={() => setMainTab('dungeon')}
+            className={`font-cinzel font-bold text-xs px-3 py-1.5 rounded-xl border flex items-center gap-1.5 transition-all ${
+              mainTab === 'dungeon'
+                ? 'bg-amber-950/80 text-fantasy-gold border-fantasy-gold shadow-gold-glow'
+                : 'bg-slate-900/80 text-slate-300 border-slate-700/70 hover:border-fantasy-gold/50'
+            }`}
+          >
+            <Compass size={13} className="text-amber-400" /> Labirin Acak
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setMainTab('camp')}
+            className={`font-cinzel font-bold text-xs px-3 py-1.5 rounded-xl border flex items-center gap-1.5 transition-all ${
+              mainTab === 'camp'
+                ? 'bg-amber-950/80 text-fantasy-gold border-fantasy-gold shadow-gold-glow'
+                : 'bg-slate-900/80 text-slate-300 border-slate-700/70 hover:border-fantasy-gold/50'
+            }`}
+          >
+            <Flame size={13} className="text-amber-400" /> Perkemahan
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setMainTab('shop')}
+            className={`font-cinzel font-bold text-xs px-3 py-1.5 rounded-xl border flex items-center gap-1.5 transition-all ${
+              mainTab === 'shop'
+                ? 'bg-amber-950/80 text-fantasy-gold border-fantasy-gold shadow-gold-glow'
+                : 'bg-slate-900/80 text-slate-300 border-slate-700/70 hover:border-fantasy-gold/50'
+            }`}
+          >
+            <Store size={13} className="text-fantasy-gold" /> Toko Pasar
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setMainTab('craft')}
+            className={`font-cinzel font-bold text-xs px-3 py-1.5 rounded-xl border flex items-center gap-1.5 transition-all ${
+              mainTab === 'craft'
+                ? 'bg-purple-950/80 text-purple-300 border-purple-500 shadow-arcane-glow'
+                : 'bg-slate-900/80 text-slate-300 border-slate-700/70 hover:border-purple-500/50'
+            }`}
+          >
+            <FlaskConical size={13} className="text-purple-400" /> Alkimia
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setMainTab('map')}
+            className={`font-cinzel font-bold text-xs px-3 py-1.5 rounded-xl border flex items-center gap-1.5 transition-all ${
+              mainTab === 'map'
                 ? 'bg-amber-950/80 text-fantasy-gold border-fantasy-gold shadow-gold-glow'
                 : 'bg-slate-900/80 text-slate-300 border-slate-700/70 hover:border-fantasy-gold/50'
             }`}
@@ -212,273 +265,184 @@ export const DashboardPage = () => {
 
           <button
             type="button"
-            onClick={() => setActiveView('stories')}
-            className={`font-cinzel font-bold text-xs px-3 py-1.5 rounded-xl border flex items-center gap-1 transition-all ${
-              activeView === 'stories' || activeView === 'play'
+            onClick={() => setMainTab('chronicle')}
+            className={`font-cinzel font-bold text-xs px-3 py-1.5 rounded-xl border flex items-center gap-1.5 transition-all ${
+              mainTab === 'chronicle'
                 ? 'bg-amber-950/80 text-fantasy-gold border-fantasy-gold shadow-gold-glow'
                 : 'bg-slate-900/80 text-slate-300 border-slate-700/70 hover:border-fantasy-gold/50'
             }`}
           >
-            <BookOpen size={13} className="text-fantasy-gold" /> Modul Cerita
+            <Scroll size={13} className="text-amber-400" /> Novel
           </button>
 
           <button
             type="button"
-            onClick={() => setActiveView('list')}
-            className={`font-cinzel font-bold text-xs px-3 py-1.5 rounded-xl border flex items-center gap-1 transition-all ${
-              activeView === 'list' || activeView === 'sheet'
+            onClick={() => setMainTab('hall')}
+            className={`font-cinzel font-bold text-xs px-3 py-1.5 rounded-xl border flex items-center gap-1.5 transition-all ${
+              mainTab === 'hall'
                 ? 'bg-amber-950/80 text-fantasy-gold border-fantasy-gold shadow-gold-glow'
                 : 'bg-slate-900/80 text-slate-300 border-slate-700/70 hover:border-fantasy-gold/50'
             }`}
           >
-            <User size={13} className="text-fantasy-gold" /> Pahlawan
+            <Trophy size={13} className="text-amber-400" /> Aula
           </button>
 
           <button
             type="button"
-            onClick={() => setActiveView('create')}
-            className="bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-cinzel font-bold text-xs uppercase px-3 py-1.5 rounded-xl shadow-gold-glow flex items-center gap-1 transition-all"
+            onClick={() => setMainTab('studio')}
+            className={`font-cinzel font-bold text-xs px-3 py-1.5 rounded-xl border flex items-center gap-1.5 transition-all ${
+              mainTab === 'studio'
+                ? 'bg-purple-950/80 text-purple-300 border-purple-500 shadow-arcane-glow'
+                : 'bg-slate-900/80 text-slate-300 border-slate-700/70 hover:border-purple-500/50'
+            }`}
           >
-            <Plus size={13} /> Baru
+            <Hammer size={13} className="text-purple-400" /> Studio
           </button>
+        </div>
+
+        {/* Active Hero Pill & 3D Dice Tray Trigger Button */}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowDiceTrayModal(true)}
+            className="bg-slate-800 hover:bg-slate-700 text-fantasy-gold border border-fantasy-gold/40 px-3 py-1.5 rounded-xl text-xs font-cinzel font-bold flex items-center gap-1.5 transition-all shadow-sm"
+            title="Buka Kotak Dadu 3D Fisik"
+          >
+            <Dices size={14} /> Kotak Dadu 3D
+          </button>
+
+          {selectedCharacter && (
+            <div
+              onClick={() => setMainTab('sheet')}
+              className="flex items-center gap-2 bg-slate-900/90 border border-fantasy-gold/40 px-2.5 py-1 rounded-xl cursor-pointer hover:border-fantasy-gold transition-all"
+            >
+              <img
+                src={selectedCharacter.avatarUrl || `https://api.dicebear.com/7.x/adventurer/svg?seed=${selectedCharacter.name}`}
+                alt={selectedCharacter.name}
+                className="w-7 h-7 rounded-lg border border-fantasy-gold object-cover"
+              />
+              <div className="text-left hidden sm:block">
+                <div className="text-xs font-bold text-slate-200 line-clamp-1">{selectedCharacter.name}</div>
+                <div className="text-[10px] text-rose-400 font-semibold leading-none">
+                  {selectedCharacter.currentHp}/{selectedCharacter.maxHp} HP
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </header>
 
-      {/* Main Workspace Layout */}
+      {/* Main Game Screen Canvas */}
       <main className="flex-1 p-4 sm:p-6 max-w-7xl mx-auto w-full">
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px] gap-6 items-start">
-          {/* Main Dynamic View Area */}
-          <div>
-            {activeView === 'chronicle' && (
-              <StoryChronicleNovelizer
-                character={selectedCharacter || { name: 'Petualang Pengembara', race: 'Manusia', characterClass: 'Pendekar', level: 1 }}
-                story={selectedStory}
-              />
-            )}
+        {mainTab === 'adventure' && (
+          selectedStory ? (
+            <AdventurePlayground
+              character={selectedCharacter}
+              story={selectedStory}
+              onExit={() => setAppStage('onboarding_choose_story')}
+              onUpdateCharacter={handleCharacterUpdated}
+            />
+          ) : (
+            <StorySelector
+              selectedCharacter={selectedCharacter}
+              onSelectStory={handleStorySelected}
+            />
+          )
+        )}
 
-            {activeView === 'hall' && (
-              <HallOfFame characters={characters} />
-            )}
-            {activeView === 'dungeon' && (
-              <RoguelikeDungeonCrawler
-                character={selectedCharacter || { id: 'temp_char', name: 'Petualang Pengembara', currentHp: 15, maxHp: 15, gold: 20 }}
-                onUpdateCharacter={handleCharacterUpdated}
-              />
-            )}
+        {mainTab === 'sheet' && selectedCharacter && (
+          <CharacterSheet
+            character={selectedCharacter}
+            onBack={() => setMainTab('adventure')}
+            onUpdate={handleCharacterUpdated}
+            onDelete={handleDeleteCharacter}
+          />
+        )}
 
-            {activeView === 'camp' && (
-              <CampfireRest
-                character={selectedCharacter || { id: 'temp_char', name: 'Petualang Pengembara', currentHp: 10, maxHp: 15 }}
-                onUpdateCharacter={handleCharacterUpdated}
-              />
-            )}
+        {mainTab === 'combat' && (
+          <BattleGridMap
+            character={selectedCharacter}
+            onExitCombat={() => setMainTab('adventure')}
+            onUpdateCharacter={handleCharacterUpdated}
+          />
+        )}
 
-            {activeView === 'craft' && (
-              <CraftingStation
-                character={selectedCharacter || { id: 'temp_char', name: 'Petualang Pengembara', inventory: [] }}
-                onUpdateCharacter={handleCharacterUpdated}
-              />
-            )}
+        {mainTab === 'dungeon' && (
+          <RoguelikeDungeonCrawler
+            character={selectedCharacter}
+            onUpdateCharacter={handleCharacterUpdated}
+          />
+        )}
 
-            {activeView === 'shop' && (
-              <MerchantShop
-                character={selectedCharacter || { id: 'temp_char', name: 'Petualang Pengembara', gold: 50, inventory: [] }}
-                onUpdateCharacter={handleCharacterUpdated}
-              />
-            )}
+        {mainTab === 'camp' && (
+          <CampfireRest
+            character={selectedCharacter}
+            onUpdateCharacter={handleCharacterUpdated}
+          />
+        )}
 
-            {activeView === 'studio' && (
-              <CampaignStudio />
-            )}
+        {mainTab === 'shop' && (
+          <MerchantShop
+            character={selectedCharacter}
+            onUpdateCharacter={handleCharacterUpdated}
+          />
+        )}
 
-            {activeView === 'combat' && (
-              <BattleGridMap
-                character={selectedCharacter || { id: 'temp_char', name: 'Petualang Pengembara', currentHp: 15, maxHp: 15, armorClass: 13, strength: 14, proficiencyBonus: 2, gold: 20, experience: 0 }}
-                onExitCombat={() => setActiveView('stories')}
-                onUpdateCharacter={handleCharacterUpdated}
-              />
-            )}
+        {mainTab === 'craft' && (
+          <CraftingStation
+            character={selectedCharacter}
+            onUpdateCharacter={handleCharacterUpdated}
+          />
+        )}
 
-            {activeView === 'map' && (
-              <WorldMapExplorer
-                onTravelLocation={(loc) => {
-                  setActiveView('stories');
-                }}
-              />
-            )}
+        {mainTab === 'map' && (
+          <WorldMapExplorer
+            onTravelLocation={(loc) => {
+              setMainTab('adventure');
+            }}
+          />
+        )}
 
-            {activeView === 'stories' && (
-              <StorySelector
-                selectedCharacter={selectedCharacter}
-                onSelectStory={handleSelectStoryToPlay}
-              />
-            )}
+        {mainTab === 'chronicle' && (
+          <StoryChronicleNovelizer
+            character={selectedCharacter}
+            story={selectedStory}
+          />
+        )}
 
-            {activeView === 'play' && selectedStory && (
-              <AdventurePlayground
-                character={selectedCharacter || { id: 'temp_char', name: 'Petualang Pengembara', currentHp: 12, maxHp: 12, armorClass: 12, gold: 15 }}
-                story={selectedStory}
-                onExit={() => setActiveView('stories')}
-                onUpdateCharacter={handleCharacterUpdated}
-              />
-            )}
+        {mainTab === 'hall' && (
+          <HallOfFame characters={characters} />
+        )}
 
-            {activeView === 'create' && (
-              <CharacterCreator
-                onCreated={handleCharacterCreated}
-                onCancel={() => setActiveView('list')}
-              />
-            )}
-
-            {activeView === 'sheet' && selectedCharacter && (
-              <CharacterSheet
-                character={selectedCharacter}
-                onBack={() => setActiveView('list')}
-                onUpdate={handleCharacterUpdated}
-                onDelete={handleDeleteCharacter}
-              />
-            )}
-
-            {activeView === 'list' && (
-              <div className="space-y-6">
-                {/* Banner Header */}
-                <div className="flex flex-wrap justify-between items-center pb-4 border-b border-slate-800 gap-4">
-                  <div>
-                    <h2 className="font-cinzel text-fantasy-gold text-2xl font-bold tracking-wide">
-                      Balairung Pahlawan (Adventurer's Hall)
-                    </h2>
-                    <p className="text-slate-400 text-xs sm:text-sm mt-0.5">
-                      Pilih karakter D&D 5E untuk melihat lembar status hidup atau mulai bertualang dalam cerita
-                    </p>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setActiveView('stories')}
-                      className="bg-amber-950/60 hover:bg-amber-900/80 text-fantasy-gold font-cinzel font-bold text-xs px-4 py-2 rounded-xl border border-fantasy-border flex items-center gap-1.5 transition-all"
-                    >
-                      <BookOpen size={14} /> Pilih Cerita Petualangan
-                    </button>
-                  </div>
-                </div>
-
-                {loading ? (
-                  <div className="text-center py-16 text-fantasy-gold">
-                    <Sparkles className="animate-spin mx-auto mb-3" size={32} />
-                    <div className="font-cinzel text-sm font-semibold">Memanggil Data Pahlawan dari Arsip MySQL...</div>
-                  </div>
-                ) : characters.length === 0 ? (
-                  <div className="glass-card rounded-2xl p-10 sm:p-14 text-center border border-fantasy-border/60">
-                    <div className="text-5xl mb-4">⚔️</div>
-                    <h3 className="font-cinzel text-fantasy-gold text-xl font-bold mb-2">Belum Ada Karakter Pahlawan</h3>
-                    <p className="text-slate-400 max-w-md mx-auto text-xs sm:text-sm mb-6 leading-relaxed">
-                      Daftar partymu masih kosong. Tempa karakter D&D 5E pertamamu sekarang dan mulailah petualangan epik!
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => setActiveView('create')}
-                      className="bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-cinzel font-bold text-xs uppercase px-6 py-3 rounded-xl shadow-gold-glow inline-flex items-center gap-2"
-                    >
-                      <Plus size={16} /> Tempa Pahlawan Pertama
-                    </button>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
-                    {characters.map((char) => (
-                      <div
-                        key={char.id}
-                        onClick={() => {
-                          setSelectedCharacter(char);
-                          setActiveView('sheet');
-                        }}
-                        className="glass-card rounded-2xl p-5 border border-fantasy-border/60 hover:border-fantasy-gold cursor-pointer transition-all flex flex-col justify-between group shadow-lg"
-                      >
-                        <div className="flex gap-3.5 items-center mb-3">
-                          <img
-                            src={char.avatarUrl || `https://api.dicebear.com/7.x/adventurer/svg?seed=${char.name}`}
-                            alt={char.name}
-                            className="w-14 h-14 rounded-xl border border-fantasy-gold bg-slate-900 group-hover:scale-105 transition-transform"
-                          />
-                          <div>
-                            <h3 className="font-cinzel text-fantasy-gold text-base font-bold group-hover:text-amber-300 transition-colors">
-                              {char.name}
-                            </h3>
-                            <div className="text-xs text-slate-400">
-                              Tingkat {char.level} • {char.race} {char.characterClass}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Quick Stats Grid */}
-                        <div className="grid grid-cols-3 gap-2 bg-slate-900/60 p-2.5 rounded-xl text-center mb-4 border border-slate-800/80">
-                          <div>
-                            <div className="text-[10px] text-slate-500 font-bold">HP</div>
-                            <div className="text-sm font-black font-cinzel text-rose-400">{char.currentHp}/{char.maxHp}</div>
-                          </div>
-                          <div>
-                            <div className="text-[10px] text-slate-500 font-bold">ARMOR</div>
-                            <div className="text-sm font-black font-cinzel text-sky-400">{char.armorClass}</div>
-                          </div>
-                          <div>
-                            <div className="text-[10px] text-slate-500 font-bold">LANGKAH</div>
-                            <div className="text-sm font-black font-cinzel text-emerald-400">{char.speed}ft</div>
-                          </div>
-                        </div>
-
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedCharacter(char);
-                              setActiveView('sheet');
-                            }}
-                            className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold py-2 rounded-xl border border-slate-700 transition-all text-center"
-                          >
-                            Buka Lembar
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedCharacter(char);
-                              setActiveView('stories');
-                            }}
-                            className="bg-amber-600/30 hover:bg-amber-600/50 text-fantasy-gold p-2 rounded-xl border border-fantasy-gold/40 transition-all"
-                            title="Mulai Petualangan dengan Karakter Ini"
-                          >
-                            <Play size={14} />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Persistent Sidebar: 3D Physics Dice Box */}
-          <aside className="lg:sticky lg:top-20 space-y-4">
-            <DiceBox />
-
-            {/* Quick Helper Widget */}
-            <div className="glass-card rounded-xl p-4 border border-fantasy-border/50 text-xs space-y-2">
-              <div className="font-cinzel text-fantasy-gold font-bold flex items-center gap-1.5">
-                <Sparkles size={14} /> Panduan Cepat Melempar
-              </div>
-              <p className="text-slate-400 text-[11px] leading-relaxed">
-                Gunakan dadu **D20** untuk *Ability Check*, *Attack Roll*, dan *Saving Throw*. Dadu **D4, D6, D8, D10, D12** untuk damage senjata & sihir.
-              </p>
-            </div>
-          </aside>
-        </div>
+        {mainTab === 'studio' && (
+          <CampaignStudio />
+        )}
       </main>
 
-      {/* Floating DM Developer & Macro Console */}
+      {/* Floating 3D Dice Box Modal (Hanya muncul saat dibuka / dibutuhkan, tidak memenuhi layar) */}
+      {showDiceTrayModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="glass-card rounded-2xl max-w-lg w-full p-6 border-2 border-fantasy-gold shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
+            <div className="flex justify-between items-center pb-2 border-b border-slate-800">
+              <h3 className="font-cinzel text-fantasy-gold font-bold text-sm flex items-center gap-2">
+                <Dices size={16} /> Kotak Dadu Fisik 3D Three.js
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowDiceTrayModal(false)}
+                className="text-slate-400 hover:text-slate-200 text-xs px-2 py-1 rounded bg-slate-900 border border-slate-800"
+              >
+                Tutup ✕
+              </button>
+            </div>
+            <DiceBox />
+          </div>
+        </div>
+      )}
+
+      {/* Floating Developer Macro Console */}
       <DmDeveloperConsole
-        character={selectedCharacter || { id: 'temp_char', name: 'Petualang Pengembara', currentHp: 15, maxHp: 15, gold: 20 }}
+        character={selectedCharacter}
         onUpdateCharacter={handleCharacterUpdated}
       />
     </div>
