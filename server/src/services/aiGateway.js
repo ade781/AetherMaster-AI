@@ -1,5 +1,6 @@
-// Free LLM Adapter (Google Gemini 1.5 Flash & Groq Llama 3) via Native Fetch
-// Equipped with intelligent offline fallback DM simulation (Ponytail principle)
+// Modern Gemini AI Gateway powered by @google/genai SDK (Interactions API)
+// Features gemini-3.8-flash with multi-model resilience and zero-crash offline simulation fallback
+const { GoogleGenAI } = require('@google/genai');
 
 const SYSTEM_PROMPT = `Kamu adalah "AetherMaster AI", seorang Dungeon Master (DM) profesional dan epik untuk tabletop RPG D&D 5th Edition.
 Tugasmu:
@@ -22,13 +23,30 @@ Tugasmu:
   ]
 }`;
 
-exports.generateAdventureResponse = async ({ character, story, history, lastAction, rollResult, apiKey }) => {
-  const activeKey = apiKey && apiKey.trim() !== '' ? apiKey : process.env.GEMINI_API_KEY;
+// Candidate models for maximum reliability
+const CANDIDATE_MODELS = [
+  process.env.GEMINI_MODEL || 'gemini-3.8-flash',
+  'gemini-3.8-flash',
+  'gemini-3.5-flash',
+  'gemini-2.5-flash',
+];
 
-  // 1. If Google Gemini API Key is available, call Gemini 3.6 Flash with 8s Timeout
+// Helper to extract JSON from model output
+function cleanAndParseJSON(rawText) {
+  if (!rawText) return null;
+  let text = rawText.trim();
+  // Remove markdown code fences if model enclosed JSON in ```json ... ```
+  if (text.startsWith('```')) {
+    text = text.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim();
+  }
+  return JSON.parse(text);
+}
+
+exports.generateAdventureResponse = async ({ character, story, history, lastAction, rollResult, apiKey }) => {
+  const activeKey = (apiKey && apiKey.trim() !== '') ? apiKey : process.env.GEMINI_API_KEY;
+
   if (activeKey && activeKey.trim() !== '') {
-    try {
-      const prompt = `Karakter Pemain: ${character.name} (Ras: ${character.race}, Kelas: ${character.characterClass}, Level: ${character.level}, HP: ${character.currentHp}/${character.maxHp}, AC: ${character.armorClass}).
+    const prompt = `Karakter Pemain: ${character.name} (Ras: ${character.race}, Kelas: ${character.characterClass}, Level: ${character.level}, HP: ${character.currentHp}/${character.maxHp}, AC: ${character.armorClass}).
 Modul Cerita: ${story?.title || 'Petualangan Aetheria'} - ${story?.description || 'Eksplorasi alam fantasi'}
 Riwayat Singkat: ${JSON.stringify((history || []).slice(-4))}
 Aksi Terakhir Pemain: "${lastAction}"
@@ -36,41 +54,34 @@ Hasil Lemparan Dadu Terakhir: ${rollResult ? JSON.stringify(rollResult) : 'Tidak
 
 Beri respon narasi lanjutan dalam format JSON yang ditentukan.`;
 
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 detik timeout
+    const ai = new GoogleGenAI({ apiKey: activeKey });
+    const uniqueModels = [...new Set(CANDIDATE_MODELS)];
 
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${activeKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          signal: controller.signal,
-          body: JSON.stringify({
-            contents: [
-              { role: 'user', parts: [{ text: SYSTEM_PROMPT + '\n\n' + prompt }] }
-            ],
-            generationConfig: {
-              responseMimeType: 'application/json',
-              temperature: 0.7,
-            }
-          }),
-        }
-      );
-      clearTimeout(timeoutId);
+    // Try candidate models in order of preference
+    for (const model of uniqueModels) {
+      try {
+        const interaction = await ai.interactions.create({
+          model,
+          input: SYSTEM_PROMPT + '\n\n' + prompt,
+          response_format: {
+            type: 'text',
+            mime_type: 'application/json',
+          },
+        });
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
-          const parsed = JSON.parse(data.candidates[0].content.parts[0].text);
-          return parsed;
+        if (interaction && interaction.output_text) {
+          const parsed = cleanAndParseJSON(interaction.output_text);
+          if (parsed && parsed.narrative) {
+            return parsed;
+          }
         }
+      } catch (err) {
+        console.warn(`[AI Gateway] Model ${model} encountered an issue (${err.message}). Trying fallback...`);
       }
-    } catch (err) {
-      console.warn('[AI Gateway] Gemini API timeout or error, falling back to built-in DM simulator:', err.message);
     }
   }
 
-  // 2. Intelligent Built-in D&D 5E Offline Narrator (Guaranteed No Error Fallback)
+  // Fallback: Intelligent Built-in D&D 5E Offline Narrator (Guaranteed No Error)
   return simulateOfflineDM({ character, story, lastAction, rollResult });
 };
 

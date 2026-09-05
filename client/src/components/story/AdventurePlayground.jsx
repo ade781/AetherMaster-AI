@@ -431,13 +431,13 @@ export const AdventurePlayground = ({ character, story, onExit, onUpdateCharacte
               <Key size={18} /> Pengaturan LLM AI Gateway
             </h3>
             <p className="text-xs text-slate-300 leading-relaxed">
-              Anda dapat memasukkan <strong>Google Gemini API Key gratis</strong> untuk mengaktifkan kecerdasan Gemini 1.5 Flash, atau kosongkan untuk menggunakan simulator DM bawaan offline kami.
+              Anda dapat memasukkan <strong>Google Gemini API Key</strong> untuk mengaktifkan kecerdasan <strong>Gemini 3.8 Flash (Interactions API)</strong>, atau kosongkan untuk menggunakan konfigurasi server / simulator DM bawaan.
             </p>
             <input
               type="password"
               defaultValue={apiKey}
               id="apiKeyInput"
-              placeholder="Masukkan AIzaSy..."
+              placeholder="Masukkan API Key (AQ... atau AIzaSy...)"
               className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-slate-100 focus:outline-none focus:border-fantasy-gold"
             />
             <div className="flex justify-end gap-2 pt-2">
