@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Store, Coins, ShoppingBag, ArrowRightLeft, Sparkles, MessageSquare } from 'lucide-react';
+import { Store, Coins, ShoppingBag, Sparkles } from 'lucide-react';
 import { audioEngine } from '../../services/audioEngine';
 
 const MERCHANT_ITEMS = [
@@ -14,8 +14,8 @@ const MERCHANT_ITEMS = [
 ];
 
 export const MerchantShop = ({ character, onUpdateCharacter }) => {
-  const [playerGold, setPlayerGold] = useState(character.gold || 30);
-  const [playerInventory, setPlayerInventory] = useState(character.inventory || []);
+  const playerGold = character.gold || 0;
+  const playerInventory = character.inventory || [];
   const [merchantDialogue, setMerchantDialogue] = useState(
     'Selamat datang, pengembara gagah! Toko kami menyediakan senjata teruji dan ramuan berkhasiat.'
   );
@@ -33,11 +33,8 @@ export const MerchantShop = ({ character, onUpdateCharacter }) => {
     const updatedGold = playerGold - finalPrice;
     const updatedInv = [...playerInventory, { ...item, id: `${item.id}_${Date.now()}` }];
 
-    setPlayerGold(updatedGold);
-    setPlayerInventory(updatedInv);
     audioEngine.playCoinDrop();
     setMerchantDialogue(`Terima kasih! Semoga ${item.name} melindungimu di dalam dungeon.`);
-
     syncCharacterData(updatedGold, updatedInv);
   };
 
@@ -47,11 +44,8 @@ export const MerchantShop = ({ character, onUpdateCharacter }) => {
     const updatedGold = playerGold + sellValue;
     const updatedInv = playerInventory.filter((_, i) => i !== index);
 
-    setPlayerGold(updatedGold);
-    setPlayerInventory(updatedInv);
     audioEngine.playCoinDrop();
     setMerchantDialogue(`Barang bagus! Aku membelinya seharga ${sellValue} koin emas.`);
-
     syncCharacterData(updatedGold, updatedInv);
   };
 
@@ -81,10 +75,10 @@ export const MerchantShop = ({ character, onUpdateCharacter }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ gold, inventory }),
       });
-      if (onUpdateCharacter) {
-        onUpdateCharacter({ ...character, gold, inventory });
-      }
-    } catch (e) {}
+      onUpdateCharacter?.({ ...character, gold, inventory });
+    } catch (e) {
+      console.error('Gagal sinkron data karakter:', e);
+    }
   };
 
   return (

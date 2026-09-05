@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BookOpen, Download, Printer, Sparkles, Feather, Scroll } from 'lucide-react';
+import { BookOpen, Download, Printer, Feather } from 'lucide-react';
 import { audioEngine } from '../../services/audioEngine';
 
 export const StoryChronicleNovelizer = ({ character, story }) => {

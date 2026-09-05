@@ -1,15 +1,12 @@
 import React, { useState } from 'react';
 import { PRESET_STORIES } from '../../data/stories';
-import { BookOpen, Sparkles, Compass, Swords, Shield, ChevronRight, Play, ArrowLeft } from 'lucide-react';
+import { BookOpen, Sparkles, Compass, Play, ArrowLeft } from 'lucide-react';
 
 export const StorySelector = ({ onSelectStory, selectedCharacter }) => {
   const [selectedStory, setSelectedStory] = useState(null);
-  const [activeTab, setActiveTab] = useState('browse'); // 'browse' | 'preview'
 
   const handleStartAdventure = (story) => {
-    if (onSelectStory) {
-      onSelectStory(story);
-    }
+    onSelectStory?.(story);
   };
 
   return (

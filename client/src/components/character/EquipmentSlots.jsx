@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Shield, Sparkles, Sword, Package, ArrowUpRight, Flame, Heart, Zap, Sparkle } from 'lucide-react';
+import React from 'react';
+import { Shield } from 'lucide-react';
 
 export const EquipmentSlots = ({ character, onEquipToggle }) => {
   const equipment = character.equipment || {};

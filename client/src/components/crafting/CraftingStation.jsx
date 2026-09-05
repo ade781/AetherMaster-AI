@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, Hammer, FlaskConical, Plus, Check } from 'lucide-react';
+import { Hammer } from 'lucide-react';
 import { audioEngine } from '../../services/audioEngine';
 
 const CRAFT_RECIPES = [
@@ -33,7 +33,7 @@ const CRAFT_RECIPES = [
 ];
 
 export const CraftingStation = ({ character, onUpdateCharacter }) => {
-  const [inventory, setInventory] = useState(character.inventory || []);
+  const inventory = character.inventory || [];
   const [craftMessage, setCraftMessage] = useState('');
 
   // Check if player has all required materials
@@ -50,7 +50,7 @@ export const CraftingStation = ({ character, onUpdateCharacter }) => {
     }
 
     // Remove 1 unit of each required material from inventory
-    let updatedInv = [...inventory];
+    const updatedInv = [...inventory];
     recipe.materials.forEach((matId) => {
       const idx = updatedInv.findIndex((item) => item.id.includes(matId));
       if (idx >= 0) {
@@ -62,7 +62,6 @@ export const CraftingStation = ({ character, onUpdateCharacter }) => {
     const newItem = { ...recipe.result, id: `${recipe.result.id}_${Date.now()}` };
     updatedInv.push(newItem);
 
-    setInventory(updatedInv);
     audioEngine.playSpellCast();
     setCraftMessage(`Berhasil meracik: ${recipe.name}! Item telah dimasukkan ke dalam tas.`);
     setTimeout(() => setCraftMessage(''), 4000);
@@ -73,10 +72,10 @@ export const CraftingStation = ({ character, onUpdateCharacter }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ inventory: updatedInv }),
       });
-      if (onUpdateCharacter) {
-        onUpdateCharacter({ ...character, inventory: updatedInv });
-      }
-    } catch (e) {}
+      onUpdateCharacter?.({ ...character, inventory: updatedInv });
+    } catch (e) {
+      console.error('Gagal menyimpan hasil crafting:', e);
+    }
   };
 
   return (

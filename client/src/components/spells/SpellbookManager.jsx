@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Wand2, Zap, Flame, Shield } from 'lucide-react';
+import { Sparkles, Wand2 } from 'lucide-react';
 
 export const SpellbookManager = ({ spells = [], spellSlots = {}, onCastSpell }) => {
   const level1 = spellSlots.level1 || { max: 2, current: 2 };

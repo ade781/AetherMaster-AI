@@ -3,7 +3,7 @@ import { EquipmentSlots } from './EquipmentSlots';
 import { InventoryManager } from '../inventory/InventoryManager';
 import { SpellbookManager } from '../spells/SpellbookManager';
 import { ConditionTracker } from './ConditionTracker';
-import { Shield, Heart, Zap, Sparkles, Sword, Award, Trash2, ArrowLeft, Layers, BookOpen, Package } from 'lucide-react';
+import { Shield, Heart, Zap, Sparkles, Sword, Award, Trash2, ArrowLeft, BookOpen, Package } from 'lucide-react';
 
 export const CharacterSheet = ({ character, onBack, onUpdate, onDelete, onQuickRoll }) => {
   const [currentHp, setCurrentHp] = useState(character.currentHp);

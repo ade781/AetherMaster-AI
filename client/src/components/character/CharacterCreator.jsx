@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Shield, Sparkles, ChevronRight, Check, Dice5, User, Swords, Heart, Zap, ArrowLeft } from 'lucide-react';
+import { ChevronRight, Check, Dice5, User, Swords, Zap, ArrowLeft } from 'lucide-react';
 import { audioEngine } from '../../services/audioEngine';
 
 const RACES = [

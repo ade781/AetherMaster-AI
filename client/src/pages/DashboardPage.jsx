@@ -15,9 +15,8 @@ import { HallOfFame } from '../components/legacy/HallOfFame';
 import { DmDeveloperConsole } from '../components/console/DmDeveloperConsole';
 import { DiceBox } from '../components/dice/DiceBox';
 import {
-  Shield, Plus, Sparkles, Play, BookOpen, User, Map, Swords,
-  Hammer, Store, FlaskConical, Flame, Compass, Trophy, Scroll,
-  RefreshCw, Dices, ChevronRight, ArrowLeft
+  Shield, Sparkles, BookOpen, User, Map, Swords,
+  Hammer, Store, FlaskConical, Flame, Compass, Trophy, Scroll, Dices
 } from 'lucide-react';
 
 export const DashboardPage = () => {

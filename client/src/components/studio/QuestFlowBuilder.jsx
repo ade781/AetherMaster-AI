@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { GitFork, Plus, Trash2, Edit3, ArrowRight, ShieldAlert, Sparkles, Trophy } from 'lucide-react';
+import { GitFork, Plus, Trash2, Edit3 } from 'lucide-react';
 
 export const QuestFlowBuilder = ({ nodes = [], onChangeNodes }) => {
   const [selectedNode, setSelectedNode] = useState(nodes[0] || null);

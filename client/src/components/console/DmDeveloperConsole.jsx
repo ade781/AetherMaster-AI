@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Terminal, Send, X, Sparkles, ChevronRight, HelpCircle } from 'lucide-react';
+import { Terminal, Send, X } from 'lucide-react';
 import { audioEngine } from '../../services/audioEngine';
 
 export const DmDeveloperConsole = ({ character, onUpdateCharacter }) => {

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Flame, Moon, Sun, Heart, Sparkles, AlertTriangle, Coffee } from 'lucide-react';
+import { Moon, Coffee } from 'lucide-react';
 import { audioEngine } from '../../services/audioEngine';
 
 export const CampfireRest = ({ character, onUpdateCharacter }) => {
@@ -27,10 +27,10 @@ export const CampfireRest = ({ character, onUpdateCharacter }) => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ currentHp: newHp }),
         });
-        if (onUpdateCharacter) {
-          onUpdateCharacter({ ...character, currentHp: newHp });
-        }
-      } catch (e) {}
+        onUpdateCharacter?.({ ...character, currentHp: newHp });
+      } catch (e) {
+        console.error('Gagal memperbarui HP setelah istirahat:', e);
+      }
     }, 1000);
   };
 
@@ -64,10 +64,10 @@ export const CampfireRest = ({ character, onUpdateCharacter }) => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ currentHp: fullHp, spellSlots: refreshedSlots }),
         });
-        if (onUpdateCharacter) {
-          onUpdateCharacter({ ...character, currentHp: fullHp, spellSlots: refreshedSlots });
-        }
-      } catch (e) {}
+        onUpdateCharacter?.({ ...character, currentHp: fullHp, spellSlots: refreshedSlots });
+      } catch (e) {
+        console.error('Gagal memperbarui data setelah Long Rest:', e);
+      }
     }, 1200);
   };
 

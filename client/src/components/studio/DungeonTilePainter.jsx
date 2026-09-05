@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LayoutGrid, Paintbrush, Eraser, Trash2, Shield, Eye } from 'lucide-react';
+import { LayoutGrid, Paintbrush, Trash2 } from 'lucide-react';
 
 const TILE_TYPES = {
   floor: { id: 'floor', name: 'Lantai Batu', color: '#1e293b', icon: '🪨' },

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Package, Search, Shield, Sword, Heart, Sparkles, Plus } from 'lucide-react';
+import { Package, Search, Shield } from 'lucide-react';
 
 export const InventoryManager = ({ inventory = [], onEquipItem, gold = 0 }) => {
   const [filter, setFilter] = useState('all');

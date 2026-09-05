@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Map, MapPin, Compass, Eye, Lock, Sparkles, Play } from 'lucide-react';
+import { Map, MapPin, Compass, Lock } from 'lucide-react';
 import { audioEngine } from '../../services/audioEngine';
 
 const MAP_LOCATIONS = [

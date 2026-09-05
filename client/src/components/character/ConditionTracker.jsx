@@ -1,13 +1,13 @@
-import React from 'react';
-import { Activity, Plus, X } from 'lucide-react';
+import { Activity, X } from 'lucide-react';
+
+const PRESET_CONDITIONS = [
+  { id: 'blessed', name: 'Diberkati (Blessed)', type: 'buff', icon: '✨', desc: '+1d4 roll' },
+  { id: 'poisoned', name: 'Teracuni (Poisoned)', type: 'debuff', icon: '🧪', desc: 'Disadvantage' },
+  { id: 'inspired', name: 'Inspirasi Heroik', type: 'buff', icon: '🔥', desc: 'Reroll 1 Dadu' },
+  { id: 'blinded', name: 'Kebutaan (Blinded)', type: 'debuff', icon: '👁️', desc: 'Serangan Lemah' },
+];
 
 export const ConditionTracker = ({ conditions = [], onToggleCondition }) => {
-  const PRESET_CONDITIONS = [
-    { id: 'blessed', name: 'Diberkati (Blessed)', type: 'buff', icon: '✨', desc: '+1d4 roll' },
-    { id: 'poisoned', name: 'Teracuni (Poisoned)', type: 'debuff', icon: '🧪', desc: 'Disadvantage' },
-    { id: 'inspired', name: 'Inspirasi Heroik', type: 'buff', icon: '🔥', desc: 'Reroll 1 Dadu' },
-    { id: 'blinded', name: 'Kebutaan (Blinded)', type: 'debuff', icon: '👁️', desc: 'Serangan Lemah' },
-  ];
 
   return (
     <div className="glass-card rounded-2xl p-5 border border-fantasy-border space-y-3">

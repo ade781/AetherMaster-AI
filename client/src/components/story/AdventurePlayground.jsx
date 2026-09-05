@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { VisualNovelStage } from './VisualNovelStage';
 import { audioEngine } from '../../services/audioEngine';
-import { Shield, Sparkles, Send, Dices, ArrowLeft, Volume2, VolumeX, Mic, MicOff, Key, Coins, Heart, AlertCircle, Music } from 'lucide-react';
+import { Sparkles, Send, Dices, ArrowLeft, Volume2, VolumeX, Mic, MicOff, Key, Music } from 'lucide-react';
 
 export const AdventurePlayground = ({ character, story, onExit, onUpdateCharacter }) => {
   const [messages, setMessages] = useState([

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Compass, RefreshCw, Key, Shield, Sparkles, Trophy, ArrowRight, Eye } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import { audioEngine } from '../../services/audioEngine';
 
 const DUNGEON_SIZE = 7; // 7x7 Procedural Maze
@@ -95,8 +95,10 @@ export const RoguelikeDungeonCrawler = ({ character, onUpdateCharacter }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ currentHp: newHp }),
       });
-      if (onUpdateCharacter) onUpdateCharacter({ ...character, currentHp: newHp });
-    } catch (e) {}
+      onUpdateCharacter?.({ ...character, currentHp: newHp });
+    } catch (e) {
+      console.error('Gagal update damage dungeon:', e);
+    }
   };
 
   const giveGold = async (amt) => {
@@ -107,8 +109,10 @@ export const RoguelikeDungeonCrawler = ({ character, onUpdateCharacter }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ gold: newGold }),
       });
-      if (onUpdateCharacter) onUpdateCharacter({ ...character, gold: newGold });
-    } catch (e) {}
+      onUpdateCharacter?.({ ...character, gold: newGold });
+    } catch (e) {
+      console.error('Gagal update gold dungeon:', e);
+    }
   };
 
   const handleNextFloor = () => {

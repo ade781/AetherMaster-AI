@@ -1,6 +1,6 @@
 import React from 'react';
 import { WeatherCanvas } from '../vfx/WeatherCanvas';
-import { Compass, Sparkles, MapPin } from 'lucide-react';
+import { Sparkles, MapPin } from 'lucide-react';
 
 const SCENE_PRESETS = {
   dungeon: {

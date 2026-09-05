@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import { Skull, Plus, Trash2, Shield, Heart, Zap, Award } from 'lucide-react';
+import { Skull, Plus, Trash2, Award } from 'lucide-react';
 
 export const MonsterCreator = ({ customMonsters = [], onChangeCustomMonsters }) => {
-  const [monsters, setMonsters] = useState(customMonsters);
   const [name, setName] = useState('');
   const [type, setType] = useState('Monster Unik');
   const [cr, setCr] = useState('1');
@@ -31,18 +30,13 @@ export const MonsterCreator = ({ customMonsters = [], onChangeCustomMonsters }) 
       goldReward: parseInt(cr, 10) * 15 || 10,
     };
 
-    const updated = [newMonster, ...monsters];
-    setMonsters(updated);
-    onChangeCustomMonsters(updated);
-
+    onChangeCustomMonsters?.([newMonster, ...customMonsters]);
     setName('');
     setAttackName('Cakaran Bayangan');
   };
 
   const handleDelete = (id) => {
-    const updated = monsters.filter(m => m.id !== id);
-    setMonsters(updated);
-    onChangeCustomMonsters(updated);
+    onChangeCustomMonsters?.(customMonsters.filter(m => m.id !== id));
   };
 
   return (
@@ -133,16 +127,16 @@ export const MonsterCreator = ({ customMonsters = [], onChangeCustomMonsters }) 
       {/* Monster List */}
       <div className="lg:col-span-2 glass-card rounded-2xl p-5 border border-fantasy-border space-y-4">
         <h4 className="font-cinzel text-fantasy-gold font-bold text-sm flex items-center gap-1.5 pb-2 border-b border-slate-800">
-          <Award size={16} /> Daftar Monster Kustom Campaign ({monsters.length})
+          <Award size={16} /> Daftar Monster Kustom Campaign ({customMonsters.length})
         </h4>
 
-        {monsters.length === 0 ? (
+        {customMonsters.length === 0 ? (
           <div className="py-16 text-center text-xs text-slate-500 italic">
             Belum ada monster kustom. Gunakan formulir di sebelah kiri untuk membuat monster baru.
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[380px] overflow-y-auto pr-1">
-            {monsters.map((m) => (
+            {customMonsters.map((m) => (
               <div
                 key={m.id}
                 className="bg-slate-900/80 p-4 rounded-xl border border-slate-800 flex justify-between items-start"

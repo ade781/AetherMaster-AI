@@ -2,6 +2,16 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { Dices, RefreshCw, Sparkles } from 'lucide-react';
 
+const DICE_TYPES = [
+  { label: 'D4', value: 'd4', max: 4, color: 0x9b59b6 },
+  { label: 'D6', value: 'd6', max: 6, color: 0x3498db },
+  { label: 'D8', value: 'd8', max: 8, color: 0x2ecc71 },
+  { label: 'D10', value: 'd10', max: 10, color: 0xe67e22 },
+  { label: 'D12', value: 'd12', max: 12, color: 0xe74c3c },
+  { label: 'D20', value: 'd20', max: 20, color: 0xe6c35c },
+  { label: 'D100', value: 'd100', max: 100, color: 0x1abc9c },
+];
+
 export const DiceBox = ({ onRollComplete }) => {
   const mountRef = useRef(null);
   const [isRolling, setIsRolling] = useState(false);
@@ -9,16 +19,6 @@ export const DiceBox = ({ onRollComplete }) => {
   const [selectedDie, setSelectedDie] = useState('d20');
   const [modifier, setModifier] = useState(0);
   const [lastResult, setLastResult] = useState(null);
-
-  const diceTypes = [
-    { label: 'D4', value: 'd4', max: 4, color: 0x9b59b6 },
-    { label: 'D6', value: 'd6', max: 6, color: 0x3498db },
-    { label: 'D8', value: 'd8', max: 8, color: 0x2ecc71 },
-    { label: 'D10', value: 'd10', max: 10, color: 0xe67e22 },
-    { label: 'D12', value: 'd12', max: 12, color: 0xe74c3c },
-    { label: 'D20', value: 'd20', max: 20, color: 0xe6c35c },
-    { label: 'D100', value: 'd100', max: 100, color: 0x1abc9c },
-  ];
 
   useEffect(() => {
     const currentMount = mountRef.current;
@@ -220,7 +220,7 @@ export const DiceBox = ({ onRollComplete }) => {
 
       {/* Die Selection Buttons */}
       <div className="grid grid-cols-7 gap-1.5 my-3">
-        {diceTypes.map((d) => (
+        {DICE_TYPES.map((d) => (
           <button
             key={d.value}
             type="button"

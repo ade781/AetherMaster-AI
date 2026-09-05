@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { MONSTER_BESTIARY } from '../../data/monsters';
 import { CombatVictoryModal } from './CombatVictoryModal';
 import { audioEngine } from '../../services/audioEngine';
-import { Swords, Shield, Heart, Zap, ArrowLeft, RefreshCw, Wand2, Plus, Sparkles } from 'lucide-react';
+import { Swords, Shield, ArrowLeft } from 'lucide-react';
 
 const GRID_SIZE = 8; // 8x8 Tactical Grid
 
@@ -212,18 +212,18 @@ export const BattleGridMap = ({ character, onExitCombat, onUpdateCharacter }) =>
         }),
       });
 
-      if (onUpdateCharacter) {
-        onUpdateCharacter({
-          ...character,
-          gold: earnedGold,
-          experience: earnedExp,
-          currentHp: playerHp,
-        });
-      }
-    } catch (e) {}
+      onUpdateCharacter?.({
+        ...character,
+        gold: earnedGold,
+        experience: earnedExp,
+        currentHp: playerHp,
+      });
+    } catch (e) {
+      console.error('Gagal klaim hadiah pertempuran:', e);
+    }
 
     setShowVictory(false);
-    onExitCombat();
+    onExitCombat?.();
   };
 
   return (

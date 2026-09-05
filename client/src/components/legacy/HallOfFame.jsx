@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trophy, Award, Shield, Skull, Coins, Sparkles, Star } from 'lucide-react';
+import { Star } from 'lucide-react';
 
 export const HallOfFame = ({ characters = [] }) => {
   return (
