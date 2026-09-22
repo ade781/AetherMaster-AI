@@ -1,291 +1,293 @@
-const { Campaign, StoryScene, StorySession } = require('../models');
+const { Character, Campaign, GameSession, StoryNode } = require('../models');
 const geminiService = require('../services/geminiService');
 
-// Get list of all campaigns (presets & custom)
-const getCampaigns = async (req, res) => {
+exports.getCampaigns = async (req, res) => {
   try {
-    const campaigns = await Campaign.findAll({
-      order: [['isCustom', 'ASC'], ['createdAt', 'DESC']],
-    });
-    return res.json({ success: true, campaigns });
-  } catch (error) {
-    console.error('Error getting campaigns:', error);
-    return res.status(500).json({ error: error.message });
+    const campaigns = await Campaign.findAll({ order: [['id', 'ASC']] });
+    res.json({ success: true, data: campaigns });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 };
 
-// AI Quest Forge: Forge a new custom campaign from player prompt
-const forgeCampaign = async (req, res) => {
+exports.startCampaign = async (req, res) => {
   try {
-    const { premise, genre } = req.body;
-    if (!premise || !premise.trim()) {
-      return res.status(400).json({ error: 'Premis ide petualangan diperlukan.' });
-    }
-
-    const forged = await geminiService.forgeCustomCampaign({ premise, genre });
-    const id = `custom_${Date.now()}`;
-
-    const campaign = await Campaign.create({
-      id,
-      title: forged.title || 'Petualangan Tempaan AI',
-      premise: forged.premise || premise,
-      genre: forged.genre || genre || 'dark_fantasy',
-      icon: forged.icon || '✨',
-      isCustom: true,
-    });
-
-    return res.json({ success: true, campaign });
-  } catch (error) {
-    console.error('Error forging campaign:', error);
-    return res.status(500).json({ error: error.message });
-  }
-};
-
-// Start a campaign session (Creates root StoryScene with parentId: null)
-const startCampaignSession = async (req, res) => {
-  try {
-    const { campaignId, sessionId } = req.body;
-    const cid = campaignId || 'whispering_tavern';
-    const sid = sessionId || `session_${Date.now()}`;
-
-    const campaign = await Campaign.findByPk(cid);
-    if (!campaign) {
-      return res.status(404).json({ error: 'Kampanye tidak ditemukan.' });
-    }
-
-    const { scene, source } = await geminiService.generateCampaignOpening(campaign);
-
-    const rootSceneId = `scene_${Date.now()}_root`;
-
-    // Create root scene in relational StoryScene table
-    const rootScene = await StoryScene.create({
-      id: rootSceneId,
-      campaignId: cid,
-      sessionId: sid,
-      parentId: null,
-      choiceTrigger: null,
-      chapterTitle: scene.chapterTitle,
-      location: scene.location,
-      speaker: scene.speaker,
-      mood: scene.mood,
-      dialogue: scene.dialogue,
-      consequenceNote: scene.consequenceNote,
-      choices: scene.choices,
-    });
-
-    // Also update StorySession for quick list
-    await StorySession.upsert({
-      id: sid,
-      title: `${campaign.title} - ${scene.chapterTitle}`,
-      location: scene.location,
-      currentScene: { ...scene, id: rootSceneId },
-      history: [],
-    });
-
-    return res.json({
-      success: true,
-      campaign,
-      sessionId: sid,
-      scene: { ...scene, id: rootSceneId },
-      source,
-    });
-  } catch (error) {
-    console.error('Error starting campaign session:', error);
-    return res.status(500).json({ error: error.message });
-  }
-};
-
-// Advance story to next branch (Stores new StoryScene linked to parentId)
-const chooseBranchAction = async (req, res) => {
-  try {
-    const { campaignId, sessionId, parentSceneId, choiceText, previousScene, history = [] } = req.body;
-
-    if (!choiceText) {
-      return res.status(400).json({ error: 'Pilihan aksi pemain diperlukan.' });
-    }
-
+    const { campaignId, characterData } = req.body;
     const campaign = await Campaign.findByPk(campaignId || 'whispering_tavern');
+    if (!campaign) {
+      return res.status(404).json({ success: false, error: 'Kampanye tidak ditemukan.' });
+    }
 
-    const { scene, source } = await geminiService.generateNextBranch({
-      campaign,
-      previousScene,
-      choiceText,
-      history,
-    });
+    // Default class stats
+    const classPresets = {
+      warrior: { hp: 35, maxHp: 35, mana: 15, maxMana: 15, str: 16, dex: 12, con: 15, int: 9, wis: 10, cha: 11, avatar: 'char_hero_01_paladin' },
+      rogue: { hp: 28, maxHp: 28, mana: 18, maxMana: 18, str: 10, dex: 16, con: 12, int: 13, wis: 12, cha: 14, avatar: 'char_hero_05_rogue' },
+      mage: { hp: 24, maxHp: 24, mana: 35, maxMana: 35, str: 8, dex: 13, con: 11, int: 17, wis: 14, cha: 10, avatar: 'char_hero_03_wizard' },
+      cleric: { hp: 30, maxHp: 30, mana: 25, maxMana: 25, str: 13, dex: 10, con: 14, int: 10, wis: 16, cha: 13, avatar: 'char_hero_06_cleric' }
+    };
 
-    const newSceneId = `scene_${Date.now()}`;
+    const chosenClass = (characterData?.characterClass || 'warrior').toLowerCase();
+    const preset = classPresets[chosenClass] || classPresets.warrior;
 
-    // Insert new branch node into relational StoryScene table
-    const savedScene = await StoryScene.create({
-      id: newSceneId,
-      campaignId: campaignId || 'whispering_tavern',
-      sessionId: sessionId || `session_${Date.now()}`,
-      parentId: parentSceneId || null,
-      choiceTrigger: choiceText,
-      chapterTitle: scene.chapterTitle,
-      location: scene.location,
-      speaker: scene.speaker,
-      mood: scene.mood,
-      dialogue: scene.dialogue,
-      consequenceNote: scene.consequenceNote,
-      choices: scene.choices,
-    });
-
-    const updatedHistory = [
-      ...history,
+    const initialInventory = [
       {
-        id: parentSceneId,
-        ...previousScene,
-        chosenAction: choiceText,
+        id: 'item_01_potion_heal',
+        name: 'Potion of Healing',
+        category: 'Obat',
+        effect: 'Memulihkan 25 HP',
+        icon: 'item_01_potion_heal'
       }
     ];
 
-    if (sessionId) {
-      await StorySession.upsert({
-        id: sessionId,
-        title: `${campaign?.title || 'Petualangan'} - ${scene.chapterTitle}`,
-        location: scene.location,
-        currentScene: { ...scene, id: newSceneId },
-        history: updatedHistory,
-      });
-    }
-
-    return res.json({
-      success: true,
-      sessionId,
-      scene: { ...scene, id: newSceneId },
-      history: updatedHistory,
-      source,
-    });
-  } catch (error) {
-    console.error('Error choosing branch action:', error);
-    return res.status(500).json({ error: error.message });
-  }
-};
-
-// Retrieve relational branching tree for this session
-const getSessionTree = async (req, res) => {
-  try {
-    const { sessionId } = req.params;
-    const scenes = await StoryScene.findAll({
-      where: { sessionId },
-      attributes: ['id', 'parentId', 'choiceTrigger', 'chapterTitle', 'location', 'speaker', 'mood', 'createdAt'],
-      order: [['createdAt', 'ASC']],
+    const character = await Character.create({
+      name: characterData?.name || 'Petualang Aether',
+      race: characterData?.race || 'human',
+      characterClass: chosenClass,
+      level: 1,
+      hp: preset.hp,
+      maxHp: preset.maxHp,
+      mana: preset.mana,
+      maxMana: preset.maxMana,
+      gold: 40,
+      str: characterData?.str || preset.str,
+      dex: characterData?.dex || preset.dex,
+      int: characterData?.int || preset.int,
+      wis: characterData?.wis || preset.wis,
+      cha: characterData?.cha || preset.cha,
+      con: characterData?.con || preset.con,
+      avatarUrl: characterData?.avatarUrl || preset.avatar,
+      inventory: initialInventory,
+      statusEffects: []
     });
 
-    return res.json({ success: true, nodes: scenes });
-  } catch (error) {
-    console.error('Error getting session tree:', error);
-    return res.status(500).json({ error: error.message });
-  }
-};
+    const session = await GameSession.create({
+      campaignId: campaign.id,
+      characterId: character.id,
+      turnCount: 1,
+      worldLedger: {
+        questFlags: { started: true },
+        reputation: {}
+      },
+      isGameOver: false
+    });
 
-// Rewind to an earlier scene node in the branching tree
-const rewindToScene = async (req, res) => {
-  try {
-    const { sceneId } = req.params;
-    const targetScene = await StoryScene.findByPk(sceneId);
+    // Generate initial scene
+    const openingScene = await geminiService.generateOpeningScene(campaign, character);
 
-    if (!targetScene) {
-      return res.status(404).json({ error: 'Adegan target tidak ditemukan di pohon cerita.' });
-    }
-
-    // Trace ancestors back to root to construct valid history
-    let current = targetScene;
-    const tracedHistory = [];
-
-    while (current && current.parentId) {
-      const parent = await StoryScene.findByPk(current.parentId);
-      if (parent) {
-        tracedHistory.unshift({
-          id: parent.id,
-          chapterTitle: parent.chapterTitle,
-          location: parent.location,
-          speaker: parent.speaker,
-          dialogue: parent.dialogue,
-          chosenAction: current.choiceTrigger,
-        });
+    // Apply any initial state updates
+    if (openingScene.stateUpdates?.receivedItem) {
+      const inv = [...character.inventory];
+      if (inv.length < 6) {
+        inv.push(openingScene.stateUpdates.receivedItem);
+        character.inventory = inv;
+        await character.save();
       }
-      current = parent;
     }
 
-    // Format target scene for frontend
-    const sceneData = {
-      id: targetScene.id,
-      chapterTitle: targetScene.chapterTitle,
-      location: targetScene.location,
-      speaker: targetScene.speaker,
-      mood: targetScene.mood,
-      dialogue: targetScene.dialogue,
-      consequenceNote: targetScene.consequenceNote,
-      choices: targetScene.choices,
+    const rootNode = await StoryNode.create({
+      sessionId: session.id,
+      parentNodeId: null,
+      chapterTitle: openingScene.chapterTitle,
+      location: openingScene.location,
+      backgroundId: openingScene.backgroundId,
+      speaker: openingScene.speaker,
+      characterId: openingScene.characterId,
+      mood: openingScene.mood,
+      dialogueText: openingScene.dialogue,
+      consequenceNote: openingScene.consequenceNote,
+      choices: openingScene.choices,
+      combatEncounter: openingScene.combatEncounter || null
+    });
+
+    session.currentSceneId = rootNode.id;
+    await session.save();
+
+    res.json({
+      success: true,
+      data: {
+        session,
+        character,
+        campaign,
+        currentNode: rootNode
+      }
+    });
+  } catch (err) {
+    console.error('startCampaign Error:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+exports.submitAction = async (req, res) => {
+  try {
+    const { sessionId, choiceId, statType, dc, advantage, disadvantage } = req.body;
+
+    const session = await GameSession.findByPk(sessionId, {
+      include: [Character, Campaign]
+    });
+    if (!session) {
+      return res.status(404).json({ success: false, error: 'Sesi permainan tidak ditemukan.' });
+    }
+
+    const currentNode = await StoryNode.findByPk(session.currentSceneId);
+    if (!currentNode) {
+      return res.status(404).json({ success: false, error: 'Node cerita aktif tidak ditemukan.' });
+    }
+
+    const character = session.Character;
+    const choiceList = currentNode.choices || [];
+    const chosenChoice = choiceList.find(c => c.id === choiceId) || {
+      id: choiceId || 'custom',
+      text: req.body.customText || 'Melangkah maju dengan waspada',
+      statType: statType || 'STR',
+      dc: dc || 12
     };
 
-    // Update StorySession state
-    if (targetScene.sessionId) {
-      await StorySession.upsert({
-        id: targetScene.sessionId,
-        title: targetScene.chapterTitle,
-        location: targetScene.location,
-        currentScene: sceneData,
-        history: tracedHistory,
-      });
+    // Generate next scene
+    const nextScene = await geminiService.generateNextScene({
+      session,
+      character,
+      previousNode: currentNode,
+      actionTaken: chosenChoice
+    });
+
+    // Apply state updates to character
+    const stateUpdates = nextScene.stateUpdates || {};
+    let newHp = character.hp + (stateUpdates.hpChange || 0);
+    newHp = Math.max(0, Math.min(character.maxHp, newHp));
+    character.hp = newHp;
+
+    let newGold = character.gold + (stateUpdates.goldChange || 0);
+    character.gold = Math.max(0, newGold);
+
+    let currentInv = [...(character.inventory || [])];
+    if (stateUpdates.consumedItem) {
+      const idx = currentInv.findIndex(i => i.id === stateUpdates.consumedItem || i.name === stateUpdates.consumedItem);
+      if (idx !== -1) currentInv.splice(idx, 1);
+    }
+    if (stateUpdates.receivedItem && currentInv.length < 6) {
+      currentInv.push(stateUpdates.receivedItem);
+    }
+    character.inventory = currentInv;
+    await character.save();
+
+    // Update world ledger
+    const ledger = session.worldLedger || { questFlags: {}, reputation: {} };
+    if (stateUpdates.addLedgerFact) {
+      ledger.questFlags[`turn_${session.turnCount + 1}`] = stateUpdates.addLedgerFact;
+    }
+    session.worldLedger = ledger;
+    session.turnCount += 1;
+    if (newHp <= 0) {
+      session.isGameOver = true;
     }
 
-    return res.json({
+    // Create next node
+    const newNode = await StoryNode.create({
+      sessionId: session.id,
+      parentNodeId: currentNode.id,
+      chapterTitle: nextScene.chapterTitle,
+      location: nextScene.location,
+      backgroundId: nextScene.backgroundId,
+      speaker: nextScene.speaker,
+      characterId: nextScene.characterId,
+      mood: nextScene.mood,
+      dialogueText: nextScene.dialogue,
+      consequenceNote: nextScene.consequenceNote,
+      choices: nextScene.choices,
+      combatEncounter: nextScene.combatEncounter || null
+    });
+
+    session.currentSceneId = newNode.id;
+    await session.save();
+
+    res.json({
       success: true,
-      scene: sceneData,
-      history: tracedHistory,
+      data: {
+        session,
+        character,
+        currentNode: newNode
+      }
     });
-  } catch (error) {
-    console.error('Error rewinding to scene:', error);
-    return res.status(500).json({ error: error.message });
+  } catch (err) {
+    console.error('submitAction Error:', err);
+    res.status(500).json({ success: false, error: err.message });
   }
 };
 
-// Legacy/Compatibility Sessions
-const getSessions = async (req, res) => {
+exports.rewindToNode = async (req, res) => {
   try {
-    const sessions = await StorySession.findAll({
-      attributes: ['id', 'title', 'location', 'updatedAt', 'createdAt'],
-      order: [['updatedAt', 'DESC']],
+    const { sessionId, targetNodeId } = req.body;
+    const session = await GameSession.findByPk(sessionId, {
+      include: [Character]
     });
-    return res.json({ success: true, sessions });
-  } catch (error) {
-    return res.status(500).json({ error: error.message });
+    if (!session) {
+      return res.status(404).json({ success: false, error: 'Sesi tidak ditemukan.' });
+    }
+
+    const targetNode = await StoryNode.findOne({
+      where: { id: targetNodeId, sessionId }
+    });
+    if (!targetNode) {
+      return res.status(404).json({ success: false, error: 'Node target tidak valid untuk sesi ini.' });
+    }
+
+    session.currentSceneId = targetNode.id;
+    session.isGameOver = false;
+    // Heal slightly on rewind to make it forgiving
+    if (session.Character && session.Character.hp <= 0) {
+      session.Character.hp = Math.floor(session.Character.maxHp / 2);
+      await session.Character.save();
+    }
+    await session.save();
+
+    res.json({
+      success: true,
+      data: {
+        session,
+        character: session.Character,
+        currentNode: targetNode
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 };
 
-const loadSession = async (req, res) => {
+exports.getStoryTree = async (req, res) => {
   try {
-    const { id } = req.params;
-    const session = await StorySession.findByPk(id);
-    if (!session) return res.status(404).json({ error: 'Sesi tidak ditemukan.' });
-    return res.json({ success: true, session });
-  } catch (error) {
-    return res.status(500).json({ error: error.message });
+    const { sessionId } = req.params;
+    const nodes = await StoryNode.findAll({
+      where: { sessionId },
+      order: [['createdAt', 'ASC']]
+    });
+    res.json({ success: true, data: nodes });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 };
 
-const deleteSession = async (req, res) => {
+exports.getBacklog = async (req, res) => {
   try {
-    const { id } = req.params;
-    await StoryScene.destroy({ where: { sessionId: id } });
-    const deleted = await StorySession.destroy({ where: { id } });
-    return res.json({ success: true, deleted: !!deleted });
-  } catch (error) {
-    return res.status(500).json({ error: error.message });
+    const { sessionId } = req.params;
+    const session = await GameSession.findByPk(sessionId);
+    if (!session) {
+      return res.status(404).json({ success: false, error: 'Sesi tidak ditemukan.' });
+    }
+
+    // Traverse upwards from currentSceneId
+    const chain = [];
+    let currId = session.currentSceneId;
+    while (currId) {
+      const node = await StoryNode.findByPk(currId);
+      if (!node) break;
+      chain.unshift(node);
+      currId = node.parentNodeId;
+    }
+
+    res.json({ success: true, data: chain });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 };
 
-module.exports = {
-  getCampaigns,
-  forgeCampaign,
-  startCampaignSession,
-  chooseBranchAction,
-  getSessionTree,
-  rewindToScene,
-  getSessions,
-  loadSession,
-  deleteSession,
-};
+

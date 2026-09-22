@@ -1,58 +1,65 @@
 const { sequelize } = require('../config/database');
+const Character = require('./Character');
 const Campaign = require('./Campaign');
-const StoryScene = require('./StoryScene');
-const StorySession = require('./StorySession');
+const GameSession = require('./GameSession');
+const StoryNode = require('./StoryNode');
 
-// Associations
-Campaign.hasMany(StoryScene, { foreignKey: 'campaignId', onDelete: 'CASCADE' });
-StoryScene.belongsTo(Campaign, { foreignKey: 'campaignId' });
+// Relations
+Character.hasMany(GameSession, { foreignKey: 'characterId', onDelete: 'CASCADE' });
+GameSession.belongsTo(Character, { foreignKey: 'characterId' });
 
-StoryScene.belongsTo(StoryScene, { as: 'parent', foreignKey: 'parentId' });
-StoryScene.hasMany(StoryScene, { as: 'children', foreignKey: 'parentId' });
+Campaign.hasMany(GameSession, { foreignKey: 'campaignId', onDelete: 'CASCADE' });
+GameSession.belongsTo(Campaign, { foreignKey: 'campaignId' });
 
-// Default Preset Campaigns
-const defaultCampaigns = [
-  {
-    id: 'whispering_tavern',
-    title: 'The Whispering Tavern & The Cursed Woods',
-    premise: 'Malam badai di kedai tua di tepi Hutan Terkutuk. Seorang buronan bertopeng menawarkan gulungan kontrak berlumur segel darah menuju relik kuno.',
-    genre: 'dark_fantasy',
-    icon: '🌲',
-    isCustom: false,
-  },
-  {
-    id: 'sunken_citadel',
-    title: 'The Sunken Citadel of the Deep',
-    premise: 'Ekspedisi bawah air ke kota reruntuhan kuno yang tenggelam ribuan tahun lalu, di mana bisikan entitas gurita kosmik menanti para penyelam berani.',
-    genre: 'eldritch_mystery',
-    icon: '🐙',
-    isCustom: false,
-  },
-  {
-    id: 'crypt_necromancer',
-    title: 'The Crypt of the Crimson Necromancer',
-    premise: 'Menyusup ke dalam katakombe bawah tanah berbau belerang untuk menghentikan ritual kebangkitan pasukan mayat hidup sang Penyihir Darah.',
-    genre: 'gothic_horror',
-    icon: '💀',
-    isCustom: false,
-  },
-];
+GameSession.hasMany(StoryNode, { foreignKey: 'sessionId', onDelete: 'CASCADE' });
+StoryNode.belongsTo(GameSession, { foreignKey: 'sessionId' });
 
-const initModels = async () => {
-  await sequelize.sync({ alter: true });
+StoryNode.hasMany(StoryNode, { as: 'children', foreignKey: 'parentNodeId' });
+StoryNode.belongsTo(StoryNode, { as: 'parent', foreignKey: 'parentNodeId' });
 
-  // Seed default campaigns if table is empty
+// Seed campaigns if empty
+const seedCampaigns = async () => {
   const count = await Campaign.count();
   if (count === 0) {
-    await Campaign.bulkCreate(defaultCampaigns);
-    console.log('🌱 [Sequelize] Default campaigns seeded successfully.');
+    await Campaign.bulkCreate([
+      {
+        id: 'whispering_tavern',
+        title: 'Misteri Kedai Whispering Tavern',
+        premise: 'Sebuah desas-desus kelam menyebar dari ruang bawah tanah kedai tua. Makam kuno yang tertidur kini bangkit kembali.',
+        genre: 'dark_fantasy',
+        icon: '🍺',
+        defaultBackgroundId: 'bg_01_tavern'
+      },
+      {
+        id: 'crypt_of_crimson',
+        title: 'Makam Merah Darah & Teror Bayangan',
+        premise: 'Kultus kuno membangkitkan Necromancer Malakor dari tidurnya. Harta karun legendaris menanti petualang pemberani.',
+        genre: 'gothic_horror',
+        icon: '💀',
+        defaultBackgroundId: 'bg_04_crimson_crypt'
+      },
+      {
+        id: 'abyssal_citadel',
+        title: 'Reruntuhan Samudra Sunken Citadel',
+        premise: 'Kuil kuno di dasar samudra memanggil arwah pelaut. Penjaga gurita raksasa dan monster laut menjaga relik aether.',
+        genre: 'eldritch_mystery',
+        icon: '🌊',
+        defaultBackgroundId: 'bg_03_sunken_citadel'
+      }
+    ]);
   }
+};
+
+const initDb = async () => {
+  await sequelize.sync();
+  await seedCampaigns();
 };
 
 module.exports = {
   sequelize,
+  Character,
   Campaign,
-  StoryScene,
-  StorySession,
-  initModels,
+  GameSession,
+  StoryNode,
+  initDb
 };

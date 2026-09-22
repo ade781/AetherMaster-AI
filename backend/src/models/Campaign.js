@@ -4,31 +4,30 @@ const { sequelize } = require('../config/database');
 const Campaign = sequelize.define('Campaign', {
   id: {
     type: DataTypes.STRING,
-    primaryKey: true,
+    primaryKey: true
   },
   title: {
     type: DataTypes.STRING,
-    allowNull: false,
+    allowNull: false
   },
   premise: {
     type: DataTypes.TEXT,
-    allowNull: false,
+    allowNull: false
   },
   genre: {
     type: DataTypes.STRING,
-    defaultValue: 'dark_fantasy',
+    defaultValue: 'dark_fantasy'
   },
   icon: {
     type: DataTypes.STRING,
-    defaultValue: '⚔️',
+    defaultValue: '⚔️'
   },
-  isCustom: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: false,
-  },
+  defaultBackgroundId: {
+    type: DataTypes.STRING,
+    defaultValue: 'bg_01_tavern'
+  }
 }, {
-  timestamps: true,
-  tableName: 'campaigns',
+  timestamps: true
 });
 
 module.exports = Campaign;

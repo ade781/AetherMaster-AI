@@ -1,23 +1,21 @@
 const express = require('express');
 const router = express.Router();
 const storyController = require('../controllers/storyController');
+const saveLoadController = require('../controllers/saveLoadController');
 
-// Campaign endpoints
+// Campaign & Story Flow Routes
 router.get('/campaigns', storyController.getCampaigns);
-router.post('/campaigns/forge', storyController.forgeCampaign);
-router.post('/campaigns/start', storyController.startCampaignSession);
+router.post('/start', storyController.startCampaign);
+router.post('/action', storyController.submitAction);
+router.post('/rewind', storyController.rewindToNode);
+router.get('/tree/:sessionId', storyController.getStoryTree);
+router.get('/backlog/:sessionId', storyController.getBacklog);
 
-// Branching story endpoints
-router.post('/choice', storyController.chooseBranchAction);
-router.get('/tree/:sessionId', storyController.getSessionTree);
-router.post('/rewind/:sceneId', storyController.rewindToScene);
-
-// Session persistence endpoints
-router.get('/sessions', storyController.getSessions);
-router.get('/sessions/:id', storyController.loadSession);
-router.delete('/sessions/:id', storyController.deleteSession);
-
-// Backward compatibility start endpoint
-router.post('/start', storyController.startCampaignSession);
+// Multi-Slot Save / Load Routes
+router.get('/saves', saveLoadController.getSaveSlots);
+router.post('/saves/save', saveLoadController.saveToSlot);
+router.get('/saves/load/:slotNumber', saveLoadController.loadFromSlot);
+router.get('/saves/export/:sessionId', saveLoadController.exportSessionJson);
+router.post('/saves/import', saveLoadController.importSessionJson);
 
 module.exports = router;
