@@ -1,345 +1,335 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  Volume2, VolumeX, BookOpen, RotateCcw, Sparkles, MapPin, 
-  Shield, Compass, Flame, Key, ChevronRight, Crown, Database
+  Volume2, VolumeX, Mic, MicOff, BookOpen, GitFork, Save, 
+  Sparkles, AlertCircle, Swords, ArrowRight, CornerDownRight, Check, Send
 } from 'lucide-react';
-import { audio } from '../services/audioService';
-import { BacklogModal } from './BacklogModal';
-import { SaveLoadModal } from './SaveLoadModal';
+import audio from '../services/audioService';
 
-export function VisualNovelStage({ 
-  currentScene, 
-  onSelectChoice, 
-  isLoading, 
-  history = [], 
-  sessionId,
-  onRestart,
-  onLoadSession 
+export default function VisualNovelStage({
+  node,
+  character,
+  onChooseAction,
+  onOpenStoryTree,
+  onOpenBacklog,
+  onOpenSaveLoad,
+  isLoading,
+  hudComponent
 }) {
   const [displayedText, setDisplayedText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [isBacklogOpen, setIsBacklogOpen] = useState(false);
-  const [isSaveLoadOpen, setIsSaveLoadOpen] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
-  const typingIndexRef = useRef(0);
-  const typingTimerRef = useRef(null);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [speechEnabled, setSpeechEnabled] = useState(false);
+  const [customActionText, setCustomActionText] = useState('');
+  const fullText = node?.dialogueText || 'Kisahmu dimulai di alam semesta AetherMaster...';
 
-  const fullText = currentScene?.dialogue || '';
-
-  // Typewriter effect on scene change
+  // Typewriter effect
   useEffect(() => {
     if (!fullText) return;
-
-    if (typingTimerRef.current) {
-      clearInterval(typingTimerRef.current);
-    }
-
-    setDisplayedText('');
     setIsTyping(true);
-    typingIndexRef.current = 0;
+    setDisplayedText('');
 
-    typingTimerRef.current = setInterval(() => {
-      typingIndexRef.current += 1;
-      setDisplayedText(fullText.slice(0, typingIndexRef.current));
-
-      if (typingIndexRef.current >= fullText.length) {
-        clearInterval(typingTimerRef.current);
+    let currentIdx = 0;
+    const interval = setInterval(() => {
+      currentIdx++;
+      setDisplayedText(fullText.slice(0, currentIdx));
+      if (currentIdx >= fullText.length) {
+        clearInterval(interval);
         setIsTyping(false);
       }
-    }, 20);
+    }, 15); // Faster snappier typing
+
+    // Voice narration via Web Speech API
+    if (speechEnabled && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(fullText);
+      utterance.rate = 1.0;
+      utterance.pitch = 0.95;
+      utterance.lang = 'id-ID';
+      window.speechSynthesis.speak(utterance);
+    }
 
     return () => {
-      if (typingTimerRef.current) {
-        clearInterval(typingTimerRef.current);
+      clearInterval(interval);
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
       }
     };
-  }, [fullText]);
+  }, [node?.id, fullText, speechEnabled]);
 
-  const handleSkipTyping = () => {
+  const handleSkipTypewriter = () => {
     if (isTyping) {
-      if (typingTimerRef.current) {
-        clearInterval(typingTimerRef.current);
-      }
       setDisplayedText(fullText);
       setIsTyping(false);
-      audio.playClick();
     }
   };
 
-  // Keyboard hotkeys for choices (1, 2, 3, 4)
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (isLoading || isBacklogOpen || isSaveLoadOpen) return;
-      const choices = currentScene?.choices || [];
-      const keyNum = parseInt(e.key, 10);
-      if (keyNum >= 1 && keyNum <= choices.length) {
-        audio.playClick();
-        onSelectChoice(choices[keyNum - 1]);
-      }
-    };
+  const toggleSound = () => {
+    const next = !soundEnabled;
+    setSoundEnabled(next);
+    audio.setMuted(!next);
+  };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentScene, isLoading, isBacklogOpen, isSaveLoadOpen, onSelectChoice]);
-
-  const handleToggleSound = () => {
-    const muted = audio.toggleMute();
-    setIsMuted(muted);
-    if (!muted) {
-      audio.startAmbient();
-      audio.playClick();
+  const toggleSpeech = () => {
+    const next = !speechEnabled;
+    setSpeechEnabled(next);
+    if (!next && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
     }
   };
 
-  const getToneBadge = (tone) => {
-    switch (tone) {
-      case 'bold':
-        return {
-          icon: <Flame className="w-3.5 h-3.5 text-rose-400" />,
-          label: 'Tegas / Berani',
-          className: 'bg-rose-950/60 border-rose-700/50 text-rose-300'
-        };
-      case 'cautious':
-        return {
-          icon: <Shield className="w-3.5 h-3.5 text-emerald-400" />,
-          label: 'Waspada / Hati-hati',
-          className: 'bg-emerald-950/60 border-emerald-700/50 text-emerald-300'
-        };
-      case 'curious':
-        return {
-          icon: <Compass className="w-3.5 h-3.5 text-sky-400" />,
-          label: 'Selidik / Tanya',
-          className: 'bg-sky-950/60 border-sky-700/50 text-sky-300'
-        };
-      case 'shrewd':
-      default:
-        return {
-          icon: <Key className="w-3.5 h-3.5 text-amber-400" />,
-          label: 'Taktis / Teliti',
-          className: 'bg-amber-950/60 border-amber-700/50 text-amber-300'
-        };
-    }
+  const getBackgroundSrc = (bgId) => {
+    if (!bgId) return '/assets/backgrounds/bg_01_tavern.png';
+    return `/assets/backgrounds/${bgId}.png`;
   };
 
-  const getSpeakerDetails = (speaker = '') => {
-    const name = speaker.toLowerCase();
-    if (name.includes('barkeep') || name.includes('barista') || name.includes('eldrin')) {
-      return {
-        title: 'Eldrin sang Barista',
-        role: 'Pemilik Kedai Kurcaci',
-        avatarBg: 'from-amber-800 to-amber-950',
-        emoji: '🍺'
-      };
-    }
-    if (name.includes('jubah') || name.includes('misterius') || name.includes('stranger')) {
-      return {
-        title: 'Sosok Berkerudung',
-        role: 'Pengembara Hutan Hitam',
-        avatarBg: 'from-purple-900 to-slate-950',
-        emoji: '🗡️'
-      };
-    }
-    if (name.includes('arwah') || name.includes('spirit') || name.includes('hantu')) {
-      return {
-        title: 'Siluet Arwah Rimba',
-        role: 'Entitas Gaib Purba',
-        avatarBg: 'from-cyan-900 to-slate-950',
-        emoji: '👻'
-      };
-    }
-    return {
-      title: speaker || 'Dungeon Master',
-      role: 'Narator Takdir',
-      avatarBg: 'from-indigo-900 to-slate-950',
-      emoji: '📜'
-    };
+  const getCharacterSpriteSrc = (charId) => {
+    if (!charId) return null;
+    return `/assets/portraits/${charId}.png`;
   };
 
-  const speakerInfo = getSpeakerDetails(currentScene?.speaker);
+  const choices = node?.choices || [];
 
   return (
-    <div className="min-h-screen w-full flex flex-col justify-between p-4 md:p-8 max-w-6xl mx-auto select-none relative">
-      {/* Top Bar / Navigation Controls */}
-      <header className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-2xl glass-panel z-10">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-amber-950/80 border border-amber-600/40 flex items-center justify-center text-amber-400 font-serif font-bold text-lg shadow-inner">
-            D&D
-          </div>
-          <div>
-            <h1 className="text-sm font-semibold tracking-wide text-amber-300 font-serif">
-              {currentScene?.chapterTitle || 'The Whispering Tavern'}
-            </h1>
-            <div className="flex items-center gap-2 text-xs text-slate-400">
-              <MapPin className="w-3.5 h-3.5 text-amber-500" />
-              <span>{currentScene?.location || 'The Whispering Hearth'}</span>
-              <span className="w-1 h-1 rounded-full bg-slate-600" />
-              <span className="capitalize text-slate-300">{currentScene?.mood || 'Misterius'}</span>
-            </div>
-          </div>
+    <div className="relative w-full h-full flex flex-col lg:flex-row overflow-hidden bg-black select-none">
+      
+      {/* LEFT PANEL: Visual Stage (60% on desktop) */}
+      <div className="relative flex-[3] xl:flex-[4] h-[40vh] lg:h-full overflow-hidden flex-shrink-0">
+        {/* Background Image Layer */}
+        <div className="absolute inset-0 z-0">
+          <img
+            src={getBackgroundSrc(node?.backgroundId)}
+            alt="Adventure Scene"
+            className="w-full h-full object-cover object-center filter brightness-[0.7] contrast-[1.05] transition-all duration-700 scale-[1.02]"
+            onError={(e) => { e.target.src = '/assets/backgrounds/bg_01_tavern.png'; }}
+          />
+          {/* Vignette & Gradients */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 pointer-events-none" />
         </div>
 
-        {/* Action buttons */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleToggleSound}
-            className={`p-2.5 rounded-xl border transition-colors ${
-              isMuted 
-                ? 'border-slate-700 bg-slate-900/60 text-slate-500 hover:text-slate-300' 
-                : 'border-amber-600/50 bg-amber-950/50 text-amber-300 hover:bg-amber-900/50'
-            }`}
-            title={isMuted ? 'Nyalakan Audio' : 'Matikan Audio'}
-          >
-            {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-          </button>
-
-          <button
-            onClick={() => {
-              audio.playClick();
-              setIsSaveLoadOpen(true);
-            }}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-700 bg-slate-900/70 text-slate-300 hover:border-amber-500/50 hover:text-amber-300 text-xs font-medium transition-colors"
-          >
-            <Database className="w-4 h-4 text-amber-500" />
-            <span className="hidden sm:inline">Database Sesi</span>
-          </button>
-
-          <button
-            onClick={() => {
-              audio.playClick();
-              setIsBacklogOpen(true);
-            }}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-700 bg-slate-900/70 text-slate-300 hover:border-amber-500/50 hover:text-amber-300 text-xs font-medium transition-colors"
-          >
-            <BookOpen className="w-4 h-4" />
-            <span className="hidden sm:inline">Riwayat ({history.length})</span>
-          </button>
-
-          <button
-            onClick={() => {
-              if (window.confirm('Mulai petualangan baru dari awal?')) {
-                audio.playClick();
-                onRestart();
-              }
-            }}
-            className="p-2.5 rounded-xl border border-slate-700 bg-slate-900/70 text-slate-400 hover:border-rose-500/50 hover:text-rose-400 transition-colors"
-            title="Mulai Ulang Cerita"
-          >
-            <RotateCcw className="w-4 h-4" />
-          </button>
-        </div>
-      </header>
-
-      {/* Main Visual Stage */}
-      <div className="flex-1 my-6 flex flex-col items-center justify-center relative min-h-[260px] md:min-h-[320px]">
-        {/* Fantasy Backdrop */}
-        <div className="w-full h-full absolute inset-0 rounded-3xl overflow-hidden border border-slate-800 bg-gradient-to-b from-slate-900/90 via-slate-950/95 to-black -z-10 shadow-2xl">
-          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-80 h-80 bg-amber-600/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute bottom-4 right-1/4 w-60 h-60 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute inset-0 bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:24px_24px] opacity-20" />
-        </div>
-
-        {/* Character Portrait */}
-        <div className="flex flex-col items-center text-center z-10 character-breath">
-          <div className={`w-28 h-28 md:w-36 md:h-36 rounded-2xl p-1 bg-gradient-to-b ${speakerInfo.avatarBg} border-2 border-amber-500/50 shadow-2xl flex items-center justify-center relative mb-3`}>
-            <span className="text-5xl md:text-6xl drop-shadow-md select-none">
-              {speakerInfo.emoji}
+        {/* Top Stage Control Header */}
+        <div className="absolute top-0 left-0 right-0 z-20 px-6 py-4 flex flex-wrap items-center justify-between gap-2">
+          {/* Location & Chapter Pill */}
+          <div className="flex items-center gap-2 bg-black/50 backdrop-blur-md border border-white/10 px-4 py-2 rounded-full shadow-lg">
+            <span className="w-2 h-2 rounded-full bg-fantasy-gold animate-ping" />
+            <span className="font-cinzel text-xs font-bold text-fantasy-gold tracking-wide drop-shadow-md">
+              {node?.chapterTitle || 'Babak I: Permulaan Takdir'}
             </span>
-            <div className="absolute -bottom-2.5 px-2.5 py-0.5 rounded-full border text-[10px] uppercase font-bold tracking-wider bg-slate-950 border-amber-500/80 text-amber-300">
-              {speakerInfo.role}
-            </div>
+            <span className="text-white/50 text-xs">•</span>
+            <span className="text-xs text-slate-200 font-medium drop-shadow-md">
+              {node?.location || 'Kedai Whispering Tavern'}
+            </span>
           </div>
-          <h2 className="text-xl md:text-2xl font-serif font-bold tracking-tight text-white drop-shadow">
-            {speakerInfo.title}
-          </h2>
+
+          {/* Action Controls */}
+          <div className="flex items-center gap-1.5 bg-black/50 backdrop-blur-md border border-white/10 p-1.5 rounded-2xl shadow-xl">
+            <button
+              onClick={toggleSound}
+              className={`p-2 rounded-xl transition-all ${
+                soundEnabled ? 'text-fantasy-gold hover:bg-white/10' : 'text-slate-400 hover:bg-white/10'
+              }`}
+              title={soundEnabled ? 'Matikan SFX/Audio' : 'Nyalakan SFX/Audio'}
+            >
+              {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+            </button>
+            <button
+              onClick={toggleSpeech}
+              className={`p-2 rounded-xl transition-all ${
+                speechEnabled ? 'text-amber-400 bg-white/10' : 'text-slate-400 hover:bg-white/10'
+              }`}
+              title={speechEnabled ? 'Matikan Narasi Suara' : 'Nyalakan Narasi Suara'}
+            >
+              {speechEnabled ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
+            </button>
+            <div className="w-[1px] h-5 bg-white/20 my-auto" />
+            <button
+              onClick={() => { audio.playClick(); onOpenBacklog(); }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-slate-200 hover:text-white hover:bg-white/10 transition-all"
+              title="Buka Catatan Riwayat Dialog"
+            >
+              <BookOpen className="w-3.5 h-3.5 text-fantasy-gold" />
+              <span className="hidden sm:inline">Log</span>
+            </button>
+            <button
+              onClick={() => { audio.playClick(); onOpenStoryTree(); }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-slate-200 hover:text-white hover:bg-white/10 transition-all"
+              title="Lihat Cabang Alur Cerita & Rewind"
+            >
+              <GitFork className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="hidden sm:inline">Cabang</span>
+            </button>
+            <button
+              onClick={() => { audio.playClick(); onOpenSaveLoad(); }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-slate-200 hover:text-white hover:bg-white/10 transition-all"
+              title="Simpan / Muat Permainan"
+            >
+              <Save className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="hidden sm:inline">Simpan</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Character Bust Sprite */}
+        <div className="absolute bottom-0 right-4 md:right-12 z-10 flex items-end justify-center pointer-events-none">
+          {node?.characterId && (
+            <div className="w-64 md:w-80 lg:w-[450px] max-h-[90vh] flex items-end justify-center filter drop-shadow-[0_25px_35px_rgba(0,0,0,0.9)] animate-fadeIn">
+              <img
+                src={getCharacterSpriteSrc(node.characterId)}
+                alt={node.speaker || 'Karakter'}
+                className="max-h-[90vh] object-contain object-bottom transform hover:scale-[1.02] transition-transform duration-500"
+                onError={(e) => { e.target.style.display = 'none'; }}
+              />
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Narrative & Choices Card */}
-      <section className="space-y-4 z-10">
-        {currentScene?.consequenceNote && (
-          <div className="px-4 py-2 rounded-xl bg-amber-950/40 border border-amber-600/30 text-amber-200 text-xs flex items-center gap-2">
-            <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-            <span className="italic">{currentScene.consequenceNote}</span>
+      {/* RIGHT PANEL: Story Dashboard (40% on desktop) */}
+      <div className="relative flex-[2] xl:flex-[2] h-[60vh] lg:h-full flex flex-col bg-slate-950/95 border-l border-white/10 shadow-2xl z-20 overflow-hidden">
+        
+        {/* Insert Top HUD component from App.jsx */}
+        {hudComponent}
+
+        {/* Scrollable Story & Choice Area */}
+        <div className="flex-1 overflow-y-auto p-5 md:p-6 lg:p-8 flex flex-col gap-6 scrollbar-hide">
+          
+          <div className="flex-1">
+            {/* Consequence Note Banner */}
+            {node?.consequenceNote && (
+              <div className="mb-4 bg-amber-500/10 border-l-4 border-fantasy-gold px-4 py-3 rounded-r-xl flex items-start gap-3 text-sm text-amber-200 animate-slideDown shadow-sm">
+                <Sparkles className="w-4 h-4 text-fantasy-gold flex-shrink-0 mt-0.5" />
+                <span className="font-medium leading-relaxed">{node.consequenceNote}</span>
+              </div>
+            )}
+
+            {/* Main Dialogue Box */}
+            <div
+              onClick={handleSkipTypewriter}
+              className="relative bg-white/5 border border-white/10 rounded-2xl p-6 shadow-xl cursor-pointer group hover:bg-white/10 transition-colors"
+            >
+              {/* Speaker Nameplate */}
+              <div className="absolute -top-3 left-6 bg-black/80 backdrop-blur-md border border-white/20 px-4 py-1 rounded-full shadow-lg flex items-center gap-2">
+                <span className="font-cinzel text-xs font-bold text-fantasy-gold tracking-widest uppercase">
+                  {node?.speaker || 'Dungeon Master'}
+                </span>
+                {node?.mood && (
+                  <span className="text-[9px] uppercase font-bold px-2 py-0.5 rounded-full bg-white/10 text-slate-300">
+                    {node.mood}
+                  </span>
+                )}
+              </div>
+
+              {/* Typewriter Text */}
+              <div className="mt-3 min-h-[80px]">
+                <p className="font-outfit text-[15px] text-slate-200 leading-relaxed font-normal">
+                  {displayedText}
+                  {isTyping && <span className="inline-block w-2 h-4 ml-1 bg-fantasy-gold animate-pulse align-middle" />}
+                </p>
+              </div>
+
+              <div className="mt-4 text-right">
+                <span className="text-[10px] text-slate-500 font-mono tracking-widest uppercase">
+                  {isTyping ? 'Klik untuk mempercepat' : 'Pilih tindakan di bawah'}
+                </span>
+              </div>
+            </div>
           </div>
-        )}
 
-        {/* Dialogue Box */}
-        <div 
-          onClick={handleSkipTyping}
-          className="p-5 md:p-7 rounded-2xl glass-panel border border-amber-500/30 cursor-pointer relative group transition-all"
-        >
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-amber-950/80 border border-amber-500/50 text-amber-300 text-xs font-serif font-semibold tracking-wide mb-3">
-            <Crown className="w-3.5 h-3.5 text-amber-400" />
-            <span>{currentScene?.speaker || 'Dungeon Master'}</span>
-          </div>
+          {/* Choice Deck / Loading State */}
+          <div className="mt-auto">
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center py-8 space-y-4 animate-fadeIn border border-white/5 rounded-2xl bg-black/20">
+                <div className="relative w-10 h-10 flex items-center justify-center">
+                  <div className="absolute inset-0 rounded-full border-2 border-slate-800 border-t-fantasy-gold animate-spin"></div>
+                  <Sparkles className="w-4 h-4 text-fantasy-gold animate-pulse" />
+                </div>
+                <div className="flex flex-col items-center">
+                  <span className="font-cinzel text-fantasy-gold text-xs font-bold tracking-widest uppercase animate-pulse">
+                    DM Berpikir...
+                  </span>
+                </div>
+              </div>
+            ) : (
+              choices.length > 0 && (
+                <div className="flex flex-col gap-3">
+                  {choices.map((choice, idx) => {
+                    const hasReqItem = !choice.requiredItem || (character?.inventory || []).some(
+                      i => i.id === choice.requiredItem || i.name === choice.requiredItem
+                    );
 
-          <p className="text-base md:text-lg leading-relaxed text-slate-100 font-sans min-h-[70px]">
-            {displayedText}
-            {isTyping && <span className="typewriter-cursor" />}
-          </p>
+                    return (
+                      <button
+                        key={choice.id || idx}
+                        disabled={!hasReqItem}
+                        onClick={() => {
+                          audio.playClick();
+                          onChooseAction(choice);
+                        }}
+                        className={`px-4 py-3.5 rounded-xl border border-transparent text-left flex items-start gap-3 transition-all duration-300 ${
+                          !hasReqItem
+                            ? 'bg-black/40 text-slate-500 opacity-50 cursor-not-allowed'
+                            : 'bg-white/5 hover:bg-white/10 border-white/5 hover:border-white/20 text-slate-200 hover:text-white shadow-md hover:shadow-xl hover:-translate-y-0.5'
+                        }`}
+                      >
+                        <div className="mt-0.5 w-6 h-6 rounded-full bg-black/50 border border-white/10 flex items-center justify-center flex-shrink-0 text-fantasy-gold text-[11px] font-bold font-cinzel">
+                          {idx + 1}
+                        </div>
+                        <div className="flex-1 min-w-0 flex flex-col gap-1">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {choice.tone && (
+                              <span className="text-[9px] px-2 py-0.5 rounded-full bg-white/10 text-slate-300 uppercase tracking-wider font-bold">
+                                {choice.tone}
+                              </span>
+                            )}
+                            {choice.requiredItem && !hasReqItem && (
+                              <span className="text-[9px] px-2 py-0.5 rounded-full bg-red-900/40 text-red-300 border border-red-800/50 uppercase font-bold">
+                                Butuh {choice.requiredItem}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm font-medium leading-snug">
+                            {choice.text}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
 
-          <div className="mt-3 flex justify-end text-[11px] text-slate-500 group-hover:text-amber-400/80 transition-colors">
-            {isTyping ? 'Klik di mana saja untuk lewati teks...' : 'Pilih tindakan Anda di bawah...'}
-          </div>
-        </div>
-
-        {/* Choices Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
-          {isLoading ? (
-            <>
-              <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/60 animate-pulse h-20" />
-              <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/60 animate-pulse h-20" />
-              <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/60 animate-pulse h-20" />
-              <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/60 animate-pulse h-20" />
-            </>
-          ) : (
-            currentScene?.choices?.map((choice, index) => {
-              const tone = getToneBadge(choice.tone);
-              return (
-                <button
-                  key={choice.id || index}
-                  onClick={() => {
-                    audio.playClick();
-                    onSelectChoice(choice);
-                  }}
-                  className="glass-card text-left p-4 rounded-xl flex items-start justify-between gap-3 group active:scale-[0.98] transition-all"
-                >
-                  <div className="space-y-1.5 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="w-5 h-5 rounded-md bg-slate-800 border border-slate-700 text-slate-300 text-[11px] font-mono flex items-center justify-center group-hover:border-amber-500 group-hover:text-amber-300">
-                        {index + 1}
-                      </span>
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-medium ${tone.className}`}>
-                        {tone.icon}
-                        <span>{tone.label}</span>
-                      </span>
-                    </div>
-                    <p className="text-sm text-slate-200 group-hover:text-amber-200 transition-colors font-sans leading-snug">
-                      {choice.text}
-                    </p>
+                  {/* Custom Action Input */}
+                  <div className="w-full pt-2 border-t border-white/5">
+                    <form 
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        if (!customActionText.trim() || isLoading) return;
+                        audio.playClick();
+                        onChooseAction({ id: 'custom', customText: customActionText.trim(), tone: 'kreatif' });
+                        setCustomActionText('');
+                      }}
+                      className="flex items-center gap-2 bg-black/40 border border-white/10 hover:border-white/30 focus-within:border-fantasy-gold focus-within:bg-black/60 rounded-xl p-1.5 shadow-lg transition-all duration-300"
+                    >
+                      <input
+                        type="text"
+                        value={customActionText}
+                        onChange={(e) => setCustomActionText(e.target.value)}
+                        placeholder="Ketik aksi bebasmu di sini..."
+                        disabled={isLoading}
+                        className="flex-1 bg-transparent border-none text-[13px] md:text-sm text-slate-200 placeholder-slate-500 px-3 py-2 outline-none font-outfit"
+                      />
+                      <button
+                        type="submit"
+                        disabled={isLoading || !customActionText.trim()}
+                        className="p-2.5 rounded-lg bg-fantasy-gold hover:bg-amber-400 text-slate-950 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md"
+                        title="Jalankan Aksi Bebas"
+                      >
+                        <Send className="w-4 h-4" />
+                      </button>
+                    </form>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-amber-400 group-hover:translate-x-0.5 transition-all shrink-0 mt-1" />
-                </button>
-              );
-            })
-          )}
+                </div>
+              )
+            )}
+          </div>
         </div>
-      </section>
-
-      {/* Backlog Modal */}
-      <BacklogModal
-        isOpen={isBacklogOpen}
-        onClose={() => setIsBacklogOpen(false)}
-        history={history}
-      />
-
-      {/* Save / Load Database Modal */}
-      <SaveLoadModal
-        isOpen={isSaveLoadOpen}
-        onClose={() => setIsSaveLoadOpen(false)}
-        onLoadSession={onLoadSession}
-        activeSessionId={sessionId}
-      />
+      </div>
     </div>
   );
 }

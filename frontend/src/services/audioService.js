@@ -1,142 +1,270 @@
-// Native Web Audio Synthesizer (Ponytail principle: zero external bloated sound files)
+/**
+ * AetherMaster Procedural Web Audio Synth & Voice Gateway
+ * 100% local synthesis using standard Web Audio API & SpeechSynthesis.
+ */
+
 class AudioService {
   constructor() {
     this.ctx = null;
     this.isMuted = false;
-    this.ambientNodes = null;
-    this.isAmbientPlaying = false;
+    this.ambientNode = null;
+    this.isSpeechEnabled = false;
   }
 
   init() {
     if (!this.ctx) {
       const AudioContext = window.AudioContext || window.webkitAudioContext;
-      if (AudioContext) {
-        this.ctx = new AudioContext();
-      }
+      this.ctx = new AudioContext();
     }
-    if (this.ctx && this.ctx.state === 'suspended') {
+    if (this.ctx.state === 'suspended') {
       this.ctx.resume();
     }
   }
 
   toggleMute() {
     this.isMuted = !this.isMuted;
-    if (this.isMuted && this.ambientNodes) {
+    if (this.isMuted && this.ambientNode) {
       this.stopAmbient();
-    } else if (!this.isMuted && this.isAmbientPlaying) {
-      this.startAmbient();
     }
     return this.isMuted;
   }
 
-  // Soft tactile UI click
-  playClick() {
+  // --- PROCEDURAL SFX GENERATION ---
+
+  playDiceRoll() {
     if (this.isMuted) return;
-    try {
-      this.init();
-      if (!this.ctx) return;
+    this.init();
+    const now = this.ctx.currentTime;
+    
+    // Simulate dice tumbling on wood
+    for (let i = 0; i < 6; i++) {
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
+      
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(140 + Math.random() * 220, now + i * 0.08);
+      osc.frequency.exponentialRampToValueAtTime(60, now + i * 0.08 + 0.06);
 
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(440, this.ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(880, this.ctx.currentTime + 0.05);
-
-      gain.gain.setValueAtTime(0.04, this.ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.05);
+      gain.gain.setValueAtTime(0.2, now + i * 0.08);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.06);
 
       osc.connect(gain);
       gain.connect(this.ctx.destination);
 
-      osc.start();
-      osc.stop(this.ctx.currentTime + 0.05);
-    } catch (e) {
-      // Ignore audio failure
+      osc.start(now + i * 0.08);
+      osc.stop(now + i * 0.08 + 0.07);
     }
   }
 
-  // Dramatic mystical scene transition chime
-  playSceneTransition() {
+  playCriticalSuccess() {
     if (this.isMuted) return;
-    try {
-      this.init();
-      if (!this.ctx) return;
+    this.init();
+    const now = this.ctx.currentTime;
+    const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51]; // C major fanfare
 
-      const now = this.ctx.currentTime;
-      [220, 277.18, 329.63, 440].forEach((freq, i) => {
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
+    notes.forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.07);
+      
+      gain.gain.setValueAtTime(0.25, now + idx * 0.07);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.07 + 0.4);
 
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(freq, now + i * 0.07);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
 
-        gain.gain.setValueAtTime(0.03, now + i * 0.07);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.07 + 0.6);
-
-        osc.connect(gain);
-        gain.connect(this.ctx.destination);
-
-        osc.start(now + i * 0.07);
-        osc.stop(now + i * 0.07 + 0.6);
-      });
-    } catch (e) {
-      // Ignore
-    }
+      osc.start(now + idx * 0.07);
+      osc.stop(now + idx * 0.07 + 0.45);
+    });
   }
 
-  // Ambient fireplace crackle & gentle storm generator
-  startAmbient() {
+  playCriticalFailure() {
     if (this.isMuted) return;
-    try {
-      this.init();
-      if (!this.ctx) return;
+    this.init();
+    const now = this.ctx.currentTime;
+    const notes = [220, 207.65, 196, 174.61]; // descending dissonance
+
+    notes.forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.12);
+
+      gain.gain.setValueAtTime(0.3, now + idx * 0.12);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.12 + 0.5);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      osc.start(now + idx * 0.12);
+      osc.stop(now + idx * 0.12 + 0.55);
+    });
+  }
+
+  playSwordClash() {
+    if (this.isMuted) return;
+    this.init();
+    const now = this.ctx.currentTime;
+
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'highpass' in this.ctx ? 'sine' : 'triangle';
+    osc.frequency.setValueAtTime(2400, now);
+    osc.frequency.exponentialRampToValueAtTime(300, now + 0.25);
+
+    gain.gain.setValueAtTime(0.35, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    osc.start(now);
+    osc.stop(now + 0.26);
+  }
+
+  playGoldCoins() {
+    if (this.isMuted) return;
+    this.init();
+    const now = this.ctx.currentTime;
+    const freqs = [1800, 2400, 3200];
+    freqs.forEach((f, i) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(f, now + i * 0.05);
+
+      gain.gain.setValueAtTime(0.15, now + i * 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.05 + 0.2);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      osc.start(now + i * 0.05);
+      osc.stop(now + i * 0.05 + 0.22);
+    });
+  }
+
+  playHeal() {
+    if (this.isMuted) return;
+    this.init();
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(440, now);
+    osc.frequency.exponentialRampToValueAtTime(880, now + 0.4);
+
+    gain.gain.setValueAtTime(0.2, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    osc.start(now);
+    osc.stop(now + 0.42);
+  }
+
+  playClick() {
+    if (this.isMuted) return;
+    this.init();
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(800, now);
+    gain.gain.setValueAtTime(0.08, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    osc.start(now);
+    osc.stop(now + 0.04);
+  }
+
+  playSelect() {
+    this.playClick();
+  }
+
+  // --- AMBIENT SOUNDSCAPE ---
+
+  startAmbient(type = 'tavern') {
+    if (this.isMuted) return;
+    this.init();
+    if (this.ambientNode) {
       this.stopAmbient();
+    }
 
-      // Pink/Brown noise buffer for rain & fireplace
+    try {
+      // Noise buffer for atmospheric hum
       const bufferSize = this.ctx.sampleRate * 2;
-      const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-      const data = buffer.getChannelData(0);
-      let lastOut = 0.0;
-
+      const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+      const output = noiseBuffer.getChannelData(0);
       for (let i = 0; i < bufferSize; i++) {
-        const white = Math.random() * 2 - 1;
-        data[i] = (lastOut + 0.02 * white) / 1.02;
-        lastOut = data[i];
+        output[i] = Math.random() * 2 - 1;
       }
 
-      const noise = this.ctx.createBufferSource();
-      noise.buffer = buffer;
-      noise.loop = true;
+      const whiteNoise = this.ctx.createBufferSource();
+      whiteNoise.buffer = noiseBuffer;
+      whiteNoise.loop = true;
 
-      // Low pass filter for muffled outdoor storm & hearth warm glow
       const filter = this.ctx.createBiquadFilter();
       filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(450, this.ctx.currentTime);
+      filter.frequency.value = type === 'tavern' ? 260 : 180;
 
       const gain = this.ctx.createGain();
-      gain.gain.setValueAtTime(0.035, this.ctx.currentTime);
+      gain.gain.setValueAtTime(0.04, this.ctx.currentTime);
 
-      noise.connect(filter);
+      whiteNoise.connect(filter);
       filter.connect(gain);
       gain.connect(this.ctx.destination);
 
-      noise.start();
-      this.ambientNodes = { noise, gain, filter };
-      this.isAmbientPlaying = true;
+      whiteNoise.start(0);
+      this.ambientNode = { source: whiteNoise, gain };
     } catch (e) {
-      // Audio autoplay restrictions handle safely
+      console.warn('Ambient start error:', e);
     }
   }
 
   stopAmbient() {
-    if (this.ambientNodes) {
+    if (this.ambientNode) {
       try {
-        this.ambientNodes.noise.stop();
-        this.ambientNodes.noise.disconnect();
+        this.ambientNode.source.stop();
       } catch (e) {}
-      this.ambientNodes = null;
+      this.ambientNode = null;
+    }
+  }
+
+  // --- WEB SPEECH API NARRATION ---
+
+  toggleSpeech() {
+    this.isSpeechEnabled = !this.isSpeechEnabled;
+    if (!this.isSpeechEnabled) {
+      this.stopSpeech();
+    }
+    return this.isSpeechEnabled;
+  }
+
+  speakText(text, lang = 'id-ID') {
+    if (!this.isSpeechEnabled || !('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const clean = text.replace(/[*_~`]/g, '');
+    const utterance = new SpeechSynthesisUtterance(clean);
+    utterance.lang = lang;
+    utterance.rate = 1.0;
+    utterance.pitch = 0.95;
+    window.speechSynthesis.speak(utterance);
+  }
+
+  stopSpeech() {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
     }
   }
 }
 
 export const audio = new AudioService();
+export default audio;

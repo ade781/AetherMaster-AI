@@ -31,6 +31,15 @@ export default {
         'gold-glow': '0 0 20px rgba(230, 195, 92, 0.35)',
         'crimson-glow': '0 0 20px rgba(192, 57, 43, 0.45)',
         'arcane-glow': '0 0 20px rgba(142, 68, 173, 0.4)',
+      },
+      keyframes: {
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+      },
+      animation: {
+        fadeIn: 'fadeIn 0.5s ease-out',
       }
     },
   },

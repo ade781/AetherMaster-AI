@@ -1,276 +1,351 @@
 import React, { useState, useEffect } from 'react';
-import { VisualNovelStage } from './components/VisualNovelStage';
-import { SaveLoadModal } from './components/SaveLoadModal';
-import { audio } from './services/audioService';
-import { Sparkles, Sword, Play, AlertCircle, RefreshCw, Database } from 'lucide-react';
+import CharacterHUD from './components/CharacterHUD';
+import VisualNovelStage from './components/VisualNovelStage';
+import CharacterCreationModal from './components/CharacterCreationModal';
+import StoryTreeModal from './components/StoryTreeModal';
+import BacklogModal from './components/BacklogModal';
+import SaveLoadModal from './components/SaveLoadModal';
+import audio from './services/audioService';
+import { Shield, Sparkles, BookOpen, Skull, Play, RefreshCw, Compass } from 'lucide-react';
 
-const STORAGE_KEY = 'aethermaster_vn_save_v1';
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = 'http://localhost:5000/api/story';
 
-export function App() {
-  const [currentScene, setCurrentScene] = useState(null);
-  const [history, setHistory] = useState([]);
-  const [sessionId, setSessionId] = useState(null);
+export default function App() {
+  const [campaigns, setCampaigns] = useState([]);
+  const [selectedCampaign, setSelectedCampaign] = useState(null);
+  const [session, setSession] = useState(null);
+  const [character, setCharacter] = useState(null);
+  const [currentNode, setCurrentNode] = useState(null);
+
+  // Modals & Overlays
+  const [isCharCreationOpen, setIsCharCreationOpen] = useState(false);
+  const [isStoryTreeOpen, setIsStoryTreeOpen] = useState(false);
+  const [isBacklogOpen, setIsBacklogOpen] = useState(false);
+  const [isSaveLoadOpen, setIsSaveLoadOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [isGameStarted, setIsGameStarted] = useState(false);
-  const [isDatabaseModalOpen, setIsDatabaseModalOpen] = useState(false);
+  const [initLoading, setInitLoading] = useState(true);
+  const [toast, setToast] = useState(null);
 
-  // Restore local cache if present
-  useEffect(() => {
-    try {
-      const savedData = localStorage.getItem(STORAGE_KEY);
-      if (savedData) {
-        const parsed = JSON.parse(savedData);
-        if (parsed.currentScene) {
-          setCurrentScene(parsed.currentScene);
-          setHistory(parsed.history || []);
-          setSessionId(parsed.sessionId || null);
-          setIsGameStarted(true);
-        }
-      }
-    } catch (e) {
-      console.warn('Failed to parse saved game data', e);
-    }
-  }, []);
-
-  // Sync to localStorage
-  useEffect(() => {
-    if (currentScene && isGameStarted) {
-      try {
-        localStorage.setItem(
-          STORAGE_KEY,
-          JSON.stringify({ 
-            currentScene, 
-            history, 
-            sessionId,
-            updatedAt: new Date().toISOString() 
-          })
-        );
-      } catch (e) {
-        console.warn('Failed to save to localStorage', e);
-      }
-    }
-  }, [currentScene, history, sessionId, isGameStarted]);
-
-  // Start new game
-  const handleStartGame = async () => {
-    setIsLoading(true);
-    setError(null);
-    audio.playSceneTransition();
-
-    const newId = `session_${Date.now()}`;
-
-    try {
-      const res = await fetch(`${API_BASE}/story/start`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: newId }),
-      });
-
-      if (!res.ok) {
-        throw new Error(`Server error: ${res.status}`);
-      }
-
-      const data = await res.json();
-      if (data.scene) {
-        setCurrentScene(data.scene);
-        setHistory([]);
-        setSessionId(data.sessionId || newId);
-        setIsGameStarted(true);
-        audio.startAmbient();
-      } else {
-        throw new Error('Format respon adegan tidak valid.');
-      }
-    } catch (err) {
-      console.error('Failed to start story:', err);
-      setError('Gagal menghubungi AI Dungeon Master. Pastikan server backend aktif di port 5000.');
-    } finally {
-      setIsLoading(false);
-    }
+  const showToast = (message, type = 'error') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3500);
   };
 
-  // Player selected an action choice
-  const handleSelectChoice = async (choice) => {
-    if (isLoading || !choice) return;
+  // Fetch campaigns on mount
+  useEffect(() => {
+    fetch(`${API_BASE}/campaigns`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          setCampaigns(data.data || []);
+        }
+      })
+      .catch(err => console.error('Gagal mengambil kampanye:', err))
+      .finally(() => setInitLoading(false));
+  }, []);
 
+  // Handler: Start campaign & character creation
+  const handleSelectCampaign = (camp) => {
+    audio.playSelect();
+    setSelectedCampaign(camp);
+    setIsCharCreationOpen(true);
+  };
+
+  const handleStartGame = async (characterData) => {
     setIsLoading(true);
-    setError(null);
-
-    const previousSnapshot = {
-      ...currentScene,
-      chosenAction: choice.text,
-    };
-    const updatedHistory = [...history, previousSnapshot];
-    setHistory(updatedHistory);
-
     try {
-      const res = await fetch(`${API_BASE}/story/choice`, {
+      const res = await fetch(`${API_BASE}/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          sessionId,
-          choiceText: choice.text,
-          previousScene: currentScene,
-          history: updatedHistory,
-        }),
+          campaignId: selectedCampaign.id,
+          characterData
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSession(data.data.session);
+        setCharacter(data.data.character);
+        setCurrentNode(data.data.currentNode);
+        setIsCharCreationOpen(false);
+      } else {
+        showToast(data.error || 'Gagal memulai petualangan.', 'error');
+      }
+    } catch (err) {
+      showToast('Koneksi ke backend gagal.', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handler: Choice action chosen in Visual Novel Stage
+  const handleChooseAction = async (choice) => {
+    if (!session || isLoading) return;
+    setIsLoading(true);
+
+    try {
+      const res = await fetch(`${API_BASE}/action`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: session.id,
+          choiceId: choice.id,
+          statType: choice.statType,
+          dc: choice.dc,
+          customText: choice.customText
+        })
       });
 
-      if (!res.ok) {
-        throw new Error(`Gagal memproses aksi: ${res.status}`);
-      }
-
       const data = await res.json();
-      if (data.scene) {
-        setCurrentScene(data.scene);
-        audio.playSceneTransition();
+      if (data.success) {
+        const nextNode = data.data.currentNode;
+        const nextChar = data.data.character;
+        const nextSess = data.data.session;
+
+        setSession(nextSess);
+        setCharacter(nextChar);
+        setCurrentNode(nextNode);
       } else {
-        throw new Error('Respon adegan selanjutnya tidak valid.');
+        showToast(data.error || 'Gagal mengambil tindakan.', 'error');
       }
     } catch (err) {
-      console.error('Choice processing error:', err);
-      setError('Gagal melanjutkan adegan. Silakan coba klik tombol Ulangi.');
+      showToast('Terjadi kesalahan komunikasi dengan server.', 'error');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Load session from Sequelize database
-  const handleLoadSession = async (id) => {
+  // Handler: Inventory use item
+  const handleUseItem = (item) => {
+    if (!character) return;
+    
+    // Smart Item Check
+    if (item.category !== 'Obat' && item.category !== 'Potion') {
+      showToast(`${item.name} tidak bisa dikonsumsi langsung. Gunakan melalui dialog/pilihan!`, 'error');
+      audio.playClick();
+      return;
+    }
+
+    audio.playSelect();
+    const inv = [...(character.inventory || [])];
+    const idx = inv.findIndex(i => i.id === item.id);
+    if (idx !== -1) {
+      inv.splice(idx, 1);
+      
+      // Determine effect (basic implementation for HP/Mana)
+      let updated = { ...character, inventory: inv };
+      if (item.name.toLowerCase().includes('mana') || item.effect.toLowerCase().includes('mana')) {
+        updated.mana = Math.min(character.maxMana, character.mana + 25);
+        showToast(`Memulihkan Mana dari ${item.name}!`, 'success');
+      } else {
+        updated.hp = Math.min(character.maxHp, character.hp + 25);
+        showToast(`Memulihkan HP dari ${item.name}!`, 'success');
+      }
+      
+      setCharacter(updated);
+    }
+  };
+
+  // Handler: Rewind to node
+  const handleRewind = async (targetNodeId) => {
+    if (!session) return;
     setIsLoading(true);
-    setError(null);
     try {
-      const res = await fetch(`${API_BASE}/story/sessions/${id}`);
+      const res = await fetch(`${API_BASE}/rewind`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: session.id,
+          targetNodeId
+        })
+      });
       const data = await res.json();
-      if (data.success && data.session) {
-        setCurrentScene(data.session.currentScene);
-        setHistory(data.session.history || []);
-        setSessionId(data.session.id);
-        setIsGameStarted(true);
-        audio.playSceneTransition();
-        audio.startAmbient();
-      } else {
-        throw new Error('Sesi tidak ditemukan.');
+      if (data.success) {
+        setSession(data.data.session);
+        setCharacter(data.data.character);
+        setCurrentNode(data.data.currentNode);
       }
     } catch (err) {
-      setError('Gagal memuat sesi: ' + err.message);
+      console.error('Rewind error:', err);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Restart story
-  const handleRestart = () => {
-    localStorage.removeItem(STORAGE_KEY);
-    handleStartGame();
+  // Handler: Load from slot or import
+  const handleLoadSession = (loadedData) => {
+    setSession(loadedData.session);
+    setCharacter(loadedData.character);
+    setCurrentNode(loadedData.currentNode);
   };
 
-  return (
-    <div className="min-h-screen text-slate-100 flex flex-col justify-between">
-      {/* Error Banner */}
-      {error && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 max-w-lg w-full px-4">
-          <div className="p-3.5 rounded-xl bg-rose-950/90 border border-rose-600/60 text-rose-200 text-xs flex items-center justify-between gap-3 shadow-2xl backdrop-blur-md">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
-              <span>{error}</span>
-            </div>
-            <button
-              onClick={() => {
-                setError(null);
-                if (!isGameStarted) handleStartGame();
-              }}
-              className="px-2.5 py-1 rounded-lg bg-rose-800 hover:bg-rose-700 text-white font-medium flex items-center gap-1 shrink-0"
-            >
-              <RefreshCw className="w-3 h-3" />
-              <span>Coba Lagi</span>
-            </button>
-          </div>
+  // Render Toast
+  const ToastNotification = () => {
+    if (!toast) return null;
+    return (
+      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] animate-slideDown">
+        <div className={`px-4 py-2 rounded-xl shadow-2xl border flex items-center gap-2 ${
+          toast.type === 'error' ? 'bg-rose-950/90 border-rose-500/50 text-rose-200' : 'bg-emerald-950/90 border-emerald-500/50 text-emerald-200'
+        }`}>
+          <span className="text-sm font-medium">{toast.message}</span>
         </div>
-      )}
+      </div>
+    );
+  };
 
-      {/* Main Screen Router */}
-      {!isGameStarted ? (
-        <main className="min-h-screen flex items-center justify-center p-6 select-none relative overflow-hidden">
-          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-96 h-96 bg-amber-600/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute bottom-10 right-1/3 w-80 h-80 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
-
-          <div className="glass-panel max-w-xl w-full p-8 md:p-12 rounded-3xl text-center space-y-6 relative border border-amber-500/30">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-amber-500/40 bg-amber-950/60 text-amber-300 text-xs font-semibold tracking-wider uppercase">
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              <span>AI Dungeon Master • Gemini 3.6 & Sequelize</span>
+  // Home Screen: Campaign Selection
+  if (!session || !currentNode) {
+    return (
+      <div className="min-h-screen bg-fantasy-dark text-slate-100 flex flex-col justify-between selection:bg-fantasy-gold selection:text-slate-950">
+        <ToastNotification />
+        {/* Top Header */}
+        <header className="w-full border-b border-fantasy-border/60 bg-slate-950/80 backdrop-blur-md px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-fantasy-gold to-amber-600 flex items-center justify-center shadow-lg shadow-fantasy-gold/20 text-slate-950 font-bold font-cinzel text-xl">
+              ⚔
             </div>
-
-            <div className="space-y-3">
-              <h1 className="text-4xl md:text-5xl font-serif font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-400 to-amber-600 drop-shadow-sm">
+            <div>
+              <h1 className="font-cinzel text-lg md:text-xl font-bold text-fantasy-gold tracking-wider">
                 AetherMaster AI
               </h1>
-              <p className="text-amber-500/90 font-serif text-sm tracking-widest uppercase">
-                The Whispering Tavern & The Cursed Woods
-              </p>
-              <p className="text-slate-400 text-sm md:text-base leading-relaxed pt-2 font-sans">
-                Masuki kedai pengembara tua di malam badai. Setiap keputusan taktis dan moralmu akan membentuk takdir dan mengungkap misteri relik kuno di Hutan Terkutuk.
-              </p>
-            </div>
-
-            <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
-              <button
-                disabled={isLoading}
-                onClick={handleStartGame}
-                className="w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-bold text-base shadow-lg shadow-amber-900/40 flex items-center justify-center gap-2.5 active:scale-95 transition-all"
-              >
-                {isLoading ? (
-                  <>
-                    <RefreshCw className="w-5 h-5 animate-spin" />
-                    <span>Mempersiapkan Takdir...</span>
-                  </>
-                ) : (
-                  <>
-                    <Play className="w-5 h-5 fill-current" />
-                    <span>Mulai Petualangan Baru</span>
-                  </>
-                )}
-              </button>
-
-              <button
-                onClick={() => {
-                  audio.playClick();
-                  setIsDatabaseModalOpen(true);
-                }}
-                className="w-full sm:w-auto px-6 py-4 rounded-xl border border-slate-700 bg-slate-900/80 hover:border-amber-500/50 hover:bg-slate-800 text-slate-200 font-semibold text-sm flex items-center justify-center gap-2 transition-all"
-              >
-                <Database className="w-4 h-4 text-amber-500" />
-                <span>Pilih Sesi Simpanan</span>
-              </button>
-            </div>
-
-            <div className="pt-4 text-xs text-slate-500 border-t border-slate-800 flex items-center justify-center gap-2">
-              <Sword className="w-3.5 h-3.5 text-amber-600" />
-              <span>Visual Novel RPG Interaktif • Database SQLite Sequelize • Audio Native</span>
+              <p className="text-[11px] text-slate-400">Virtual Tabletop D&D 5E AI Engine</p>
             </div>
           </div>
+          <button
+            onClick={() => setIsSaveLoadOpen(true)}
+            className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-medium text-slate-200 transition-colors flex items-center gap-2"
+          >
+            <BookOpen className="w-4 h-4 text-emerald-400" />
+            Muat Save Game
+          </button>
+        </header>
+
+        {/* Campaign Hero Area */}
+        <main className="max-w-6xl mx-auto px-6 py-12 flex-1 flex flex-col justify-center">
+          <div className="text-center max-w-2xl mx-auto mb-10 space-y-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-fantasy-gold/10 border border-fantasy-gold/30 text-fantasy-gold text-xs font-semibold tracking-wide uppercase">
+              <Sparkles className="w-3.5 h-3.5" />
+              D&D 5E Visual Novel Tabletop
+            </div>
+            <h2 className="font-cinzel text-3xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-fantasy-gold via-amber-200 to-amber-500 tracking-tight">
+              Pilih Dunia Petualanganmu
+            </h2>
+            <p className="text-sm md:text-base text-slate-300 font-light leading-relaxed">
+              Setiap keputusan didukung kalkulasi dadu D20, narasi adaptif AI Dungeon Master, serta mini-VTT pertempuran taktis.
+            </p>
+          </div>
+
+          {/* Campaign Cards */}
+          {initLoading ? (
+            <div className="text-center py-12 text-slate-400 flex items-center justify-center gap-2">
+              <RefreshCw className="w-5 h-5 animate-spin text-fantasy-gold" />
+              <span>Memuat arsip kampanye...</span>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {campaigns.map((camp) => (
+                <div
+                  key={camp.id}
+                  className="group relative bg-slate-950/80 border-2 border-fantasy-border/60 hover:border-fantasy-gold rounded-2xl p-6 shadow-xl hover:shadow-2xl hover:shadow-fantasy-gold/20 transition-all duration-300 flex flex-col justify-between hover:scale-[1.02]"
+                >
+                  <div className="space-y-3">
+                    <div className="w-12 h-12 rounded-xl bg-slate-900 border border-fantasy-border flex items-center justify-center text-2xl shadow-inner">
+                      {camp.icon || '⚔️'}
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400/80 block">
+                      Genre: {camp.genre?.replace('_', ' ')}
+                    </span>
+                    <h3 className="font-cinzel text-lg md:text-xl font-bold text-white group-hover:text-fantasy-gold transition-colors">
+                      {camp.title}
+                    </h3>
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      {camp.premise}
+                    </p>
+                  </div>
+
+                  <div className="pt-6">
+                    <button
+                      onClick={() => handleSelectCampaign(camp)}
+                      className="w-full py-3 rounded-xl bg-gradient-to-r from-fantasy-gold to-amber-500 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-cinzel font-bold text-xs tracking-wider shadow-lg shadow-fantasy-gold/20 flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95"
+                    >
+                      <Play className="w-4 h-4 fill-slate-950" />
+                      Pilih Kampanye
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </main>
-      ) : (
-        <VisualNovelStage
-          currentScene={currentScene}
-          onSelectChoice={handleSelectChoice}
+
+        {/* Footer */}
+        <footer className="w-full border-t border-slate-900 py-4 px-6 text-center text-xs text-slate-500 font-mono">
+          AetherMaster AI Local Edition • Three.js 3D D20 • Web Audio Synth • SQLite Persistence
+        </footer>
+
+        {/* Character Creation Modal */}
+        <CharacterCreationModal
+          isOpen={isCharCreationOpen}
+          campaign={selectedCampaign}
+          onClose={() => setIsCharCreationOpen(false)}
+          onConfirm={handleStartGame}
           isLoading={isLoading}
-          history={history}
-          sessionId={sessionId}
-          onRestart={handleRestart}
+        />
+
+        {/* Save Load Modal */}
+        <SaveLoadModal
+          isOpen={isSaveLoadOpen}
+          onClose={() => setIsSaveLoadOpen(false)}
+          sessionId={null}
           onLoadSession={handleLoadSession}
         />
-      )}
+      </div>
+    );
+  }
 
-      {/* Database Sessions Modal on Title Screen */}
+  // In-Game Active Stage View
+  return (
+    <div className="h-screen w-full bg-slate-950 text-slate-100 flex overflow-hidden selection:bg-fantasy-gold selection:text-slate-950">
+      <ToastNotification />
+      <VisualNovelStage
+        node={currentNode}
+        character={character}
+        onChooseAction={handleChooseAction}
+        onOpenStoryTree={() => setIsStoryTreeOpen(true)}
+        onOpenBacklog={() => setIsBacklogOpen(true)}
+        onOpenSaveLoad={() => setIsSaveLoadOpen(true)}
+        isLoading={isLoading}
+        hudComponent={
+          <CharacterHUD
+            character={character}
+            onUseItem={handleUseItem}
+          />
+        }
+      />
+
+      {/* Story Tree & Rewind Modal */}
+      <StoryTreeModal
+        isOpen={isStoryTreeOpen}
+        onClose={() => setIsStoryTreeOpen(false)}
+        sessionId={session?.id}
+        currentNodeId={currentNode?.id}
+        onRewind={handleRewind}
+      />
+
+      {/* Backlog Transcript Modal */}
+      <BacklogModal
+        isOpen={isBacklogOpen}
+        onClose={() => setIsBacklogOpen(false)}
+        sessionId={session?.id}
+      />
+
+      {/* Multi-Slot Save/Load Modal */}
       <SaveLoadModal
-        isOpen={isDatabaseModalOpen}
-        onClose={() => setIsDatabaseModalOpen(false)}
+        isOpen={isSaveLoadOpen}
+        onClose={() => setIsSaveLoadOpen(false)}
+        sessionId={session?.id}
         onLoadSession={handleLoadSession}
-        activeSessionId={sessionId}
       />
     </div>
   );
 }
-
-export default App;
