@@ -5,6 +5,7 @@ import CharacterCreationModal from './components/CharacterCreationModal';
 import StoryTreeModal from './components/StoryTreeModal';
 import BacklogModal from './components/BacklogModal';
 import SaveLoadModal from './components/SaveLoadModal';
+import GameOverModal from './components/GameOverModal';
 import LandingPage from './components/LandingPage';
 import audio from './services/audioService';
 import { Shield, Sparkles, BookOpen, Skull, Play, RefreshCw, Compass } from 'lucide-react';
@@ -116,34 +117,37 @@ export default function App() {
     }
   };
 
-  // Handler: Inventory use item
-  const handleUseItem = (item) => {
-    if (!character) return;
+  // Handler: Inventory use item with persistent backend synchronization
+  const handleUseItem = async (item) => {
+    if (!character || !session) return;
     
     // Smart Item Check
-    if (item.category !== 'Obat' && item.category !== 'Potion') {
+    if (item.category !== 'Obat' && item.category !== 'Potion' && !item.id.includes('potion')) {
       showToast(`${item.name} tidak bisa dikonsumsi langsung. Gunakan melalui dialog/pilihan!`, 'error');
       audio.playClick();
       return;
     }
 
     audio.playSelect();
-    const inv = [...(character.inventory || [])];
-    const idx = inv.findIndex(i => i.id === item.id);
-    if (idx !== -1) {
-      inv.splice(idx, 1);
-      
-      // Determine effect (basic implementation for HP/Mana)
-      let updated = { ...character, inventory: inv };
-      if (item.name.toLowerCase().includes('mana') || item.effect.toLowerCase().includes('mana')) {
-        updated.mana = Math.min(character.maxMana, character.mana + 25);
-        showToast(`Memulihkan Mana dari ${item.name}!`, 'success');
+    try {
+      const res = await fetch(`${API_BASE}/use-item`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: session.id,
+          itemId: item.id
+        })
+      });
+
+      const data = await res.json();
+      if (data.success && data.data?.character) {
+        setCharacter(data.data.character);
+        showToast(data.message || `Memulihkan status dengan ${item.name}!`, 'success');
       } else {
-        updated.hp = Math.min(character.maxHp, character.hp + 25);
-        showToast(`Memulihkan HP dari ${item.name}!`, 'success');
+        showToast(data.error || 'Gagal menggunakan item.', 'error');
       }
-      
-      setCharacter(updated);
+    } catch (err) {
+      showToast('Koneksi ke backend gagal saat menggunakan item.', 'error');
     }
   };
 
@@ -269,6 +273,19 @@ export default function App() {
         onClose={() => setIsSaveLoadOpen(false)}
         sessionId={session?.id}
         onLoadSession={handleLoadSession}
+      />
+
+      {/* Game Over & Defeat Modal */}
+      <GameOverModal
+        isOpen={Boolean(character && (character.hp <= 0 || session?.isGameOver))}
+        character={character}
+        onRewind={() => setIsStoryTreeOpen(true)}
+        onLoadGame={() => setIsSaveLoadOpen(true)}
+        onRestart={() => {
+          setSession(null);
+          setCharacter(null);
+          setCurrentNode(null);
+        }}
       />
     </div>
   );

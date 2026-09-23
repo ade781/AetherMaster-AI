@@ -54,6 +54,10 @@ const StoryNode = sequelize.define('StoryNode', {
   combatEncounter: {
     type: DataTypes.JSON,
     allowNull: true
+  },
+  characterSnapshot: {
+    type: DataTypes.JSON,
+    allowNull: true
   }
 }, {
   timestamps: true

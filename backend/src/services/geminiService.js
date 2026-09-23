@@ -21,12 +21,14 @@ const sceneSchema = z.object({
   consequenceNote: z.string().nullable().optional(),
   stateUpdates: z.object({
     hpChange: z.number().default(0),
+    manaChange: z.number().default(0),
     goldChange: z.number().default(0),
     receivedItem: z.any().nullable().optional(),
     consumedItem: z.any().nullable().optional(),
     addLedgerFact: z.string().nullable().optional()
   }).default({
     hpChange: 0,
+    manaChange: 0,
     goldChange: 0,
     receivedItem: null,
     consumedItem: null,
@@ -182,6 +184,74 @@ function getFallbackNextScene(previousNode, actionTaken, checkResult, character,
   const actionTone = actionTaken?.tone || 'cautious';
   const prevLoc = previousNode?.location || 'Ruang Petualangan';
   const prevSpk = previousNode?.speaker || 'Narator';
+  const lowerAction = actionText.toLowerCase();
+
+  // Active combat resolution if previous node had combat encounter
+  if (previousNode?.combatEncounter) {
+    const enemy = previousNode.combatEncounter;
+    if (actionTaken?.id === 'combat_flee' || lowerAction.includes('mundur') || lowerAction.includes('lari') || lowerAction.includes('kabur')) {
+      return {
+        chapterTitle: `Babak ${turnCount + 1}: Meloloskan Diri`,
+        location: prevLoc,
+        backgroundId: previousNode.backgroundId || 'bg_04_crimson_crypt',
+        speaker: 'Narator',
+        characterId: 'char_hero_01_paladin',
+        mood: 'tense',
+        dialogue: `Dengan refleks sigap dan langkah lincah, kamu berhasil menangkis ayunan cakar ${enemy.enemyName} lalu melompat mundur menyusuri celah koridor sempit. Musuh meraung geram namun kehilangan jejakmu di dalam kegelapan.`,
+        consequenceNote: `Berhasil mundur taktis dan selamat dari ancaman ${enemy.enemyName}.`,
+        stateUpdates: {
+          hpChange: 0,
+          manaChange: 0,
+          goldChange: 0,
+          receivedItem: null,
+          consumedItem: null,
+          addLedgerFact: `Berhasil meloloskan diri dari ${enemy.enemyName}.`
+        },
+        combatEncounter: null,
+        choices: [
+          { id: `c_${turnCount}_1`, text: 'Atur napas lalu telusuri rute alternatif yang lebih aman', tone: 'cautious' },
+          { id: `c_${turnCount}_2`, text: 'Cari tempat perlindungan untuk memeriksa sisa perbekalan', tone: 'curious' },
+          { id: `c_${turnCount}_3`, text: 'Siapkan posisi siaga bila musuh kembali mengejar', tone: 'bold' }
+        ]
+      };
+    }
+
+    const isSpell = actionTaken?.id === 'combat_spell' || lowerAction.includes('sihir') || lowerAction.includes('mantra') || lowerAction.includes('fireball') || lowerAction.includes('energi');
+    return {
+      chapterTitle: `Babak ${turnCount + 1}: Kemenangan Gemilang`,
+      location: prevLoc,
+      backgroundId: previousNode.backgroundId || 'bg_04_crimson_crypt',
+      speaker: 'Narator',
+      characterId: 'char_hero_01_paladin',
+      mood: 'triumphant',
+      dialogue: cleanText(
+        isSpell
+          ? `Semburan sihir berkobar menerjang telak ${enemy.enemyName}! Sambaran arkanum melumat persendian tulangnya hingga hancur berkeping-keping di lantai batu. Kutukan di ruangan ini sirna seketika meninggalkan rasa lega yang mendalam.`
+          : `Dengan ayunan senjata penuh keyakinan, tebasanmu membelah pertahanan ${enemy.enemyName}! Tubuh lawan ambruk terhempas dan hancur tak berdaya. Ancaman maut berhasil kamu tumpas tuntas!`
+      ),
+      consequenceNote: `Kemenangan mutlak! ${enemy.enemyName} berhasil ditumpas. Memperoleh ${enemy.rewardGold || 25} Koin Emas.`,
+      stateUpdates: {
+        hpChange: -3,
+        manaChange: isSpell ? -8 : 0,
+        goldChange: enemy.rewardGold || 25,
+        receivedItem: {
+          id: 'item_06_skeleton_key',
+          name: 'Kunci Tulang Tua',
+          category: 'Kunci',
+          effect: 'Dapat membuka peti besi terkutuk',
+          icon: 'item_06_skeleton_key'
+        },
+        consumedItem: null,
+        addLedgerFact: `Mengalahkan ${enemy.enemyName} dan menemukan Kunci Tulang Tua.`
+      },
+      combatEncounter: null,
+      choices: [
+        { id: `c_${turnCount}_1`, text: 'Gunakan Kunci Tulang Tua untuk membuka peti besi di sudut ruangan', tone: 'curious' },
+        { id: `c_${turnCount}_2`, text: 'Telusuri lorong lebih dalam menuju altar suci yang tersembunyi', tone: 'bold' },
+        { id: `c_${turnCount}_3`, text: 'Periksa sisa reruntuhan untuk mencari catatan rahasia musuh', tone: 'shrewd' }
+      ]
+    };
+  }
 
   // Combat encounter if turn >= 3 and not already in combat
   if (turnCount >= 3 && !previousNode?.combatEncounter) {
@@ -198,6 +268,7 @@ function getFallbackNextScene(previousNode, actionTaken, checkResult, character,
       consequenceNote: `Aksimu "${actionText.slice(0, 45)}..." memicu kemunculan musuh.`,
       stateUpdates: {
         hpChange: -4,
+        manaChange: 0,
         goldChange: 0,
         receivedItem: null,
         consumedItem: null,
@@ -265,11 +336,15 @@ function getFallbackNextScene(previousNode, actionTaken, checkResult, character,
   const locIdx = Math.min(locations.length - 1, Math.max(0, turnCount % locations.length));
   const chosenLoc = locations[locIdx];
 
-  const lowerAction = actionText.toLowerCase();
   let consequence = '';
   let outcomeDialogue = '';
   let hpDelta = 0;
+  let manaDelta = 0;
   let goldDelta = 0;
+
+  if (lowerAction.includes('sihir') || lowerAction.includes('mantra') || lowerAction.includes('spell') || lowerAction.includes('fireball') || lowerAction.includes('arkana')) {
+    manaDelta = -6;
+  }
 
   if (lowerAction.includes('serang') || lowerAction.includes('tebas') || lowerAction.includes('kekuatan') || lowerAction.includes('hantam') || actionTone === 'bold') {
     consequence = `Dampak: Aksi fisik berhasil menembus hambatan.`;
@@ -301,6 +376,7 @@ function getFallbackNextScene(previousNode, actionTaken, checkResult, character,
     consequenceNote: consequence,
     stateUpdates: {
       hpChange: hpDelta,
+      manaChange: manaDelta,
       goldChange: goldDelta,
       receivedItem: (turnCount === 2) ? {
         id: 'item_04_silver_dagger',
@@ -365,7 +441,7 @@ class GeminiService {
     let lastError = null;
     for (const model of candidateModels) {
       try {
-        const response = await this.client.models.generateContent({
+        const generatePromise = this.client.models.generateContent({
           model,
           contents: [
             {
@@ -374,6 +450,12 @@ class GeminiService {
             }
           ]
         });
+
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error(`Timeout: Model ${model} took longer than 5000ms`)), 5000)
+        );
+
+        const response = await Promise.race([generatePromise, timeoutPromise]);
 
         if (response && response.text) {
           return response.text.trim();
@@ -416,6 +498,7 @@ SKEMA JSON RESMI:
   "consequenceNote": "string",
   "stateUpdates": {
     "hpChange": 0,
+    "manaChange": 0,
     "goldChange": 0,
     "receivedItem": null,
     "consumedItem": null,
@@ -463,6 +546,17 @@ PENTING: Pada teks 'dialogue', sampaikan terlebih dahulu Latar Belakang Cerita (
     const actionText = actionTaken?.text || 'Melangkah maju dengan waspada';
     const actionTone = actionTaken?.tone || 'cautious';
 
+    const activeCombat = previousNode?.combatEncounter;
+    const combatContext = activeCombat ? `
+[PERTEMPURAN AKTIF SEDANG BERLANGSUNG]:
+- Musuh: ${activeCombat.enemyName} (HP Musuh: ${activeCombat.enemyHp}/${activeCombat.maxEnemyHp})
+- ATURAN PERTEMPURAN:
+  * Jika pemain menyerang atau merapal sihir, hitung dampak damage ke musuh (10 s.d 25 damage).
+  * Jika musuh kalah (HP <= 0), narasikan kekalahan musuh, berikan reward koin gold/item pada stateUpdates, dan set 'combatEncounter': null.
+  * Jika musuh belum kalah, narasikan serangan balasan musuh (-HP pemain di 'hpChange') dan perbarui sisa HP musuh di 'combatEncounter'.
+  * Jika pemain kabur, narasikan pelarian dan set 'combatEncounter': null.
+` : '';
+
     const systemPrompt = `Kamu adalah Dungeon Master (DM) legendaris untuk game Visual Novel RPG Tabletop.
 TUGAS UTAMA: Menulis adegan narasi berikutnya yang SEPENUHNYA TANGGAP dan REAKTIF terhadap aksi pemain.
 
@@ -470,8 +564,9 @@ KONTEKS DUNIA SAAT INI:
 - Lokasi Terakhir: ${prevLocation}
 - Pembicara / Karakter Terakhir: ${prevSpeaker}
 - Narasi Situasi Sebelumnya: "${prevDialogue}"
-- Karakter Pemain: ${character.name} (Kelas: ${character.characterClass})
+- Karakter Pemain: ${character.name} (Kelas: ${character.characterClass}, HP: ${character.hp}/${character.maxHp}, Mana: ${character.mana}/${character.maxMana})
 - Catatan Petualangan Sebelumnya: ${ledgerFacts}
+${combatContext}
 
 TINDAKAN YANG DIPILIH PEMAIN:
 Aksi: "${actionText}"
@@ -480,10 +575,11 @@ Nada Tindakan: ${actionTone}
 ATURAN REAKTIVITAS KONSEKUENSI (SANGAT KRUSIAL):
 1. RESPON PARAGRAF PERTAMA WAJIB LANGSUNG: Kalimat dan paragraf pertama 'dialogue' HARUS SECARA LANGSUNG menceritakan bagaimana karakter mengeksekusi aksi "${actionText}" dan apa dampak instan yang terjadi seketika di lokasi. DILARANG KERAS mengabaikan aksi ini atau melompat ke peristiwa lain tanpa menceritakan hasilnya terlebih dahulu!
 2. KONSEKUENSI NYATA ('consequenceNote'): Tulis ringkasan padat dampak langsung aksi pemain tersebut. (Contoh: "Pintu rahasia berhasil dibuka", "Musuh terkejut oleh serangan tiba-tiba", "Relik tersembunyi berhasil ditemukan"). JANGAN gunakan teks generik seperti "Langkah baru diambil."!
-3. JANGAN PERNAH GUNAKAN EM DASH (—). Gunakan koma, titik dua, atau kurung.
-4. TANPA SISTEM DADU: Evaluasi aksi secara logis. Jika aksinya kreatif dan masuk akal, buat berhasil dan berikan hadiah gold/item bila layak. Jika aksinya berbahaya, berikan pengurangan HP masuk akal (misal: hpChange: -4).
-5. PILIHAN TINDAKAN BERIKUTNYA ('choices'): Sediakan 3 pilihan aksi baru yang secara runtut dan logis merupakan kelanjutan situasi setelah aksi "${actionText}" tersebut selesai terjadi.
-6. Respon WAJIB berupa objek JSON murni tanpa pembungkus \`\`\`json.
+3. PENGURANGAN MANA SIHIR: Jika aksi pemain menggunakan mantra/sihir (misal Fireball, teleport, hembusan energi), kurangi Mana pemain secara proporsional (-4 s.d -12) di 'manaChange' dalam 'stateUpdates'.
+4. JANGAN PERNAH GUNAKAN EM DASH (—). Gunakan koma, titik dua, atau kurung.
+5. TANPA SISTEM DADU: Evaluasi aksi secara logis. Jika aksinya kreatif dan masuk akal, buat berhasil dan berikan hadiah gold/item bila layak. Jika aksinya berbahaya, berikan pengurangan HP masuk akal (misal: hpChange: -4).
+6. PILIHAN TINDAKAN BERIKUTNYA ('choices'): Sediakan 3 pilihan aksi baru yang secara runtut dan logis merupakan kelanjutan situasi setelah aksi "${actionText}" tersebut selesai terjadi.
+7. Respon WAJIB berupa objek JSON murni tanpa pembungkus \`\`\`json.
 
 SKEMA JSON RESMI:
 {
@@ -497,11 +593,13 @@ SKEMA JSON RESMI:
   "consequenceNote": "string ringkas dampak aksi pemain",
   "stateUpdates": {
     "hpChange": 0,
+    "manaChange": 0,
     "goldChange": 0,
     "receivedItem": null,
     "consumedItem": null,
     "addLedgerFact": "string ringkas tindakan dan dampaknya untuk memori DM"
   },
+  "combatEncounter": null,
   "choices": [
     {
       "id": "c1",

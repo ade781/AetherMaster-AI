@@ -23,7 +23,9 @@ exports.startCampaign = async (req, res) => {
       warrior: { hp: 35, maxHp: 35, mana: 15, maxMana: 15, str: 16, dex: 12, con: 15, int: 9, wis: 10, cha: 11, avatar: 'char_hero_01_paladin' },
       rogue: { hp: 28, maxHp: 28, mana: 18, maxMana: 18, str: 10, dex: 16, con: 12, int: 13, wis: 12, cha: 14, avatar: 'char_hero_05_rogue' },
       mage: { hp: 24, maxHp: 24, mana: 35, maxMana: 35, str: 8, dex: 13, con: 11, int: 17, wis: 14, cha: 10, avatar: 'char_hero_03_wizard' },
-      cleric: { hp: 30, maxHp: 30, mana: 25, maxMana: 25, str: 13, dex: 10, con: 14, int: 10, wis: 16, cha: 13, avatar: 'char_hero_06_cleric' }
+      cleric: { hp: 30, maxHp: 30, mana: 25, maxMana: 25, str: 13, dex: 10, con: 14, int: 10, wis: 16, cha: 13, avatar: 'char_hero_06_cleric' },
+      ranger: { hp: 28, maxHp: 28, mana: 20, maxMana: 20, str: 11, dex: 17, con: 13, int: 12, wis: 15, cha: 10, avatar: 'char_hero_02_ranger' },
+      warlock: { hp: 26, maxHp: 26, mana: 30, maxMana: 30, str: 9, dex: 14, con: 12, int: 14, wis: 11, cha: 17, avatar: 'char_hero_07_warlock' }
     };
 
     const chosenClass = (characterData?.characterClass || 'warrior').toLowerCase();
@@ -38,6 +40,10 @@ exports.startCampaign = async (req, res) => {
         icon: 'item_01_potion_heal'
       }
     ];
+
+    if (characterData?.starterItem) {
+      initialInventory.push(characterData.starterItem);
+    }
 
     const character = await Character.create({
       name: characterData?.name || 'Petualang Aether',
@@ -96,7 +102,15 @@ exports.startCampaign = async (req, res) => {
       dialogueText: openingScene.dialogue,
       consequenceNote: openingScene.consequenceNote,
       choices: openingScene.choices,
-      combatEncounter: openingScene.combatEncounter || null
+      combatEncounter: openingScene.combatEncounter || null,
+      characterSnapshot: {
+        hp: character.hp,
+        maxHp: character.maxHp,
+        mana: character.mana,
+        maxMana: character.maxMana,
+        gold: character.gold,
+        inventory: [...character.inventory]
+      }
     });
 
     session.currentSceneId = rootNode.id;
@@ -113,6 +127,64 @@ exports.startCampaign = async (req, res) => {
     });
   } catch (err) {
     console.error('startCampaign Error:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// Use consumable item from HUD inventory with persistent database save
+exports.useItem = async (req, res) => {
+  try {
+    const { sessionId, itemId } = req.body;
+    const session = await GameSession.findByPk(sessionId, {
+      include: [Character]
+    });
+    if (!session || !session.Character) {
+      return res.status(404).json({ success: false, error: 'Sesi atau karakter tidak ditemukan.' });
+    }
+
+    const character = session.Character;
+    const inv = [...(character.inventory || [])];
+    const itemIdx = inv.findIndex(i => i.id === itemId || i.name === itemId);
+
+    if (itemIdx === -1) {
+      return res.status(400).json({ success: false, error: 'Item tidak ditemukan di dalam inventaris.' });
+    }
+
+    const item = inv[itemIdx];
+    let msg = '';
+
+    if (item.category === 'Obat' || item.category === 'Potion' || item.id.includes('potion')) {
+      const lowerName = item.name.toLowerCase();
+      const lowerEff = (item.effect || '').toLowerCase();
+
+      if (lowerName.includes('mana') || lowerEff.includes('mana')) {
+        const healAmt = 25;
+        character.mana = Math.min(character.maxMana, character.mana + healAmt);
+        msg = `Memulihkan ${healAmt} Mana dari ${item.name}!`;
+      } else {
+        const healAmt = 25;
+        character.hp = Math.min(character.maxHp, character.hp + healAmt);
+        msg = `Memulihkan ${healAmt} HP dari ${item.name}!`;
+      }
+
+      // Consume item from inventory
+      inv.splice(itemIdx, 1);
+      character.inventory = inv;
+      await character.save();
+
+      return res.json({
+        success: true,
+        message: msg,
+        data: { character }
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        error: `${item.name} tidak bisa dikonsumsi langsung. Gunakan melalui dialog/pilihan cerita!`
+      });
+    }
+  } catch (err) {
+    console.error('useItem Error:', err);
     res.status(500).json({ success: false, error: err.message });
   }
 };
@@ -139,7 +211,8 @@ exports.submitAction = async (req, res) => {
       id: choiceId || 'custom',
       text: req.body.customText || 'Melangkah maju dengan waspada',
       statType: statType || 'STR',
-      dc: dc || 12
+      dc: dc || 12,
+      tone: req.body.tone || 'kreatif'
     };
 
     // Generate next scene
@@ -150,20 +223,35 @@ exports.submitAction = async (req, res) => {
       actionTaken: chosenChoice
     });
 
-    // Apply state updates to character
+    // Apply state updates to character (HP, Mana, Gold)
     const stateUpdates = nextScene.stateUpdates || {};
     let newHp = character.hp + (stateUpdates.hpChange || 0);
     newHp = Math.max(0, Math.min(character.maxHp, newHp));
     character.hp = newHp;
 
+    let newMana = character.mana + (stateUpdates.manaChange || 0);
+    newMana = Math.max(0, Math.min(character.maxMana, newMana));
+    character.mana = newMana;
+
     let newGold = character.gold + (stateUpdates.goldChange || 0);
     character.gold = Math.max(0, newGold);
 
+    // Process inventory: consumption and receiving
     let currentInv = [...(character.inventory || [])];
-    if (stateUpdates.consumedItem) {
-      const idx = currentInv.findIndex(i => i.id === stateUpdates.consumedItem || i.name === stateUpdates.consumedItem);
-      if (idx !== -1) currentInv.splice(idx, 1);
+    const toConsume = stateUpdates.consumedItem || (chosenChoice.requiredItem ? chosenChoice.requiredItem : null);
+    if (toConsume) {
+      const lowerReq = String(toConsume).toLowerCase();
+      const idx = currentInv.findIndex(i => 
+        i.id === toConsume || 
+        i.name.toLowerCase() === lowerReq || 
+        i.name.toLowerCase().includes(lowerReq) ||
+        lowerReq.includes(i.name.toLowerCase())
+      );
+      if (idx !== -1 && (currentInv[idx].category === 'Kunci' || currentInv[idx].category === 'Obat' || currentInv[idx].category === 'Potion')) {
+        currentInv.splice(idx, 1);
+      }
     }
+
     if (stateUpdates.receivedItem && currentInv.length < 6) {
       currentInv.push(stateUpdates.receivedItem);
     }
@@ -181,7 +269,7 @@ exports.submitAction = async (req, res) => {
       session.isGameOver = true;
     }
 
-    // Create next node
+    // Create next node with character state snapshot for precise rewind
     const newNode = await StoryNode.create({
       sessionId: session.id,
       parentNodeId: currentNode.id,
@@ -194,7 +282,15 @@ exports.submitAction = async (req, res) => {
       dialogueText: nextScene.dialogue,
       consequenceNote: nextScene.consequenceNote,
       choices: nextScene.choices,
-      combatEncounter: nextScene.combatEncounter || null
+      combatEncounter: nextScene.combatEncounter || null,
+      characterSnapshot: {
+        hp: character.hp,
+        maxHp: character.maxHp,
+        mana: character.mana,
+        maxMana: character.maxMana,
+        gold: character.gold,
+        inventory: [...character.inventory]
+      }
     });
 
     session.currentSceneId = newNode.id;
@@ -233,11 +329,27 @@ exports.rewindToNode = async (req, res) => {
 
     session.currentSceneId = targetNode.id;
     session.isGameOver = false;
-    // Heal slightly on rewind to make it forgiving
-    if (session.Character && session.Character.hp <= 0) {
+
+    // Restore character snapshot if available for true state rewind
+    if (targetNode.characterSnapshot && session.Character) {
+      const snap = targetNode.characterSnapshot;
+      session.Character.hp = snap.hp !== undefined ? snap.hp : session.Character.hp;
+      session.Character.maxHp = snap.maxHp !== undefined ? snap.maxHp : session.Character.maxHp;
+      session.Character.mana = snap.mana !== undefined ? snap.mana : session.Character.mana;
+      session.Character.maxMana = snap.maxMana !== undefined ? snap.maxMana : session.Character.maxMana;
+      session.Character.gold = snap.gold !== undefined ? snap.gold : session.Character.gold;
+      session.Character.inventory = snap.inventory ? [...snap.inventory] : session.Character.inventory;
+      
+      // If was defeated, revive with half HP
+      if (session.Character.hp <= 0) {
+        session.Character.hp = Math.floor(session.Character.maxHp / 2);
+      }
+      await session.Character.save();
+    } else if (session.Character && session.Character.hp <= 0) {
       session.Character.hp = Math.floor(session.Character.maxHp / 2);
       await session.Character.save();
     }
+
     await session.save();
 
     res.json({

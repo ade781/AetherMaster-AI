@@ -7,6 +7,7 @@ const saveLoadController = require('../controllers/saveLoadController');
 router.get('/campaigns', storyController.getCampaigns);
 router.post('/start', storyController.startCampaign);
 router.post('/action', storyController.submitAction);
+router.post('/use-item', storyController.useItem);
 router.post('/rewind', storyController.rewindToNode);
 router.get('/tree/:sessionId', storyController.getStoryTree);
 router.get('/backlog/:sessionId', storyController.getBacklog);

@@ -252,9 +252,13 @@ export default function VisualNovelStage({
               choices.length > 0 && (
                 <div className="flex flex-col gap-3">
                   {choices.map((choice, idx) => {
-                    const hasReqItem = !choice.requiredItem || (character?.inventory || []).some(
-                      i => i.id === choice.requiredItem || i.name === choice.requiredItem
-                    );
+                    const hasReqItem = !choice.requiredItem || (character?.inventory || []).some(i => {
+                      if (!choice.requiredItem) return true;
+                      const req = String(choice.requiredItem).toLowerCase().trim();
+                      const itemId = String(i.id || '').toLowerCase().trim();
+                      const itemName = String(i.name || '').toLowerCase().trim();
+                      return itemId === req || itemName === req || itemName.includes(req) || req.includes(itemName);
+                    });
 
                     return (
                       <button
