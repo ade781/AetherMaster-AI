@@ -9,7 +9,7 @@ export default function BacklogModal({ isOpen, onClose, sessionId }) {
   useEffect(() => {
     if (!isOpen || !sessionId) return;
     setLoading(true);
-    fetch(`http://localhost:5000/api/story/backlog/${sessionId}`)
+    fetch(`http://127.0.0.1:5000/api/story/backlog/${sessionId}`)
       .then(res => res.json())
       .then(data => {
         if (data.success) {

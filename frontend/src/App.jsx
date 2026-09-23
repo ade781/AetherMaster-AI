@@ -5,10 +5,11 @@ import CharacterCreationModal from './components/CharacterCreationModal';
 import StoryTreeModal from './components/StoryTreeModal';
 import BacklogModal from './components/BacklogModal';
 import SaveLoadModal from './components/SaveLoadModal';
+import LandingPage from './components/LandingPage';
 import audio from './services/audioService';
 import { Shield, Sparkles, BookOpen, Skull, Play, RefreshCw, Compass } from 'lucide-react';
 
-const API_BASE = 'http://localhost:5000/api/story';
+const API_BASE = 'http://127.0.0.1:5000/api/story';
 
 export default function App() {
   const [campaigns, setCampaigns] = useState([]);
@@ -193,95 +194,18 @@ export default function App() {
     );
   };
 
-  // Home Screen: Campaign Selection
+  // Home Screen: Epic Landing Page
   if (!session || !currentNode) {
     return (
-      <div className="min-h-screen bg-fantasy-dark text-slate-100 flex flex-col justify-between selection:bg-fantasy-gold selection:text-slate-950">
+      <>
         <ToastNotification />
-        {/* Top Header */}
-        <header className="w-full border-b border-fantasy-border/60 bg-slate-950/80 backdrop-blur-md px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-fantasy-gold to-amber-600 flex items-center justify-center shadow-lg shadow-fantasy-gold/20 text-slate-950 font-bold font-cinzel text-xl">
-              ⚔
-            </div>
-            <div>
-              <h1 className="font-cinzel text-lg md:text-xl font-bold text-fantasy-gold tracking-wider">
-                AetherMaster AI
-              </h1>
-              <p className="text-[11px] text-slate-400">Virtual Tabletop D&D 5E AI Engine</p>
-            </div>
-          </div>
-          <button
-            onClick={() => setIsSaveLoadOpen(true)}
-            className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-medium text-slate-200 transition-colors flex items-center gap-2"
-          >
-            <BookOpen className="w-4 h-4 text-emerald-400" />
-            Muat Save Game
-          </button>
-        </header>
-
-        {/* Campaign Hero Area */}
-        <main className="max-w-6xl mx-auto px-6 py-12 flex-1 flex flex-col justify-center">
-          <div className="text-center max-w-2xl mx-auto mb-10 space-y-3">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-fantasy-gold/10 border border-fantasy-gold/30 text-fantasy-gold text-xs font-semibold tracking-wide uppercase">
-              <Sparkles className="w-3.5 h-3.5" />
-              D&D 5E Visual Novel Tabletop
-            </div>
-            <h2 className="font-cinzel text-3xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-fantasy-gold via-amber-200 to-amber-500 tracking-tight">
-              Pilih Dunia Petualanganmu
-            </h2>
-            <p className="text-sm md:text-base text-slate-300 font-light leading-relaxed">
-              Setiap keputusan didukung kalkulasi dadu D20, narasi adaptif AI Dungeon Master, serta mini-VTT pertempuran taktis.
-            </p>
-          </div>
-
-          {/* Campaign Cards */}
-          {initLoading ? (
-            <div className="text-center py-12 text-slate-400 flex items-center justify-center gap-2">
-              <RefreshCw className="w-5 h-5 animate-spin text-fantasy-gold" />
-              <span>Memuat arsip kampanye...</span>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {campaigns.map((camp) => (
-                <div
-                  key={camp.id}
-                  className="group relative bg-slate-950/80 border-2 border-fantasy-border/60 hover:border-fantasy-gold rounded-2xl p-6 shadow-xl hover:shadow-2xl hover:shadow-fantasy-gold/20 transition-all duration-300 flex flex-col justify-between hover:scale-[1.02]"
-                >
-                  <div className="space-y-3">
-                    <div className="w-12 h-12 rounded-xl bg-slate-900 border border-fantasy-border flex items-center justify-center text-2xl shadow-inner">
-                      {camp.icon || '⚔️'}
-                    </div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400/80 block">
-                      Genre: {camp.genre?.replace('_', ' ')}
-                    </span>
-                    <h3 className="font-cinzel text-lg md:text-xl font-bold text-white group-hover:text-fantasy-gold transition-colors">
-                      {camp.title}
-                    </h3>
-                    <p className="text-xs text-slate-300 leading-relaxed">
-                      {camp.premise}
-                    </p>
-                  </div>
-
-                  <div className="pt-6">
-                    <button
-                      onClick={() => handleSelectCampaign(camp)}
-                      className="w-full py-3 rounded-xl bg-gradient-to-r from-fantasy-gold to-amber-500 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-cinzel font-bold text-xs tracking-wider shadow-lg shadow-fantasy-gold/20 flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95"
-                    >
-                      <Play className="w-4 h-4 fill-slate-950" />
-                      Pilih Kampanye
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </main>
-
-        {/* Footer */}
-        <footer className="w-full border-t border-slate-900 py-4 px-6 text-center text-xs text-slate-500 font-mono">
-          AetherMaster AI Local Edition • Three.js 3D D20 • Web Audio Synth • SQLite Persistence
-        </footer>
+        <LandingPage
+          campaigns={campaigns}
+          initLoading={initLoading}
+          onSelectCampaign={handleSelectCampaign}
+          onOpenSaveLoad={() => setIsSaveLoadOpen(true)}
+          showToast={showToast}
+        />
 
         {/* Character Creation Modal */}
         <CharacterCreationModal
@@ -299,7 +223,7 @@ export default function App() {
           sessionId={null}
           onLoadSession={handleLoadSession}
         />
-      </div>
+      </>
     );
   }
 
