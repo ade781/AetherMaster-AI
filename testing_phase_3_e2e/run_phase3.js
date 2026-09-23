@@ -1,6 +1,6 @@
 const http = require('http');
 
-const API_BASE = 'http://localhost:5000/api/story';
+const API_BASE = 'http://127.0.0.1:5000/api/story';
 
 function makeRequest(url, method = 'GET', body = null) {
   return new Promise((resolve, reject) => {
@@ -11,6 +11,8 @@ function makeRequest(url, method = 'GET', body = null) {
       port: parsedUrl.port,
       path: parsedUrl.pathname + parsedUrl.search,
       method: method,
+      timeout: 45000,
+      agent: new http.Agent({ keepAlive: false }),
       headers: {
         'Content-Type': 'application/json'
       }

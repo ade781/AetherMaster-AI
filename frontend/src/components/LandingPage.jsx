@@ -15,9 +15,23 @@ import {
   X,
   Scroll,
   Sword,
-  Wand2
+  Wand2,
+  Download,
+  Code,
+  Image as ImageIcon
 } from 'lucide-react';
 import audio from '../services/audioService';
+import { 
+  IconSwords, 
+  IconSkull, 
+  IconWave, 
+  IconTavernMug, 
+  IconShield, 
+  IconCompass, 
+  IconGrimoire, 
+  IconPortal,
+  IconCrown
+} from './icons/FantasyIcons';
 
 const CAMPAIGN_METADATA = {
   whispering_tavern: {
@@ -77,6 +91,67 @@ export default function LandingPage({
   const [copied, setCopied] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeCampaignId, setActiveCampaignId] = useState('whispering_tavern');
+  const [activeModal, setActiveModal] = useState(null);
+  const [iconModalTab, setIconModalTab] = useState('svg');
+  const [copiedSvgId, setCopiedSvgId] = useState(null);
+
+  const SVG_ICONS_COLLECTION = [
+    { id: 'swords', name: 'Pedang Bersilang', component: IconSwords, file: '/assets/icons/svg/swords.svg', desc: 'Simbol inisiatif pertempuran & taktik D&D 5E' },
+    { id: 'skull', name: 'Tengkorak Kutukan', component: IconSkull, file: '/assets/icons/svg/skull.svg', desc: 'Bahaya kematian, undead & dungeon gothic' },
+    { id: 'wave', name: 'Ombak Abyssal', component: IconWave, file: '/assets/icons/svg/wave.svg', desc: 'Misteri samudra & reruntuhan kuil kuno' },
+    { id: 'tavern', name: 'Cangkir Kedai Kayu', component: IconTavernMug, file: '/assets/icons/svg/tavern.svg', desc: 'Tempat istirahat panjang & interaksi NPC' },
+    { id: 'shield', name: 'Perisai Kesatria', component: IconShield, file: '/assets/icons/svg/shield.svg', desc: 'Armor Class (AC) & ketahanan fisik' },
+    { id: 'compass', name: 'Kompas Navigasi', component: IconCompass, file: '/assets/icons/svg/compass.svg', desc: 'Eksplorasi dunia & orientasi petualang' },
+    { id: 'grimoire', name: 'Grimoire Mantra', component: IconGrimoire, file: '/assets/icons/svg/grimoire.svg', desc: 'Sihir arcana, spellbook & catatan AI DM' },
+    { id: 'portal', name: 'Gerbang Dimensi', component: IconPortal, file: '/assets/icons/svg/portal.svg', desc: 'Teleportasi & nodus percabangan alur' },
+    { id: 'crown', name: 'Mahkota Kristal', component: IconCrown, file: '/assets/icons/svg/crown.svg', desc: 'Simbol hierarki, relik kekuasaan & artefak mistis' },
+  ];
+
+  const ALL_BACKGROUNDS_COLLECTION = [
+    { id: 'bg_01_tavern', name: 'Kedai Oakhaven', genre: 'Dark Fantasy', file: '/assets/backgrounds/bg_01_tavern.png', desc: 'Kedai kayu hangat tempat berkumpulnya petualang' },
+    { id: 'bg_02_cursed_woods', name: 'Hutan Terkutuk', genre: 'Gothic Horror', file: '/assets/backgrounds/bg_02_cursed_woods.png', desc: 'Pepohonan purba berkabut penuh bisikan misterius' },
+    { id: 'bg_03_sunken_citadel', name: 'Kuil Samudra Bawah Air', genre: 'Eldritch', file: '/assets/backgrounds/bg_03_sunken_citadel.png', desc: 'Reruntuhan karang bercahaya bioluminesensi mistis' },
+    { id: 'bg_04_crimson_crypt', name: 'Katakombe Berdarah', genre: 'Gothic Horror', file: '/assets/backgrounds/bg_04_crimson_crypt.png', desc: 'Makam batu kuno tempat bersemayamnya necromancer' },
+    { id: 'bg_05_vampire_castle', name: 'Kastil Vampir', genre: 'Gothic Horror', file: '/assets/backgrounds/bg_05_vampire_castle.png', desc: 'Benteng megah bernuansa darah di puncak tebing' },
+    { id: 'bg_06_alchemy_lab', name: 'Laboratorium Alkimia', genre: 'Arcane', file: '/assets/backgrounds/bg_06_alchemy_lab.png', desc: 'Ruang eksperimen ramuan dan manuskrip arkanum' },
+    { id: 'bg_07_smuggler_cave', name: 'Gua Penyelundup', genre: 'Adventure', file: '/assets/backgrounds/bg_07_smuggler_cave.png', desc: 'Gua pesisir tersembunyi dengan tumpukan peti emas' },
+    { id: 'bg_08_arcane_library', name: 'Perpustakaan Sihir', genre: 'Arcane', file: '/assets/backgrounds/bg_08_arcane_library.png', desc: 'Ribuan gulungan mantra kuno yang melayang di udara' },
+    { id: 'bg_09_dragon_crater', name: 'Kawah Naga Purba', genre: 'High Fantasy', file: '/assets/backgrounds/bg_09_dragon_crater.png', desc: 'Kawah belerang bekas pertempuran wyrm purba' },
+    { id: 'bg_10_ancient_ruins', name: 'Reruntuhan Monolit Elven', genre: 'Mythic', file: '/assets/backgrounds/bg_10_ancient_ruins.png', desc: 'Monolit batu berukir rune arkanum berpendar di senja berkabut' },
+    { id: 'bg_11_throne_room', name: 'Aula Takhta Katedral Gotik', genre: 'Dark Fantasy', file: '/assets/backgrounds/bg_11_throne_room.png', desc: 'Singgasana obsidian megah dengan kaca mawar scarlet menyala' },
+    { id: 'bg_12_underdark_cavern', name: 'Gua Underdark Bioluminesensi', genre: 'Subterranean', file: '/assets/backgrounds/bg_12_underdark_cavern.png', desc: 'Jamur raksasa ungu dan cyan memancarkan spora di danau bawah tanah' },
+    { id: 'bg_13_lava_forge', name: 'Tempat Tempa Lahar Kurcaci', genre: 'Industrial Fantasy', file: '/assets/backgrounds/bg_13_lava_forge.png', desc: 'Sungai magma membara di bawah patung raksasa penempa kurcaci' },
+    { id: 'bg_14_frost_peak', name: 'Puncak Tebing Badai Es', genre: 'Frozen Wilds', file: '/assets/backgrounds/bg_14_frost_peak.png', desc: 'Gargoyle es membeku di atas jurang gletser di bawah cahaya aurora' },
+    { id: 'bg_15_haunted_graveyard', name: 'Pemakaman Gotik Berkabut', genre: 'Gothic Horror', file: '/assets/backgrounds/bg_15_haunted_graveyard.png', desc: 'Nisan condong berlumut dan burung gagak di bawah sinar bulan purnama' },
+    { id: 'bg_16_swamp_huts', name: 'Rawa Purba & Pondok Nenek Sihir', genre: 'Folklore Horror', file: '/assets/backgrounds/bg_16_swamp_huts.png', desc: 'Pondok panggung kayu di atas air rawa berlumpur dengan lentera api' },
+    { id: 'bg_17_desert_temple', name: 'Piramida Pasir Necropolis', genre: 'Ancient Mystery', file: '/assets/backgrounds/bg_17_desert_temple.png', desc: 'Patung Anubis raksasa mengawal koridor kuil pasir berpendar hieroglif' },
+    { id: 'bg_18_celestial_sanctum', name: 'Sanctum Dimensi Astral', genre: 'Cosmic Fantasy', file: '/assets/backgrounds/bg_18_celestial_sanctum.png', desc: 'Platform marmer melayang di antara nebula bintang dan rasi galaksi' },
+    { id: 'bg_19_shadowfell_citadel', name: 'Spire Dimensi Shadowfell', genre: 'Shadow Horror', file: '/assets/backgrounds/bg_19_shadowfell_citadel.png', desc: 'Benteng bayangan hitam runcing di bawah gerhana matahari ungu' },
+    { id: 'bg_20_pirate_ship_deck', name: 'Geladak Galleon Badai Samudra', genre: 'High Seas', file: '/assets/backgrounds/bg_20_pirate_ship_deck.png', desc: 'Tiang kapal dan tali layar terombang-ambing di tengah kilat badai' },
+    { id: 'bg_21_goblin_war_camp', name: 'Benteng Perang Suku Goblin', genre: 'Warband', file: '/assets/backgrounds/bg_21_goblin_war_camp.png', desc: 'Palisade kayu runcing dan kobaran api unggun perang malam hari' },
+    { id: 'bg_22_crystal_mines', name: 'Tambang Kristal Aether', genre: 'Arcane Mine', file: '/assets/backgrounds/bg_22_crystal_mines.png', desc: 'Gugusan kristal mentah ungu memancarkan radiasi sihir murni' },
+    { id: 'bg_23_dungeon_torture_chamber', name: 'Ruang Jeruji Penjara Bawah Tanah', genre: 'Grimdark', file: '/assets/backgrounds/bg_23_dungeon_torture_chamber.png', desc: 'Jeruji besi berkarat dan obor dinding menyala remang-remang' },
+    { id: 'bg_24_feywild_glade', name: 'Lembah Senja Feywild', genre: 'Enchanted', file: '/assets/backgrounds/bg_24_feywild_glade.png', desc: 'Flora raksasa berpendar zamrud dan kunang-kunang di alam mimpi peri' },
+    { id: 'bg_25_abandoned_cathedral', name: 'Reruntuhan Katedral Mawar Pecah', genre: 'Ruins', file: '/assets/backgrounds/bg_25_abandoned_cathedral.png', desc: 'Puing altar suci bermandikan berkas sinar matahari senja temaram' },
+    { id: 'bg_26_clockwork_vault', name: 'Kubah Mesin Mechanus', genre: 'Clockwork', file: '/assets/backgrounds/bg_26_clockwork_vault.png', desc: 'Roda gigi kuningan raksasa berputar dalam harmoni mekanikal mutlak' },
+    { id: 'bg_27_dragon_hoard', name: 'Sarang Tumpukan Harta Karun Naga', genre: 'Epic Fantasy', file: '/assets/backgrounds/bg_27_dragon_hoard.png', desc: 'Gunung koin emas berkilauan dan relik peradaban yang ditaklukkan' },
+    { id: 'bg_28_city_market_alley', name: 'Lorong Kota Gotik Basah Hujan', genre: 'Urban Fantasy', file: '/assets/backgrounds/bg_28_city_market_alley.png', desc: 'Jalanan batu licin memantulkan cahaya lentera kuning gas malam hari' },
+    { id: 'bg_29_abyssal_rift', name: 'Pusaran Retakan Dimensi Abyssal', genre: 'Cosmic Horror', file: '/assets/backgrounds/bg_29_abyssal_rift.png', desc: 'Lubang hitam dimensi berputar membuka gerbang ke jurang kehampaan' }
+  ];
+
+  const handleCopySvg = async (item) => {
+    try {
+      const res = await fetch(item.file);
+      const svgText = await res.text();
+      await navigator.clipboard.writeText(svgText);
+      setCopiedSvgId(item.id);
+      audio.playClick();
+      if (showToast) showToast(`Kode SVG ${item.name} berhasil disalin!`, 'success');
+      setTimeout(() => setCopiedSvgId(null), 2200);
+    } catch {
+      if (showToast) showToast(`Gagal menyalin kode SVG`, 'error');
+    }
+  };
 
   // Launch command displayed in the central glassmorphism pill
   const launchCommand = "npx aethermaster-ai";
@@ -136,11 +211,7 @@ export default function LandingPage({
               className="group flex items-center gap-2.5 text-slate-100 hover:text-fantasy-gold transition-colors"
             >
               <div className="w-9 h-9 rounded-lg bg-slate-900 border border-fantasy-gold/40 flex items-center justify-center p-1 shadow-sm group-hover:border-fantasy-gold transition-colors">
-                <img 
-                  src="/assets/icons/icon_swords.png" 
-                  alt="AetherMaster Swords" 
-                  className="w-full h-full object-contain rounded"
-                />
+                <IconSwords className="w-6 h-6" />
               </div>
               <span className="font-cinzel text-base md:text-lg font-bold tracking-wide text-white group-hover:text-fantasy-gold transition-colors">
                 /aethermaster
@@ -181,11 +252,11 @@ export default function LandingPage({
             </button>
 
             <button 
-              onClick={() => setActiveModal('icons')}
+              onClick={() => { setActiveModal('icons'); setIconModalTab('svg'); }}
               className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 hover:text-white hover:border-amber-400 transition-colors"
             >
-              <img src="/assets/icons/icon_swords.png" alt="Aset" className="w-3.5 h-3.5 object-contain" />
-              <span>Aset 3x3</span>
+              <IconSwords className="w-3.5 h-3.5" />
+              <span>Aset SVG</span>
             </button>
 
             <a 
@@ -250,11 +321,11 @@ export default function LandingPage({
               Roadmap Pengembangan
             </button>
             <button 
-              onClick={() => { setMobileMenuOpen(false); setActiveModal('icons'); }}
+              onClick={() => { setMobileMenuOpen(false); setActiveModal('icons'); setIconModalTab('svg'); }}
               className="text-left py-2 font-medium text-amber-300 hover:text-white flex items-center gap-2"
             >
-              <img src="/assets/icons/icon_swords.png" alt="Aset" className="w-4 h-4 object-contain" />
-              <span>Galeri Aset Ikon 3x3</span>
+              <IconSwords className="w-4 h-4" />
+              <span>Galeri Aset SVG &amp; Ikon</span>
             </button>
             <a 
               href="https://github.com/ade781/AetherMaster-AI" 
@@ -795,86 +866,249 @@ export default function LandingPage({
               </div>
             )}
 
-            {/* Modal: Galeri Aset Ikon 3x3 */}
+            {/* Modal: Galeri Aset Ikon & SVG */}
             {activeModal === 'icons' && (
               <div className="space-y-6">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-fantasy-gold/40 flex items-center justify-center p-1.5">
-                    <img src="/assets/icons/icon_swords.png" alt="Icons" className="w-full h-full object-contain" />
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-fantasy-gold/40 flex items-center justify-center p-1.5 text-fantasy-gold">
+                      <IconSwords className="w-full h-full" />
+                    </div>
+                    <div>
+                      <h3 className="font-cinzel text-xl font-bold text-white">Galeri Aset Ikon Kustom</h3>
+                      <p className="text-xs text-slate-400">Pilihan format vektor SVG skalabel &amp; PNG kustom meja D&amp;D 5E</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-cinzel text-xl font-bold text-white">Galeri Aset Ikon 3x3 Buatan Sendiri</h3>
-                    <p className="text-xs text-slate-400">Total 27 ikon hasil pemotongan 3x generasi AI khusus tema meja D&amp;D 5E</p>
+
+                  {/* Format Selector Tabs */}
+                  <div className="flex items-center p-1 rounded-xl bg-slate-950 border border-slate-800 text-xs flex-wrap gap-1">
+                    <button
+                      onClick={() => setIconModalTab('backgrounds')}
+                      className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
+                        iconModalTab === 'backgrounds'
+                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      29 Latar Visual (Backgrounds)
+                    </button>
+                    <button
+                      onClick={() => setIconModalTab('svg')}
+                      className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
+                        iconModalTab === 'svg'
+                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      Vektor SVG AI (9 Ikon)
+                    </button>
+                    <button
+                      onClick={() => setIconModalTab('png')}
+                      className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
+                        iconModalTab === 'png'
+                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      Grid 3x3 PNG (27 Ikon)
+                    </button>
                   </div>
                 </div>
 
-                {/* Set 1: Campaign & Meja Tabletop */}
-                <div className="space-y-2">
-                  <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-300">Set 1: Kampanye &amp; Meja Tabletop (9 Ikon)</h4>
-                  <div className="grid grid-cols-3 sm:grid-cols-9 gap-2 p-3 bg-slate-950 rounded-xl border border-slate-800">
-                    {[
-                      { name: 'Pedang', src: '/assets/icons/icon_swords.png' },
-                      { name: 'Tengkorak', src: '/assets/icons/icon_skull.png' },
-                      { name: 'Ombak', src: '/assets/icons/icon_wave.png' },
-                      { name: 'Kedai', src: '/assets/icons/icon_tavern.png' },
-                      { name: 'Perisai', src: '/assets/icons/icon_shield.png' },
-                      { name: 'Grimoire', src: '/assets/icons/icon_grimoire.png' },
-                      { name: 'Kompas', src: '/assets/icons/icon_compass.png' },
-                      { name: 'Portal', src: '/assets/icons/icon_portal.png' },
-                    ].map((item, i) => (
-                      <div key={i} className="flex flex-col items-center gap-1.5 p-2 rounded-lg bg-slate-900 border border-slate-800/80 text-center hover:border-fantasy-gold/50 transition-colors">
-                        <img src={item.src} alt={item.name} className="w-10 h-10 object-contain rounded" />
-                        <span className="text-[10px] text-slate-300 font-mono truncate w-full">{item.name}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                {/* TAB 1: VECTOR SVG ICONS */}
+                {iconModalTab === 'svg' && (
+                  <div className="space-y-4">
+                    <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800 text-xs text-slate-300 flex items-center justify-between flex-wrap gap-2">
+                      <span>File SVG murni vektor resolusi bebas pixelation untuk peramban dan VTT HUD.</span>
+                      <span className="text-[11px] font-mono text-amber-400">Dir: /assets/icons/svg/*.svg</span>
+                    </div>
 
-                {/* Set 2: Senjata & Relik */}
-                <div className="space-y-2">
-                  <h4 className="text-xs font-semibold uppercase tracking-wider text-rose-300">Set 2: Senjata, Ramuan &amp; Relik (9 Ikon)</h4>
-                  <div className="grid grid-cols-3 sm:grid-cols-9 gap-2 p-3 bg-slate-950 rounded-xl border border-slate-800">
-                    {[
-                      { name: 'Rapier', src: '/assets/items/item_rapier.png' },
-                      { name: 'Belati Tulang', src: '/assets/items/item_bone_dagger.png' },
-                      { name: 'Trisula Laut', src: '/assets/items/item_sea_trident.png' },
-                      { name: 'Mahkota', src: '/assets/items/item_golden_crown.png' },
-                      { name: 'Ramuan HP', src: '/assets/items/item_01_potion_heal.png' },
-                      { name: 'Ramuan Mana', src: '/assets/items/item_02_potion_mana.png' },
-                      { name: 'Kunci Tulang', src: '/assets/items/item_06_skeleton_key.png' },
-                      { name: 'Jimat Aether', src: '/assets/items/item_05_cursed_amulet.png' },
-                      { name: 'Peta Harta', src: '/assets/items/item_treasure_map.png' },
-                    ].map((item, i) => (
-                      <div key={i} className="flex flex-col items-center gap-1.5 p-2 rounded-lg bg-slate-900 border border-slate-800/80 text-center hover:border-fantasy-gold/50 transition-colors">
-                        <img src={item.src} alt={item.name} className="w-10 h-10 object-contain rounded" />
-                        <span className="text-[10px] text-slate-300 font-mono truncate w-full">{item.name}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                      {SVG_ICONS_COLLECTION.map((item) => {
+                        const IconComp = item.component;
+                        const isCopied = copiedSvgId === item.id;
 
-                {/* Set 3: Sihir, Mantra & Kemampuan */}
-                <div className="space-y-2">
-                  <h4 className="text-xs font-semibold uppercase tracking-wider text-purple-300">Set 3: Sihir, Mantra &amp; Kemampuan (9 Ikon)</h4>
-                  <div className="grid grid-cols-3 sm:grid-cols-9 gap-2 p-3 bg-slate-950 rounded-xl border border-slate-800">
-                    {[
-                      { name: 'Fireball', src: '/assets/skills/skill_01_fireball.png' },
-                      { name: 'Holy Heal', src: '/assets/skills/skill_02_heal.png' },
-                      { name: 'Stealth', src: '/assets/skills/skill_03_stealth.png' },
-                      { name: 'Frost', src: '/assets/skills/skill_ice_shards.png' },
-                      { name: 'Petir', src: '/assets/skills/skill_lightning.png' },
-                      { name: 'Kutukan', src: '/assets/skills/skill_skull_curse.png' },
-                      { name: 'Vortex', src: '/assets/skills/skill_vortex.png' },
-                      { name: 'Mata Gaib', src: '/assets/skills/skill_05_perception.png' },
-                      { name: 'Slash', src: '/assets/skills/skill_06_strike.png' },
-                    ].map((item, i) => (
-                      <div key={i} className="flex flex-col items-center gap-1.5 p-2 rounded-lg bg-slate-900 border border-slate-800/80 text-center hover:border-fantasy-gold/50 transition-colors">
-                        <img src={item.src} alt={item.name} className="w-10 h-10 object-contain rounded" />
-                        <span className="text-[10px] text-slate-300 font-mono truncate w-full">{item.name}</span>
-                      </div>
-                    ))}
+                        return (
+                          <div 
+                            key={item.id}
+                            className="group p-4 rounded-xl bg-slate-950 border border-slate-800/90 hover:border-fantasy-gold/60 transition-all flex flex-col justify-between gap-3 shadow-lg"
+                          >
+                            <div className="flex flex-col items-center text-center gap-2">
+                              <div className="w-16 h-16 rounded-2xl bg-slate-900 border border-slate-700/80 p-2.5 flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform">
+                                <IconComp className="w-full h-full drop-shadow-md" />
+                              </div>
+                              <h4 className="font-semibold text-white text-xs tracking-wide">{item.name}</h4>
+                              <p className="text-[11px] text-slate-400 leading-tight line-clamp-2">{item.desc}</p>
+                            </div>
+
+                            <div className="flex items-center gap-1.5 pt-2 border-t border-slate-850">
+                              <button
+                                onClick={() => handleCopySvg(item)}
+                                className={`flex-1 py-1.5 px-2 rounded-lg text-[10px] font-medium flex items-center justify-center gap-1 transition-colors border ${
+                                  isCopied
+                                    ? 'bg-emerald-950/80 border-emerald-500/50 text-emerald-300'
+                                    : 'bg-slate-900 hover:bg-slate-850 border-slate-800 text-slate-300 hover:text-white'
+                                }`}
+                                title="Salin kode SVG ke clipboard"
+                              >
+                                {isCopied ? <Check className="w-3 h-3 text-emerald-400" /> : <Code className="w-3 h-3 text-amber-400" />}
+                                <span>{isCopied ? 'Tersalin' : 'Salin SVG'}</span>
+                              </button>
+
+                              <a
+                                href={item.file}
+                                download={`${item.id}.svg`}
+                                className="py-1.5 px-2.5 rounded-lg bg-slate-900 hover:bg-slate-850 border border-slate-800 text-[10px] font-medium text-slate-300 hover:text-fantasy-gold flex items-center justify-center gap-1 transition-colors"
+                                title="Unduh file .svg"
+                              >
+                                <Download className="w-3 h-3" />
+                                <span>Unduh</span>
+                              </a>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
+                )}
+
+                {/* TAB 2: SLICED 3x3 PNG ICONS */}
+                {iconModalTab === 'png' && (
+                  <div className="space-y-5">
+                    {/* Set 1: Campaign & Meja Tabletop */}
+                    <div className="space-y-2">
+                      <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-300">Set 1: Kampanye &amp; Meja Tabletop (9 Ikon)</h4>
+                      <div className="grid grid-cols-3 sm:grid-cols-9 gap-2 p-3 bg-slate-950 rounded-xl border border-slate-800">
+                        {[
+                          { name: 'Pedang', src: '/assets/icons/icon_swords.png' },
+                          { name: 'Tengkorak', src: '/assets/icons/icon_skull.png' },
+                          { name: 'Ombak', src: '/assets/icons/icon_wave.png' },
+                          { name: 'Kedai', src: '/assets/icons/icon_tavern.png' },
+                          { name: 'Perisai', src: '/assets/icons/icon_shield.png' },
+                          { name: 'Grimoire', src: '/assets/icons/icon_grimoire.png' },
+                          { name: 'Kompas', src: '/assets/icons/icon_compass.png' },
+                          { name: 'Portal', src: '/assets/icons/icon_portal.png' },
+                        ].map((item, i) => (
+                          <div key={i} className="flex flex-col items-center gap-1.5 p-2 rounded-lg bg-slate-900 border border-slate-800/80 text-center hover:border-fantasy-gold/50 transition-colors">
+                            <img src={item.src} alt={item.name} className="w-10 h-10 object-contain rounded" />
+                            <span className="text-[10px] text-slate-300 font-mono truncate w-full">{item.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Set 2: Senjata & Relik */}
+                    <div className="space-y-2">
+                      <h4 className="text-xs font-semibold uppercase tracking-wider text-rose-300">Set 2: Senjata, Ramuan &amp; Relik (9 Ikon)</h4>
+                      <div className="grid grid-cols-3 sm:grid-cols-9 gap-2 p-3 bg-slate-950 rounded-xl border border-slate-800">
+                        {[
+                          { name: 'Rapier', src: '/assets/items/item_rapier.png' },
+                          { name: 'Belati Tulang', src: '/assets/items/item_bone_dagger.png' },
+                          { name: 'Trisula Laut', src: '/assets/items/item_sea_trident.png' },
+                          { name: 'Mahkota', src: '/assets/items/item_golden_crown.png' },
+                          { name: 'Ramuan HP', src: '/assets/items/item_01_potion_heal.png' },
+                          { name: 'Ramuan Mana', src: '/assets/items/item_02_potion_mana.png' },
+                          { name: 'Kunci Tulang', src: '/assets/items/item_06_skeleton_key.png' },
+                          { name: 'Jimat Aether', src: '/assets/items/item_05_cursed_amulet.png' },
+                          { name: 'Peta Harta', src: '/assets/items/item_treasure_map.png' },
+                        ].map((item, i) => (
+                          <div key={i} className="flex flex-col items-center gap-1.5 p-2 rounded-lg bg-slate-900 border border-slate-800/80 text-center hover:border-fantasy-gold/50 transition-colors">
+                            <img src={item.src} alt={item.name} className="w-10 h-10 object-contain rounded" />
+                            <span className="text-[10px] text-slate-300 font-mono truncate w-full">{item.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Set 3: Sihir, Mantra & Kemampuan */}
+                    <div className="space-y-2">
+                      <h4 className="text-xs font-semibold uppercase tracking-wider text-purple-300">Set 3: Sihir, Mantra &amp; Kemampuan (9 Ikon)</h4>
+                      <div className="grid grid-cols-3 sm:grid-cols-9 gap-2 p-3 bg-slate-950 rounded-xl border border-slate-800">
+                        {[
+                          { name: 'Fireball', src: '/assets/skills/skill_01_fireball.png' },
+                          { name: 'Holy Heal', src: '/assets/skills/skill_02_heal.png' },
+                          { name: 'Stealth', src: '/assets/skills/skill_03_stealth.png' },
+                          { name: 'Frost', src: '/assets/skills/skill_ice_shards.png' },
+                          { name: 'Petir', src: '/assets/skills/skill_lightning.png' },
+                          { name: 'Kutukan', src: '/assets/skills/skill_skull_curse.png' },
+                          { name: 'Vortex', src: '/assets/skills/skill_vortex.png' },
+                          { name: 'Mata Gaib', src: '/assets/skills/skill_05_perception.png' },
+                          { name: 'Slash', src: '/assets/skills/skill_06_strike.png' },
+                        ].map((item, i) => (
+                          <div key={i} className="flex flex-col items-center gap-1.5 p-2 rounded-lg bg-slate-900 border border-slate-800/80 text-center hover:border-fantasy-gold/50 transition-colors">
+                            <img src={item.src} alt={item.name} className="w-10 h-10 object-contain rounded" />
+                            <span className="text-[10px] text-slate-300 font-mono truncate w-full">{item.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 3: 29 VISUAL NOVEL BACKGROUNDS */}
+                {iconModalTab === 'backgrounds' && (
+                  <div className="space-y-4">
+                    <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800 text-xs text-slate-300 flex items-center justify-between flex-wrap gap-2">
+                      <span>Koleksi 29 Latar Visual Novel Sinematik 16:9 siap pakai untuk adegan panggung D&amp;D 5E.</span>
+                      <span className="text-[11px] font-mono text-amber-400">Total: 29 Latar (9 Klasik + 20 Sinematik Baru)</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {ALL_BACKGROUNDS_COLLECTION.map((bg) => (
+                        <div 
+                          key={bg.id}
+                          className="group rounded-xl overflow-hidden bg-slate-950 border border-slate-800/90 hover:border-fantasy-gold/60 transition-all flex flex-col justify-between shadow-lg"
+                        >
+                          <div className="relative h-36 w-full overflow-hidden bg-slate-900">
+                            <img 
+                              src={bg.file} 
+                              alt={bg.name}
+                              className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
+                              loading="lazy"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-80" />
+                            <span className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-black/70 backdrop-blur-md border border-white/10 text-amber-300">
+                              {bg.genre}
+                            </span>
+                          </div>
+
+                          <div className="p-3 flex flex-col justify-between flex-1 gap-2">
+                            <div>
+                              <div className="flex items-center justify-between gap-1">
+                                <h4 className="font-semibold text-white text-xs tracking-wide line-clamp-1">{bg.name}</h4>
+                                <span className="text-[9px] font-mono text-slate-400">{bg.id}</span>
+                              </div>
+                              <p className="text-[11px] text-slate-400 mt-1 leading-snug line-clamp-2">{bg.desc}</p>
+                            </div>
+
+                            <div className="pt-2 border-t border-slate-850 flex items-center justify-between gap-2">
+                              <a
+                                href={bg.file}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="py-1 px-2 rounded-lg bg-slate-900 hover:bg-slate-850 border border-slate-800 text-[10px] font-medium text-slate-300 hover:text-white flex items-center gap-1 transition-colors"
+                                title="Buka pratinjau penuh 1920x1080"
+                              >
+                                <ExternalLink className="w-3 h-3" />
+                                <span>Lihat HD</span>
+                              </a>
+
+                              <a
+                                href={bg.file}
+                                download={`${bg.id}.png`}
+                                className="py-1 px-2.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-[10px] font-medium text-amber-300 hover:text-white flex items-center gap-1 transition-colors"
+                                title="Unduh file gambar latar"
+                              >
+                                <Download className="w-3 h-3" />
+                                <span>Unduh</span>
+                              </a>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <div className="pt-2 flex justify-end">
                   <button
