@@ -397,14 +397,13 @@ exports.getBacklog = async (req, res) => {
       return res.status(404).json({ success: false, error: 'Sesi tidak ditemukan.' });
     }
 
-    // Traverse upwards from currentSceneId
+    const nodes = await StoryNode.findAll({ where: { sessionId } });
+    const nodeMap = new Map(nodes.map(n => [n.id, n]));
     const chain = [];
-    let currId = session.currentSceneId;
-    while (currId) {
-      const node = await StoryNode.findByPk(currId);
-      if (!node) break;
-      chain.unshift(node);
-      currId = node.parentNodeId;
+    let curr = nodeMap.get(session.currentSceneId);
+    while (curr) {
+      chain.unshift(curr);
+      curr = curr.parentNodeId ? nodeMap.get(curr.parentNodeId) : null;
     }
 
     res.json({ success: true, data: chain });

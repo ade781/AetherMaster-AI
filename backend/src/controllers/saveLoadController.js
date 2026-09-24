@@ -17,8 +17,12 @@ exports.getSaveSlots = async (req, res) => {
       3: null  // Manual Slot 3
     };
 
+    const sceneIds = sessions.map(s => s.currentSceneId).filter(Boolean);
+    const nodes = await StoryNode.findAll({ where: { id: sceneIds } });
+    const nodeMap = new Map(nodes.map(n => [n.id, n]));
+
     for (const sess of sessions) {
-      const node = await StoryNode.findByPk(sess.currentSceneId);
+      const node = nodeMap.get(sess.currentSceneId);
       slots[sess.slotNumber] = {
         sessionId: sess.id,
         slotNumber: sess.slotNumber,

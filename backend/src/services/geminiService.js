@@ -44,6 +44,13 @@ function cleanText(text) {
   return text.replace(/—/g, ', ');
 }
 
+function parseSceneJson(rawText) {
+  const match = rawText.match(/\{[\s\S]*\}/);
+  const parsed = JSON.parse(match ? match[0] : rawText);
+  if (parsed.dialogue) parsed.dialogue = cleanText(parsed.dialogue);
+  return sceneSchema.parse(parsed);
+}
+
 // Fallback Deterministic Scene Generator
 function getFallbackOpening(campaign, character) {
   const charName = character?.name || 'Petualang';
@@ -526,12 +533,7 @@ Buatlah adegan pembuka Babak I yang sangat memukau dan menggugah imajinasi pemai
 PENTING: Pada teks 'dialogue', sampaikan terlebih dahulu Latar Belakang Cerita (Premise) dari kampanye ini secara naratif dan epik. Setelah latar belakang cerita diceritakan dengan jelas, barulah pada paragraf berikutnya berikan naratif situasi karakter saat ini yang mendorong pemain untuk mengambil tindakan atau pilihan pertama.`;
 
     try {
-      let rawText = await this.callWithFallback(prompt, systemPrompt);
-      const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-      if (jsonMatch) rawText = jsonMatch[0];
-      const parsed = JSON.parse(rawText);
-      parsed.dialogue = cleanText(parsed.dialogue);
-      return sceneSchema.parse(parsed);
+      return parseSceneJson(await this.callWithFallback(prompt, systemPrompt));
     } catch (err) {
       console.warn('[GeminiService] Error calling Gemini API for opening, using deterministic fallback:', err.message);
       return getFallbackOpening(campaign, character);
@@ -630,12 +632,7 @@ SKEMA JSON RESMI:
     const prompt = `Lanjutkan petualangan sekarang! Aksi pemain yang baru saja dilakukan: "${actionText}". Ceritakan dampak langsungnya pada situasi!`;
 
     try {
-      let rawText = await this.callWithFallback(prompt, systemPrompt);
-      const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-      if (jsonMatch) rawText = jsonMatch[0];
-      const parsed = JSON.parse(rawText);
-      parsed.dialogue = cleanText(parsed.dialogue);
-      return sceneSchema.parse(parsed);
+      return parseSceneJson(await this.callWithFallback(prompt, systemPrompt));
     } catch (err) {
       console.warn('[GeminiService] Error calling Gemini API for next scene, using smart contextual fallback:', err.message);
       return getFallbackNextScene(previousNode, actionTaken, checkResult, character, session?.turnCount || 1);
