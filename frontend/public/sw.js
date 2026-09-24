@@ -1,4 +1,4 @@
-// AetherMaster AI Native Service Worker (Ponytail zero-bloat caching)
+// AetherMaster Native Service Worker (Ponytail zero-bloat caching)
 const CACHE_NAME = 'aethermaster-v1';
 const STATIC_ASSETS = [
   '/',

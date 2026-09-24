@@ -102,7 +102,7 @@ export default function LandingPage({
     { id: 'tavern', name: 'Cangkir Kedai Kayu', component: IconTavernMug, file: '/assets/icons/svg/tavern.svg', desc: 'Tempat istirahat panjang & interaksi NPC' },
     { id: 'shield', name: 'Perisai Kesatria', component: IconShield, file: '/assets/icons/svg/shield.svg', desc: 'Armor Class (AC) & ketahanan fisik' },
     { id: 'compass', name: 'Kompas Navigasi', component: IconCompass, file: '/assets/icons/svg/compass.svg', desc: 'Eksplorasi dunia & orientasi petualang' },
-    { id: 'grimoire', name: 'Grimoire Mantra', component: IconGrimoire, file: '/assets/icons/svg/grimoire.svg', desc: 'Sihir arcana, spellbook & catatan AI DM' },
+    { id: 'grimoire', name: 'Grimoire Mantra', component: IconGrimoire, file: '/assets/icons/svg/grimoire.svg', desc: 'Sihir arcana, spellbook & catatan Dungeon Master' },
     { id: 'portal', name: 'Gerbang Dimensi', component: IconPortal, file: '/assets/icons/svg/portal.svg', desc: 'Teleportasi & nodus percabangan alur' },
     { id: 'crown', name: 'Mahkota Kristal', component: IconCrown, file: '/assets/icons/svg/crown.svg', desc: 'Simbol hierarki, relik kekuasaan & artefak mistis' },
   ];
@@ -217,6 +217,9 @@ export default function LandingPage({
                 /aethermaster
               </span>
             </a>
+            <span className="hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 font-mono text-[10px] font-semibold tracking-wider">
+              Made by ADE7
+            </span>
           </div>
 
           {/* Desktop Nav Links */}
@@ -351,9 +354,15 @@ export default function LandingPage({
         {/* Center Hero Content (Aligned with reference screenshot) */}
         <div className="relative z-10 max-w-4xl mx-auto px-6 text-center my-auto flex flex-col items-center">
           
+          {/* Hero Creator Tag */}
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900/80 border border-fantasy-gold/40 text-fantasy-gold text-xs font-mono font-semibold tracking-wider shadow-lg mb-4 backdrop-blur-md">
+            <span>✨</span>
+            <span>Made by ADE7</span>
+          </div>
+
           {/* Main Display Headline */}
           <h1 className="font-cinzel text-4xl sm:text-5xl md:text-7xl font-bold tracking-tight text-white drop-shadow-md leading-[1.15]">
-            AI Dungeon Master &amp; Virtual Tabletop
+            Dungeon Master &amp; Virtual Tabletop RPG
           </h1>
 
           {/* Subtitle (Crafted without AI marketing buzzwords or em dashes) */}
@@ -412,7 +421,7 @@ export default function LandingPage({
         {/* Subtle Bottom Hero Quote (Exact counterpart to reference screenshot bottom line) */}
         <div className="relative z-10 w-full pb-8 pt-4 px-6 text-center">
           <p className="text-xs text-slate-400/80 font-normal max-w-xl mx-auto leading-relaxed">
-            AetherMaster adalah kanvas naratif, bukan sekadar bot. Dipandu aturan D&amp;D 5E asli dan kecerdasan buatan, dirancang untuk petualanganmu.
+            AetherMaster adalah kanvas naratif takdir. Dipandu fondasi aturan petualangan meja klasik, dirancang untuk setiap keputusan beraniku.
           </p>
         </div>
 
@@ -573,7 +582,7 @@ export default function LandingPage({
                       </button>
 
                       <span className="text-[11px] text-slate-400 font-mono">
-                        Narasi Adaptif AI • Evaluasi Aksi Logis • Mini-VTT 5E
+                        Narasi Adaptif • Evaluasi Aksi Logis • Visual Novel VTT
                       </span>
                     </div>
 
@@ -663,10 +672,12 @@ export default function LandingPage({
       {/* 4. FOOTER                                                                 */}
       {/* ========================================================================= */}
       <footer className="relative z-20 w-full border-t border-slate-800/80 bg-slate-950 py-8 px-6 md:px-12 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-500 font-mono">
-        <div className="flex items-center gap-2">
-          <span>⚔️ AetherMaster AI Platform</span>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span>⚔️ AetherMaster VTT Platform</span>
           <span>•</span>
           <span>D&amp;D 5E Virtual Tabletop Engine</span>
+          <span>•</span>
+          <span className="text-amber-400 font-semibold">Made by ADE7</span>
         </div>
         <div className="flex items-center gap-6">
           <button 
@@ -750,7 +761,7 @@ export default function LandingPage({
                   <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
                     <h4 className="font-semibold text-white">3. Evaluasi Konsekuensi &amp; Narasi Adaptif</h4>
                     <p>
-                      AI Dungeon Master mengevaluasi tindakan berdasarkan logika dunia dan latar situasi, membuka cabang cerita baru atau memicu konsekuensi yang masuk akal secara dinamis.
+                      Dungeon Master mengevaluasi tindakan berdasarkan logika dunia dan latar situasi, membuka cabang cerita baru atau memicu konsekuensi yang masuk akal secara dinamis.
                     </p>
                   </div>
                 </div>
@@ -800,7 +811,7 @@ export default function LandingPage({
                     <span className="w-6 h-6 rounded-full bg-slate-800 flex items-center justify-center text-amber-400 font-bold shrink-0">3</span>
                     <div>
                       <h4 className="font-semibold text-white">Tentukan Aksi &amp; Buka Cabang Cerita</h4>
-                      <p>Baca narasi AI Dungeon Master, pilih opsi dialog taktis, atau ketikkan aksi kreatifmu sendiri untuk mengeksplorasi dunia.</p>
+                      <p>Baca narasi Dungeon Master, pilih opsi dialog taktis, atau ketikkan aksi kreatifmu sendiri untuk mengeksplorasi dunia.</p>
                     </div>
                   </div>
                 </div>
@@ -832,7 +843,7 @@ export default function LandingPage({
                 <div className="space-y-3 text-xs text-slate-300 leading-relaxed">
                   <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
                     <div className="flex items-center justify-between">
-                      <h4 className="font-semibold text-white">Fase 1: Core AI DM &amp; 5E Engine</h4>
+                      <h4 className="font-semibold text-white">Fase 1: Core Dungeon Master &amp; VTT Engine</h4>
                       <span className="text-[10px] font-bold text-emerald-400 px-2 py-0.5 rounded bg-emerald-950 border border-emerald-800">SELESAI</span>
                     </div>
                     <p>Evaluasi aksi logis lokal, audio synth Web Audio, percabangan cerita, dan manajemen save SQLite.</p>
@@ -851,7 +862,7 @@ export default function LandingPage({
                       <h4 className="font-semibold text-white">Fase 3: Multi-User Tabletop Sync</h4>
                       <span className="text-[10px] font-bold text-slate-400 px-2 py-0.5 rounded bg-slate-900 border border-slate-800">TERENCANA</span>
                     </div>
-                    <p>Sinkronisasi sesi pesta pemain via WebSocket untuk petualangan kooperatif bersama AI DM.</p>
+                    <p>Sinkronisasi sesi pesta pemain via WebSocket untuk petualangan kooperatif bersama Dungeon Master.</p>
                   </div>
                 </div>
 
@@ -900,7 +911,7 @@ export default function LandingPage({
                           : 'text-slate-400 hover:text-slate-200'
                       }`}
                     >
-                      Vektor SVG AI (9 Ikon)
+                      Ikon Vektor Dark Fantasy (9 Ikon)
                     </button>
                     <button
                       onClick={() => setIconModalTab('png')}

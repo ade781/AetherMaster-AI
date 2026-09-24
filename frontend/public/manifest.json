@@ -1,7 +1,7 @@
 {
   "short_name": "AetherMaster",
-  "name": "AetherMaster AI: Virtual Tabletop & AI Dungeon Master",
-  "description": "Virtual Tabletop D&D 5E modern yang ditenagai AI Dungeon Master dengan narasi adaptif, pertarungan taktis, dan petualangan imersif.",
+  "name": "AetherMaster: Virtual Tabletop & Dark Fantasy RPG",
+  "description": "Virtual Tabletop Visual Novel RPG modern dengan narasi adaptif, pertarungan taktis, dan petualangan imersif.",
   "icons": [
     {
       "src": "https://api.dicebear.com/7.x/adventurer/svg?seed=AetherMaster",

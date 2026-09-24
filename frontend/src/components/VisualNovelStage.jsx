@@ -244,7 +244,7 @@ export default function VisualNovelStage({
                 </div>
                 <div className="flex flex-col items-center">
                   <span className="font-cinzel text-fantasy-gold text-xs font-bold tracking-widest uppercase animate-pulse">
-                    DM Berpikir...
+                    Menenun Takdir...
                   </span>
                 </div>
               </div>

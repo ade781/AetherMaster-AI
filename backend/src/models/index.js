@@ -51,7 +51,7 @@ const seedCampaigns = async () => {
 };
 
 const initDb = async () => {
-  await sequelize.sync({ alter: true });
+  await sequelize.sync();
   await seedCampaigns();
 };
 

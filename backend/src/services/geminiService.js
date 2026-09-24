@@ -346,7 +346,14 @@ function getFallbackNextScene(previousNode, actionTaken, checkResult, character,
     manaDelta = -6;
   }
 
-  if (lowerAction.includes('serang') || lowerAction.includes('tebas') || lowerAction.includes('kekuatan') || lowerAction.includes('hantam') || actionTone === 'bold') {
+  const lethalKeywords = ['lahar', 'magma', 'kawah', 'racun', 'jurang', 'bunuh diri', 'terjun', 'tanpa perlindungan'];
+  const isLethal = lethalKeywords.some(k => lowerAction.includes(k));
+
+  if (isLethal) {
+    hpDelta = -25;
+    consequence = `Dampak fatal: Aksi ceroboh menerjang bahaya maut mengakibatkan luka parah dan kehancuran fisik!`;
+    outcomeDialogue = `Kamu nekat memutuskan untuk: "${actionText}". Tanpa perlindungan memadai, kobaran bahaya mematikan seketika melalap tubuhmu, membakar daging dan meremukkan daya tahan ragamu hingga ke batas maut!`;
+  } else if (lowerAction.includes('serang') || lowerAction.includes('tebas') || lowerAction.includes('kekuatan') || lowerAction.includes('hantam') || actionTone === 'bold') {
     consequence = `Dampak: Aksi fisik berhasil menembus hambatan.`;
     outcomeDialogue = `Kamu memutuskan untuk: "${actionText}". Dengan pengerahan tenaga penuh, langkah agresifmu membuahkan hasil nyata, meremukkan rintangan dan membuka celah di ${chosenLoc.loc}. ${chosenLoc.spk} memperhatikan tekadmu yang tak gentar.`;
     goldDelta = 10;
@@ -578,8 +585,9 @@ ATURAN REAKTIVITAS KONSEKUENSI (SANGAT KRUSIAL):
 3. PENGURANGAN MANA SIHIR: Jika aksi pemain menggunakan mantra/sihir (misal Fireball, teleport, hembusan energi), kurangi Mana pemain secara proporsional (-4 s.d -12) di 'manaChange' dalam 'stateUpdates'.
 4. JANGAN PERNAH GUNAKAN EM DASH (—). Gunakan koma, titik dua, atau kurung.
 5. TANPA SISTEM DADU: Evaluasi aksi secara logis. Jika aksinya kreatif dan masuk akal, buat berhasil dan berikan hadiah gold/item bila layak. Jika aksinya berbahaya, berikan pengurangan HP masuk akal (misal: hpChange: -4).
-6. PILIHAN TINDAKAN BERIKUTNYA ('choices'): Sediakan 3 pilihan aksi baru yang secara runtut dan logis merupakan kelanjutan situasi setelah aksi "${actionText}" tersebut selesai terjadi.
-7. Respon WAJIB berupa objek JSON murni tanpa pembungkus \`\`\`json.
+6. BAHAYA MAUT / TINDAKAN FATAL: Jika aksi pemain adalah tindakan ceroboh atau mematikan (seperti melompat ke kawah lahar, terjun ke jurang tanpa perlindungan, menenggak racun maut, menusuk diri sendiri), wajib berikan pengurangan HP fatal (-15 s.d -30) pada 'hpChange' dalam 'stateUpdates', dan narasikan luka bakar dahsyat atau kepedihan fisik yang dialami karakter.
+7. PILIHAN TINDAKAN BERIKUTNYA ('choices'): Sediakan 3 pilihan aksi baru yang secara runtut dan logis merupakan kelanjutan situasi setelah aksi "${actionText}" tersebut selesai terjadi.
+8. Respon WAJIB berupa objek JSON murni tanpa pembungkus \`\`\`json.
 
 SKEMA JSON RESMI:
 {

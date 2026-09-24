@@ -1,8 +1,8 @@
 import React from 'react';
 
 /**
- * AetherMaster AI-Generated Dark Fantasy Vector SVG Icons
- * Vectorized from AI Generated Sprite Sheet
+ * AetherMaster Dark Fantasy Vector SVG Icons
+ * Handcrafted & Optimized Vector Sprite Sheet
  */
 
 export function IconSwords({ className = "w-6 h-6", ...props }) {

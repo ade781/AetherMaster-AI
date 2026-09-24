@@ -109,7 +109,8 @@ exports.startCampaign = async (req, res) => {
         mana: character.mana,
         maxMana: character.maxMana,
         gold: character.gold,
-        inventory: [...character.inventory]
+        inventory: [...character.inventory],
+        turnCount: session.turnCount
       }
     });
 
@@ -225,6 +226,14 @@ exports.submitAction = async (req, res) => {
 
     // Apply state updates to character (HP, Mana, Gold)
     const stateUpdates = nextScene.stateUpdates || {};
+
+    // Hazard enforcement: if player deliberately dove into fatal hazards and LLM was too lenient
+    const lethalWords = ['lahar', 'magma', 'kawah', 'racun maut', 'jurang', 'bunuh diri', 'tanpa perlindungan'];
+    const actTextLower = (chosenChoice.text || '').toLowerCase();
+    if (lethalWords.some(w => actTextLower.includes(w)) && (!stateUpdates.hpChange || stateUpdates.hpChange >= 0)) {
+      stateUpdates.hpChange = -25;
+    }
+
     let newHp = character.hp + (stateUpdates.hpChange || 0);
     newHp = Math.max(0, Math.min(character.maxHp, newHp));
     character.hp = newHp;
@@ -289,7 +298,8 @@ exports.submitAction = async (req, res) => {
         mana: character.mana,
         maxMana: character.maxMana,
         gold: character.gold,
-        inventory: [...character.inventory]
+        inventory: [...character.inventory],
+        turnCount: session.turnCount
       }
     });
 
@@ -333,6 +343,7 @@ exports.rewindToNode = async (req, res) => {
     // Restore character snapshot if available for true state rewind
     if (targetNode.characterSnapshot && session.Character) {
       const snap = targetNode.characterSnapshot;
+      session.turnCount = snap.turnCount || 1;
       session.Character.hp = snap.hp !== undefined ? snap.hp : session.Character.hp;
       session.Character.maxHp = snap.maxHp !== undefined ? snap.maxHp : session.Character.maxHp;
       session.Character.mana = snap.mana !== undefined ? snap.mana : session.Character.mana;

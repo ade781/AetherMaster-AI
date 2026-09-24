@@ -12,7 +12,7 @@ async function runVerification() {
   // TEST 1: Ranger Character Creation & Starter Item
   // -------------------------------------------------------------------------
   console.log('--- TEST 1: Ranger Character Creation & Starter Item ---');
-  const rangerStartRes = await fetch('http://localhost:5000/api/story/start', {
+  const rangerStartRes = await fetch('http://127.0.0.1:5000/api/story/start', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -58,7 +58,7 @@ async function runVerification() {
   rangerChar.hp = 18;
   await (await import('./backend/src/models/index.js')).Character.update({ hp: 18 }, { where: { id: rangerChar.id } });
 
-  const useItemRes = await fetch('http://localhost:5000/api/story/use-item', {
+  const useItemRes = await fetch('http://127.0.0.1:5000/api/story/use-item', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -73,7 +73,7 @@ async function runVerification() {
   const potionRemoved = !useItemData.data?.character?.inventory?.some(i => i.id === 'item_01_potion_heal');
 
   // Now take next action to verify that the heal is NOT reverted on the next turn
-  const actionRes = await fetch('http://localhost:5000/api/story/action', {
+  const actionRes = await fetch('http://127.0.0.1:5000/api/story/action', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -101,7 +101,7 @@ async function runVerification() {
   // -------------------------------------------------------------------------
   console.log('--- TEST 3: Spell Action & Mana Consumption ---');
   const startMana = nextChar?.mana;
-  const spellActionRes = await fetch('http://localhost:5000/api/story/action', {
+  const spellActionRes = await fetch('http://127.0.0.1:5000/api/story/action', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -125,7 +125,7 @@ async function runVerification() {
   // TEST 4: Story Node Rewind Snapshot Restoration
   // -------------------------------------------------------------------------
   console.log('--- TEST 4: Rewind Snapshot State Restoration ---');
-  const rewindRes = await fetch('http://localhost:5000/api/story/rewind', {
+  const rewindRes = await fetch('http://127.0.0.1:5000/api/story/rewind', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -153,7 +153,7 @@ async function runVerification() {
   // -------------------------------------------------------------------------
   console.log('--- TEST 5: Save & Load True Snapshot Isolation ---');
   // Save current state (Turn 1 / rewound) to Slot 2
-  const saveRes = await fetch('http://localhost:5000/api/story/saves/save', {
+  const saveRes = await fetch('http://127.0.0.1:5000/api/story/saves/save', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -166,7 +166,7 @@ async function runVerification() {
   console.log('Save to Slot 2 Result:', saveData.message);
 
   // Advance the active session by taking 2 more turns
-  await fetch('http://localhost:5000/api/story/action', {
+  await fetch('http://127.0.0.1:5000/api/story/action', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -177,7 +177,7 @@ async function runVerification() {
   });
 
   // Now load Slot 2
-  const loadRes = await fetch('http://localhost:5000/api/story/saves/load/2');
+  const loadRes = await fetch('http://127.0.0.1:5000/api/story/saves/load/2');
   const loadData = await loadRes.json();
   const loadedSession = loadData.data?.session;
   console.log(`Loaded Session Turn Count: ${loadedSession?.turnCount} (Saved session was Turn 1)`);
@@ -198,7 +198,7 @@ async function runVerification() {
   await CharacterModel.update({ hp: 1 }, { where: { id: loadedSession.characterId } });
 
   // Take dangerous action that causes damage
-  const lethalActionRes = await fetch('http://localhost:5000/api/story/action', {
+  const lethalActionRes = await fetch('http://127.0.0.1:5000/api/story/action', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

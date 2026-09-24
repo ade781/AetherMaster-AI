@@ -57,10 +57,14 @@ exports.saveToSlot = async (req, res) => {
       return res.status(400).json({ success: false, error: 'Nomor slot tidak valid (0-3).' });
     }
 
-    // Clean previous session stored in this slot
+    // Clean previous session stored in this slot (delete child nodes first to satisfy foreign keys)
     const oldSlotSessions = await GameSession.findAll({ where: { slotNumber: slotNum } });
     for (const oldSess of oldSlotSessions) {
+      await StoryNode.destroy({ where: { sessionId: oldSess.id } });
       await GameSession.destroy({ where: { id: oldSess.id } });
+      if (oldSess.characterId) {
+        await Character.destroy({ where: { id: oldSess.characterId } }).catch(() => {});
+      }
     }
 
     // Clone character snapshot
