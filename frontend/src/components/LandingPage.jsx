@@ -328,7 +328,7 @@ export default function LandingPage({
               className="text-left py-2 font-medium text-amber-300 hover:text-white flex items-center gap-2"
             >
               <IconSwords className="w-4 h-4" />
-              <span>Galeri Aset SVG &amp; Ikon</span>
+              <span>Galeri Aset SVG & Ikon</span>
             </button>
             <a 
               href="https://github.com/ade781/AetherMaster-AI" 
@@ -362,12 +362,12 @@ export default function LandingPage({
 
           {/* Main Display Headline */}
           <h1 className="font-cinzel text-4xl sm:text-5xl md:text-7xl font-bold tracking-tight text-white drop-shadow-md leading-[1.15]">
-            Dungeon Master &amp; Virtual Tabletop RPG
+            Dungeon Master & Virtual Tabletop RPG
           </h1>
 
           {/* Subtitle (Crafted without AI marketing buzzwords or em dashes) */}
           <p className="mt-6 max-w-2xl text-base md:text-lg text-slate-200 font-light leading-relaxed drop-shadow-sm">
-            Petualangan RPG D&amp;D 5E interaktif dengan narasi cabang adaptif, evaluasi aksi taktis logis, dan visual novel tanpa batas skenario.
+            Petualangan RPG D&D 5E interaktif dengan narasi cabang adaptif, evaluasi aksi taktis logis, dan visual novel tanpa batas skenario.
           </p>
 
           {/* Center Interactive Glassmorphism Command Pill */}
@@ -413,7 +413,7 @@ export default function LandingPage({
               className="px-6 py-3.5 rounded-xl bg-slate-900/80 hover:bg-slate-800/90 border border-slate-700/80 hover:border-slate-500 text-slate-200 font-cinzel font-semibold text-xs tracking-wider backdrop-blur-md transition-all hover:scale-105 active:scale-95 flex items-center gap-2"
             >
               <Scroll className="w-4 h-4 text-amber-400" />
-              Mekanik D&amp;D 5E
+              Mekanik D&D 5E
             </button>
           </div>
         </div>
@@ -438,10 +438,10 @@ export default function LandingPage({
             <div className="space-y-2 max-w-xl">
               <span className="text-xs uppercase font-semibold tracking-widest text-fantasy-gold flex items-center gap-2">
                 <img src="/assets/icons/icon_compass.png" alt="Compass" className="w-3.5 h-3.5 object-contain" />
-                Arsip Intelijen Petualangan D&amp;D 5E
+                Arsip Intelijen Petualangan D&D 5E
               </span>
               <h2 className="font-cinzel text-3xl md:text-4xl font-bold text-white tracking-tight">
-                Pilih Dunia &amp; Tentukan Takdir
+                Pilih Dunia & Tentukan Takdir
               </h2>
               <p className="text-xs md:text-sm text-slate-400 font-light leading-relaxed">
                 Tinjau berkas intelijen taktis, kondisi lingkungan, dan bahaya musuh sebelum merakit lembar karakter petualangmu.
@@ -675,7 +675,7 @@ export default function LandingPage({
         <div className="flex items-center gap-2 flex-wrap">
           <span>⚔️ AetherMaster VTT Platform</span>
           <span>•</span>
-          <span>D&amp;D 5E Virtual Tabletop Engine</span>
+          <span>D&D 5E Virtual Tabletop Engine</span>
           <span>•</span>
           <span className="text-amber-400 font-semibold">Made by ADE7</span>
         </div>
@@ -738,14 +738,14 @@ export default function LandingPage({
                     <Scroll className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="font-cinzel text-xl font-bold text-white">Sistem Aturan D&amp;D 5E</h3>
+                    <h3 className="font-cinzel text-xl font-bold text-white">Sistem Aturan D&D 5E</h3>
                     <p className="text-xs text-slate-400">Implementasi kalkulasi mekanik meja</p>
                   </div>
                 </div>
 
                 <div className="space-y-3 text-xs text-slate-300 leading-relaxed">
                   <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
-                    <h4 className="font-semibold text-white">1. Ability Checks &amp; Logika Tindakan</h4>
+                    <h4 className="font-semibold text-white">1. Ability Checks & Logika Tindakan</h4>
                     <p>
                       Setiap aksi pilihan pemain memiliki atribut terkait (Kekuatan, Ketangkasan, Konstitusi, Kecerdasan, Kebijaksanaan, Karisma). Keberhasilan aksi dievaluasi dari skor atribut dan modifier karakter melawan tingkat kesulitan skenario.
                     </p>
@@ -759,7 +759,7 @@ export default function LandingPage({
                   </div>
 
                   <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
-                    <h4 className="font-semibold text-white">3. Evaluasi Konsekuensi &amp; Narasi Adaptif</h4>
+                    <h4 className="font-semibold text-white">3. Evaluasi Konsekuensi & Narasi Adaptif</h4>
                     <p>
                       Dungeon Master mengevaluasi tindakan berdasarkan logika dunia dan latar situasi, membuka cabang cerita baru atau memicu konsekuensi yang masuk akal secara dinamis.
                     </p>
@@ -810,7 +810,7 @@ export default function LandingPage({
                   <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex gap-3">
                     <span className="w-6 h-6 rounded-full bg-slate-800 flex items-center justify-center text-amber-400 font-bold shrink-0">3</span>
                     <div>
-                      <h4 className="font-semibold text-white">Tentukan Aksi &amp; Buka Cabang Cerita</h4>
+                      <h4 className="font-semibold text-white">Tentukan Aksi & Buka Cabang Cerita</h4>
                       <p>Baca narasi Dungeon Master, pilih opsi dialog taktis, atau ketikkan aksi kreatifmu sendiri untuk mengeksplorasi dunia.</p>
                     </div>
                   </div>
@@ -843,7 +843,7 @@ export default function LandingPage({
                 <div className="space-y-3 text-xs text-slate-300 leading-relaxed">
                   <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
                     <div className="flex items-center justify-between">
-                      <h4 className="font-semibold text-white">Fase 1: Core Dungeon Master &amp; VTT Engine</h4>
+                      <h4 className="font-semibold text-white">Fase 1: Core Dungeon Master & VTT Engine</h4>
                       <span className="text-[10px] font-bold text-emerald-400 px-2 py-0.5 rounded bg-emerald-950 border border-emerald-800">SELESAI</span>
                     </div>
                     <p>Evaluasi aksi logis lokal, audio synth Web Audio, percabangan cerita, dan manajemen save SQLite.</p>
@@ -887,7 +887,7 @@ export default function LandingPage({
                     </div>
                     <div>
                       <h3 className="font-cinzel text-xl font-bold text-white">Galeri Aset Ikon Kustom</h3>
-                      <p className="text-xs text-slate-400">Pilihan format vektor SVG skalabel &amp; PNG kustom meja D&amp;D 5E</p>
+                      <p className="text-xs text-slate-400">Pilihan format vektor SVG skalabel & PNG kustom meja D&D 5E</p>
                     </div>
                   </div>
 
@@ -988,7 +988,7 @@ export default function LandingPage({
                   <div className="space-y-5">
                     {/* Set 1: Campaign & Meja Tabletop */}
                     <div className="space-y-2">
-                      <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-300">Set 1: Kampanye &amp; Meja Tabletop (9 Ikon)</h4>
+                      <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-300">Set 1: Kampanye & Meja Tabletop (9 Ikon)</h4>
                       <div className="grid grid-cols-3 sm:grid-cols-9 gap-2 p-3 bg-slate-950 rounded-xl border border-slate-800">
                         {[
                           { name: 'Pedang', src: '/assets/icons/icon_swords.png' },
@@ -1010,7 +1010,7 @@ export default function LandingPage({
 
                     {/* Set 2: Senjata & Relik */}
                     <div className="space-y-2">
-                      <h4 className="text-xs font-semibold uppercase tracking-wider text-rose-300">Set 2: Senjata, Ramuan &amp; Relik (9 Ikon)</h4>
+                      <h4 className="text-xs font-semibold uppercase tracking-wider text-rose-300">Set 2: Senjata, Ramuan & Relik (9 Ikon)</h4>
                       <div className="grid grid-cols-3 sm:grid-cols-9 gap-2 p-3 bg-slate-950 rounded-xl border border-slate-800">
                         {[
                           { name: 'Rapier', src: '/assets/items/item_rapier.png' },
@@ -1033,7 +1033,7 @@ export default function LandingPage({
 
                     {/* Set 3: Sihir, Mantra & Kemampuan */}
                     <div className="space-y-2">
-                      <h4 className="text-xs font-semibold uppercase tracking-wider text-purple-300">Set 3: Sihir, Mantra &amp; Kemampuan (9 Ikon)</h4>
+                      <h4 className="text-xs font-semibold uppercase tracking-wider text-purple-300">Set 3: Sihir, Mantra & Kemampuan (9 Ikon)</h4>
                       <div className="grid grid-cols-3 sm:grid-cols-9 gap-2 p-3 bg-slate-950 rounded-xl border border-slate-800">
                         {[
                           { name: 'Fireball', src: '/assets/skills/skill_01_fireball.png' },
@@ -1060,7 +1060,7 @@ export default function LandingPage({
                 {iconModalTab === 'backgrounds' && (
                   <div className="space-y-4">
                     <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800 text-xs text-slate-300 flex items-center justify-between flex-wrap gap-2">
-                      <span>Koleksi 29 Latar Visual Novel Sinematik 16:9 siap pakai untuk adegan panggung D&amp;D 5E.</span>
+                      <span>Koleksi 29 Latar Visual Novel Sinematik 16:9 siap pakai untuk adegan panggung D&D 5E.</span>
                       <span className="text-[11px] font-mono text-amber-400">Total: 29 Latar (9 Klasik + 20 Sinematik Baru)</span>
                     </div>
 
