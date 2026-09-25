@@ -11,7 +11,7 @@ const campaignsData = [
     defaultBackgroundId: 'bg_01_tavern',
     defaultNpcId: 'char_npc_01_barkeep',
     icon: '🍺',
-    coverImage: '/assets/covers/cover_tavern.jpg',
+    coverImage: '/assets/backgrounds/bg_01_tavern.png',
     factions: ['Serikat Kedai Oakhaven', 'Guild Pencuri Bayangan'],
     premise: 'Sebuah desas-desus kelam menyebar dari ruang bawah tanah kedai tua Whispering Tavern di desa Oakhaven. Suara ketukan aneh berirama dari balik tumpukan tong anggur tua telah terdengar selama tiga malam berturut-turut. Konon, kedai ini dibangun tepat di atas pintu masuk katakombe kuno yang terkutuk sejak ratusan tahun silam.',
     introDialogue: 'Hangatnya api unggun kedai tak mampu mengusir hawa dingin yang merayap dari balik lantai kayu ruang bawah tanah. Eldrin sang pemilik kedai meletakkan mug kayu berisi ale hangat di depanmu dengan tangan sedikit bergetar, memohon agar kamu memeriksa keganjilan di lorong bawah tanah sebelum korban jiwa berjatuhan.'
@@ -26,7 +26,7 @@ const campaignsData = [
     defaultBackgroundId: 'bg_04_crimson_crypt',
     defaultNpcId: 'char_npc_02_informant',
     icon: '💀',
-    coverImage: '/assets/covers/cover_crypt.jpg',
+    coverImage: '/assets/backgrounds/bg_04_crimson_crypt.png',
     factions: ['Ordo Ksatria Matahari', 'Kultus Kematian Merah'],
     premise: 'Necromancer Malakor telah bangkit dari tidurnya setelah segel makam bangsawan kuno dihancurkan oleh para penjarah kubur yang serakah. Lilin-lilin merah menyala sendiri di dinding bertabur tengkorak manusia, sementara bau tembaga dan darah menggenang di lantai batu basah.',
     introDialogue: 'Kabut merah darah merayap perlahan menyelimuti mata kakimu. Dari balik pilar batu yang retak, sosok informan bertudung hitam muncul tanpa suara seraya berbisik memperingatkan bahwa pasukan kerangka penjaga altar pengorbanan telah mulai berpatroli.'
@@ -41,7 +41,7 @@ const campaignsData = [
     defaultBackgroundId: 'bg_03_sunken_citadel',
     defaultNpcId: 'char_npc_08_cultist',
     icon: '🌊',
-    coverImage: '/assets/covers/cover_citadel.jpg',
+    coverImage: '/assets/backgrounds/bg_03_sunken_citadel.png',
     factions: ['Penjaga Lautan Lepas', 'Pemuja Dagon Kedalaman'],
     premise: 'Kuil batu megah yang tenggelam di palung samudra terdalam memancarkan denyut gelombang psionik yang membingungkan para pelaut. Dinding kuil dipenuhi ukiran makhluk bertentakel purba, dijaga oleh monster laut raksasa dan kultis fanatik yang menyembah kegelapan abadi di bawah tekanan air maut.',
     introDialogue: 'Gelembung udara tipis dan pendar cahaya biru kehijauan dari anemon laut menerangi reruntuhan kuil pualam di dasar laut. Di hadapanmu, pilar-pilar raksasa berukir sulur gurita menjulang tinggi menuju kegelapan samudra, tempat entitas purba menanti persembahan jiwa baru.'
@@ -56,7 +56,7 @@ const campaignsData = [
     defaultBackgroundId: 'bg_05_vampire_castle',
     defaultNpcId: 'char_npc_03_vampire',
     icon: '🍷',
-    coverImage: '/assets/covers/cover_vampire.jpg',
+    coverImage: '/assets/backgrounds/bg_05_vampire_castle.png',
     factions: ['Klan Vampir Bloodmere', 'Pemburu Monster Salib Perak'],
     premise: 'Kastil gotik megah di puncak tebing karang tinggi Bloodmere dikuasai oleh Lord Cassian, bangsawan vampir abadi yang telah memerintah tanah terisolasi ini selama empat abad. Setiap bulan purnama darah, seorang pemuda desa diculik untuk dijadikan jamuan di aula perjamuan malam sang tiran.',
     introDialogue: 'Lampu gantung kristal berderak pelan dihembus angin malam yang menerobos lewat jendela kaca patri mawar berdarah. Di ujung karpet beludru merah yang terbentang melintasi aula tahta, sepasang mata merah rubi menyala dalam bayangan dingin menatap setiap jengkal langkahmu.'
@@ -71,7 +71,7 @@ const campaignsData = [
     defaultBackgroundId: 'bg_02_cursed_woods',
     defaultNpcId: 'char_npc_05_dryad',
     icon: '🌲',
-    coverImage: '/assets/covers/cover_woods.jpg',
+    coverImage: '/assets/backgrounds/bg_02_cursed_woods.png',
     factions: ['Lingkaran Druid Hutan', 'Bandit Bayangan Hitam'],
     premise: 'Pohon-pohon di hutan tertua benua Aether mulai mengeluarkan getah hitam pekat berbau busuk. Hewan-hewan liar bermutasi menjadi monster agresif bermata merah menyala. Roh pohon (Dryad) bernama Sylvanis menangis meminta bantuan sebelum seluruh jantung rimba membusuk ditelan kutukan racun kegelapan.',
     introDialogue: 'Akar-akar pohon raksasa yang meliuk angker merintih di bawah pijakan sepatumu seiring kabut ungu tebal membungkus pandangan. Tiba-tiba, dedaunan berputar di udara dan sesosok peri pohon berparas sendu menampakkan diri, memohon agar kamu menghancurkan kristal kutukan di tengah hutan.'
@@ -86,7 +86,7 @@ const campaignsData = [
     defaultBackgroundId: 'bg_06_alchemy_lab',
     defaultNpcId: 'char_npc_06_goblin',
     icon: '🧪',
-    coverImage: '/assets/covers/cover_lab.jpg',
+    coverImage: '/assets/backgrounds/bg_06_alchemy_lab.png',
     factions: ['Serikat Alkemis Kerajaan', 'Penyelundup Bahan Terlarang'],
     premise: 'Eksperimen transmutasi zat terlarang oleh Grand Alchemist Paracelsus meledak, menutupi seluruh lantai laboratorium menara dengan gas hijau beracun yang dapat menghidupkan kembali perkakas besi dan bangkai hewan laboratorium menjadi automaton ganas.',
     introDialogue: 'Bau belerang menyengat menusuk hidung saat kamu melangkah menembus pecahan tabung kaca kimia yang berserakan di lantai. Di sudut ruangan, seorang goblin pedagang bahan kimia langka sedang meringkuk ketakutan di balik meja tembaga sambil menunjuk ke arah tungku distilasi yang mendesis liar.'
@@ -101,7 +101,7 @@ const campaignsData = [
     defaultBackgroundId: 'bg_07_smuggler_cave',
     defaultNpcId: 'char_npc_07_guard',
     icon: '⚓',
-    coverImage: '/assets/covers/cover_cave.jpg',
+    coverImage: '/assets/backgrounds/bg_07_smuggler_cave.png',
     factions: ['Sindikat Penyelundup Karang', 'Garnisun Pelabuhan'],
     premise: 'Di celah gua laut pasang-surut yang hanya bisa diakses saat fajar, sindikat penyelundup terbesar menyelundupkan senjata ajaib ilegal untuk membiayai pemberontakan terhadap kerajaan. Dok-dok kayu rahasia dipenuhi jebakan lantai mematikan dan anjing penjaga bayangan.',
     introDialogue: 'Suara deburan ombak berpadu dengan gema tetesan air dari stalaktit runcing di atas langit-langit gua. Dari balik tumpukan peti senjata berukir lambang terlarang, gemerincing sarung pedang terdengar mendekat diiringi derap langkah patroli para pengawal bersenjata tombak.'
@@ -116,7 +116,7 @@ const campaignsData = [
     defaultBackgroundId: 'bg_08_arcane_library',
     defaultNpcId: 'char_hero_03_wizard',
     icon: '📚',
-    coverImage: '/assets/covers/cover_library.jpg',
+    coverImage: '/assets/backgrounds/bg_08_arcane_library.png',
     factions: ['Pustakawan Bintang Agung', 'Kolektor Grimoire Hitam'],
     premise: 'Perpustakaan agung yang menyimpan seluruh catatan mantra sejak zaman para dewa mengalami anomali dimensi. Buku-buku mantra kuno terlepas dari rantai pengikatnya dan melayang di udara, melepaskan arwah-arwah penasaran para penyihir masa lampau yang haus akan raga fana.',
     introDialogue: 'Ribuan perkamen bertulisan huruf emas berputar kencang di udara membentuk pusaran badai kertas yang membingungkan. Seorang pustakawan tua berjubah bintang melambaikan tangannya di depan pintu gerbang utama seraya memperingatkanmu untuk tidak menatap langsung ke arah buku hitam terkutuk di rak tertinggi.'
@@ -131,7 +131,7 @@ const campaignsData = [
     defaultBackgroundId: 'bg_09_dragon_crater',
     defaultNpcId: 'char_hero_08_dragonborn',
     icon: '🌋',
-    coverImage: '/assets/covers/cover_crater.jpg',
+    coverImage: '/assets/backgrounds/bg_09_dragon_crater.png',
     factions: ['Klan Pemburu Naga Gunung Api', 'Penyembah Naga Merah'],
     premise: 'Naga Merah Kuno Vermithrax telah terbangun di kawah gunung berapi aktif Ignis Peak. Aliran lahar mendidih mulai mengalir menuruni lereng gunung mengancam kota di lembah, sementara sang naga menuntut persembahan emas murni dan artefak suci jika lembah tidak ingin dibakar hangus.',
     introDialogue: 'Hawa panas membakar kulitmu bahkan sebelum kamu mencapai bibir kawah yang membara. Di sekelilingmu, sungai lahar oranye menggelegak di bawah langit mendung yang diterangi kilatan petir merah, sementara kepakan sayap naga sebesar kapal perang menimbulkan gelombang angin panas yang meremukkan batu karang.'
@@ -146,7 +146,7 @@ const campaignsData = [
     defaultBackgroundId: 'bg_12_underdark_cavern',
     defaultNpcId: 'char_hero_04_dwarf',
     icon: '🍄',
-    coverImage: '/assets/covers/cover_underdark.jpg',
+    coverImage: '/assets/backgrounds/bg_12_underdark_cavern.png',
     factions: ['Kurcaci Tambang Bawah Tanah', 'Bangsa Drow Bayangan'],
     premise: 'Jauh berkilo-kilometer di bawah kerak bumi, terhampar jaringan gua tanpa batas yang hanya diterangi pendar spora jamur raksasa dan kristal safir gaib. Ekspedisi kurcaci penambang mineral aether menghilang tanpa jejak setelah menggali terlalu dalam ke wilayah sarang monster penggali purba.',
     introDialogue: 'Kesunyian total gua bawah tanah hanya dipecahkan oleh suara tetesan air kristal dan desis halus di kejauhan. Pendar jamur biru neon melukiskan bayangan memanjang di dinding kapur, menyingkap jejak cakar raksasa yang meremukkan bebatuan tambang kokoh.'
@@ -161,7 +161,7 @@ const campaignsData = [
     defaultBackgroundId: 'bg_14_frost_peak',
     defaultNpcId: 'char_hero_02_ranger',
     icon: '❄️',
-    coverImage: '/assets/covers/cover_frost.jpg',
+    coverImage: '/assets/backgrounds/bg_14_frost_peak.png',
     factions: ['Suku Pengembara Badai Salju', 'Penjaga Menara Es'],
     premise: 'Kuil Es di puncak gunung Frost Peak membeku dalam badai salju supranatural yang menolak mencair. Siapapun yang terperangkap di badai ini akan membeku menjadi patung es dalam waktu satu jam jika gagal menemukan gua perlindungan berapi abadi yang dijaga oleh monster es liar.',
     introDialogue: 'Angin dingin bersalju meniup kencang menusuk hingga ke sumsum tulang. Di tengah kebutaan badai es putih pekat, sebuah gundukan salju di depanmu bergerak perlahan, menampakkan siluet cakar beruang es bertanduk yang kelaparan mengendus jejak panas tubuhmu.'
@@ -176,7 +176,7 @@ const campaignsData = [
     defaultBackgroundId: 'bg_16_swamp_huts',
     defaultNpcId: 'char_npc_05_dryad',
     icon: '🐊',
-    coverImage: '/assets/covers/cover_swamp.jpg',
+    coverImage: '/assets/backgrounds/bg_16_swamp_huts.png',
     factions: ['Perserikatan Nenek Sihir Rawa', 'Penduduk Desa Tepi Danau'],
     premise: 'Tiga bersaudari penyihir rawa hitam mengikat perjanjian dengan iblis lumpur untuk menukarkan jiwa anak-anak desa dengan ramuan awet muda abadi. Pondok kayu panggung mereka mengapung di atas danau lintah yang dilindungi oleh monster rawa berkepala tiga.',
     introDialogue: 'Air rawa hitam berkilau kehijauan memantulkan cahaya lentera tulang yang tergantung di pondok panggung lapuk. Asap kuali ramuan berbau bunga kuburan mengepul keluar lewat jendela kayu miring, sementara tawa melengking menyeramkan menggema di antara batang pohon bakau mati.'
@@ -191,7 +191,7 @@ const campaignsData = [
     defaultBackgroundId: 'bg_24_feywild_glade',
     defaultNpcId: 'char_hero_09_bard',
     icon: '🦋',
-    coverImage: '/assets/covers/cover_fey.jpg',
+    coverImage: '/assets/backgrounds/bg_24_feywild_glade.png',
     factions: ['Istana Musim Semi Peri', 'Pengadilan Malam Fey'],
     premise: 'Sebuah portal peri terbuka di tengah lingkaran batu kuno, menarik siapa saja yang melangkah ke padang rumput abadi di mana waktu berhenti bergerak. Bunga-bunga menyanyikan lagu melenakan pikiran dan kupu-kupu kristal memikat pengembara untuk menari selamanya hingga binasa karena kelaparan.',
     introDialogue: 'Kelopak bunga berwarna pelangi bersinar lembut di bawah langit senja keemasan yang tak pernah berganti malam. Seorang pengembara berbusana megah menghampirimu sambil memetik mandolin kayu dengan senyum menggoda, menawarkan segelas nektar manis yang baunya sanggup menghapus seluruh ingatan masa lalumu.'
@@ -206,7 +206,7 @@ const campaignsData = [
     defaultBackgroundId: 'bg_25_abandoned_cathedral',
     defaultNpcId: 'char_hero_01_paladin',
     icon: '⛪',
-    coverImage: '/assets/covers/cover_cathedral.jpg',
+    coverImage: '/assets/backgrounds/bg_25_abandoned_cathedral.png',
     factions: ['Arwah Ordo Perisai Putih', 'Kultus Pengkhianat'],
     premise: 'Katedral suci pelindung ibukota kuno telah hancur dan terbengkalai sejak ratusan tahun lalu. Namun setiap tengah malam, lonceng katedral yang retak berdentang sendiri, membangkitkan arwah para ksatria suci berbaju zirah hampa yang dikutuk untuk terus bertarung menjaga relik suci yang telah dicuri.',
     introDialogue: 'Sinar rembulan menembus kubah katedral yang runtuh, menerangi barisan bangku kayu panjang yang hancur tertimbun puing marmer. Di dekat altar yang retak, sebuah zirah plat baja ksatria berdiri tegak tanpa tubuh di dalamnya, perlahan mengangkat pedang berkarat ke arah lehermu.'
@@ -221,7 +221,7 @@ const campaignsData = [
     defaultBackgroundId: 'bg_26_clockwork_vault',
     defaultNpcId: 'char_hero_05_rogue',
     icon: '⚙️',
-    coverImage: '/assets/covers/cover_clockwork.jpg',
+    coverImage: '/assets/backgrounds/bg_26_clockwork_vault.png',
     factions: ['Perkumpulan Mekanik Kuno', 'Sindikat Pembobol Brankas'],
     premise: 'Di dalam ruang bawah tanah bank tertua kerajaan, terdapat sebuah brankas rahasia peninggalan peradaban kurcaci mekanik. Ruangan ini dipenuhi dinding roda gigi perunggu raksasa, pendulum jam berbilah pisau, dan penjaga automaton uap yang tidak mengenal rasa lelah atau ampun.',
     introDialogue: 'Dentang ritmis roda gigi kuningan raksasa berputar harmonis dengan desisan uap panas dari pipa tembaga di dinding. Sebuah pintu brankas berkunci tujuh silinder kombinasi berdiri kokoh di ujung lorong berlantai pelat pegas bertekanan tinggi yang siap meluncurkan tombak dari lantai.'
@@ -236,7 +236,7 @@ const campaignsData = [
     defaultBackgroundId: 'bg_21_goblin_war_camp',
     defaultNpcId: 'char_npc_06_goblin',
     icon: '🏹',
-    coverImage: '/assets/covers/cover_goblin.jpg',
+    coverImage: '/assets/backgrounds/bg_21_goblin_war_camp.png',
     factions: ['Garnisun Perbatasan Kerajaan', 'Gerombolan Suku Taring Merah'],
     premise: 'Suku goblin liar bersatu di bawah pimpinan Warlord Grakas yang berhasil menunggangi serigala raksasa dan merakit ketapel tempur minyak api. Mereka mendirikan kamp berbenteng duri di jalur perdagangan pegunungan, menyandera konvoi pedagang dan siap menyerbu pos perbatasan terdekat.',
     introDialogue: 'Bau asap api unggun kotor dari kotoran hewan dan jeritan riuh goblin memekakkan telinga dari balik pagar kayu runcing perkemahan. Dari puncak menara pengawas reyot, sebuah anak panah berapi melesat menancap di tanah persis di depan sepatumu sebagai peringatan keras.'
@@ -251,7 +251,7 @@ const campaignsData = [
     defaultBackgroundId: 'bg_22_crystal_mines',
     defaultNpcId: 'char_hero_04_dwarf',
     icon: '💎',
-    coverImage: '/assets/covers/cover_crystal.jpg',
+    coverImage: '/assets/backgrounds/bg_22_crystal_mines.png',
     factions: ['Serikat Tambang Permata', 'Peneliti Arkanum Kristal'],
     premise: 'Tambang kristal safir terdalam tiba-tiba beresonansi menghasilkan melodi gaib berfrekuensi tinggi yang membuat para penambang menjadi linglung dan berjalan menyerahkan diri ke dalam jurang kristal. Diduga ada entitas kristal kosmik yang terkubur di urat safir paling murni.',
     introDialogue: 'Kilauan cahaya biru safir dan ungu kuarsa memantulkan bayangan ribuan bias di dinding tambang yang mempesona. Nada melodi dengungan halus yang indah namun menghipnotis mulai merayap memasuki pikiranmu, mendesakmu untuk melepaskan senjatamu dan melompat ke dalam gua kristal.'
@@ -266,7 +266,7 @@ const campaignsData = [
     defaultBackgroundId: 'bg_23_dungeon_torture_chamber',
     defaultNpcId: 'char_npc_02_informant',
     icon: '⛓️',
-    coverImage: '/assets/covers/cover_dungeon.jpg',
+    coverImage: '/assets/backgrounds/bg_23_dungeon_torture_chamber.png',
     factions: ['Inkuisisi Kerajaan Hitam', 'Tahanan Pemberontak'],
     premise: 'Kamu terbangun dalam keadaan terikat rantai berkarat di ruang interogasi bawah tanah benteng inkuisitor kejam. Dengan persenjataan yang telah dilucuti, kamu harus mengelabui algojo bertopeng besi, memetik gembok kurungan, dan menyusup keluar menembus lorong penuh jebakan mematikan.',
     introDialogue: 'Bau karat besi dan darah kering memenuhi ruangan batu sempit berlampu obor minyak jelang padam. Di seberang jeruji besimu, sang algojo berbadan raksasa sedang memanaskan besi cap berlogo tengkorak di atas tungku bara api, bersiap menyambut sesi interogasi berikutnya.'
@@ -281,7 +281,7 @@ const campaignsData = [
     defaultBackgroundId: 'bg_19_shadowfell_citadel',
     defaultNpcId: 'char_hero_07_warlock',
     icon: '🌑',
-    coverImage: '/assets/covers/cover_shadowfell.jpg',
+    coverImage: '/assets/backgrounds/bg_19_shadowfell_citadel.png',
     factions: ['Pengawal Bayangan Hampa', 'Jiwa Tersesat Tanpa Raga'],
     premise: 'Sebuah anomali magis menarik seluruh kota kecil ke alam kematian Shadowfell, dimensi kelam monokromatik di mana semua warna dan emosi bahagia terhisap lenyap. Penduduk kota perlahan berubah menjadi makhluk bayangan tanpa raga kecuali kamu berhasil menyalakan lentera suci jiwa di benteng pusat.',
     introDialogue: 'Dunia di sekelilingmu kehilangan seluruh warnanya, hanya menyisakan gradasi abu-abu kelam dan hitam pekat. Hawa dingin kehampaan menusuk dada, merenggut semangat hidupmu setapak demi setapak saat bayangan tanpa wajah mulai merayap keluar dari celah dinding batu benteng.'
@@ -296,7 +296,7 @@ const campaignsData = [
     defaultBackgroundId: 'bg_29_abyssal_rift',
     defaultNpcId: 'char_npc_09_lich',
     icon: '🌌',
-    coverImage: '/assets/covers/cover_abyssal.jpg',
+    coverImage: '/assets/backgrounds/bg_29_abyssal_rift.png',
     factions: ['Aliansi Pahlawan Penjaga Dimensi', 'Entitas Kehampaan Kosmik'],
     premise: 'Struktur ruang dan waktu benua Aether retak total. Di hadapan jurang kehampaan kosmik Abyssal Rift, kaisar tengkorak purba bersatu dengan entitas kosmik bintang mati untuk menelan seluruh semesta ke dalam ketiadaan abadi. Ini adalah garis pertahanan terakhir bagi semua ras makhluk hidup.',
     introDialogue: 'Pecahan-pecahan pulau batu melayang tak berbobot di atas pusaran galaksi ungu yang meledak berputar lambat. Sosok Kaisar Tengkorak raksasa dengan mahkota emas retak berdiri di bibir lubang hitam kosmik, menatapmu dengan dua bola api kosmik ungu seraya mengangkat tangan untuk melenyapkan takdir duniamu.'

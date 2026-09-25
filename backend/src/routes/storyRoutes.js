@@ -12,7 +12,7 @@ const storyAiLimiter = rateLimit({
   legacyHeaders: false,
   message: {
     success: false,
-    error: 'Terlalu banyak permintaan cerita AI. Mohon tunggu sejenak sebelum mencoba lagi.'
+    error: 'Terlalu banyak tindakan dalam waktu singkat. Mohon tunggu sejenak sebelum melanjutkan.'
   }
 });
 

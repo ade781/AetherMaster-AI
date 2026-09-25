@@ -1,5 +1,104 @@
 const { Character, Campaign, GameSession, StoryNode } = require('../models');
 const geminiService = require('../services/geminiService');
+const diceEngine = require('../utils/diceEngine');
+const { getEffectiveStats } = require('../utils/statEngine');
+
+function resolveChoice(currentNode, choiceId, customText, statType, dc, tone) {
+  const choiceList = currentNode?.choices || [];
+  return choiceList.find(c => c.id === choiceId) || {
+    id: choiceId || 'custom',
+    text: customText || 'Melangkah maju dengan waspada',
+    statType: statType || 'STR',
+    dc: typeof dc === 'number' ? dc : 12,
+    tone: tone || 'kreatif'
+  };
+}
+
+async function advanceStoryState({ session, character, currentNode, chosenChoice, nextScene }) {
+  const stateUpdates = nextScene.stateUpdates || {};
+
+  // Hazard enforcement: if player deliberately dove into fatal hazards and LLM was too lenient
+  const lethalWords = ['lahar', 'magma', 'kawah', 'racun maut', 'jurang', 'bunuh diri', 'tanpa perlindungan'];
+  const actTextLower = (chosenChoice?.text || '').toLowerCase();
+  if (lethalWords.some(w => actTextLower.includes(w)) && (!stateUpdates.hpChange || stateUpdates.hpChange >= 0)) {
+    stateUpdates.hpChange = -25;
+  }
+
+  character.hp = Math.max(0, Math.min(character.maxHp, character.hp + (stateUpdates.hpChange || 0)));
+  character.mana = Math.max(0, Math.min(character.maxMana, character.mana + (stateUpdates.manaChange || 0)));
+  character.gold = Math.max(0, character.gold + (stateUpdates.goldChange || 0));
+
+  // Process inventory: consumption and receiving
+  let currentInv = [...(character.inventory || [])];
+  const toConsume = stateUpdates.consumedItem || (chosenChoice?.requiredItem ? chosenChoice.requiredItem : null);
+  if (toConsume) {
+    const lowerReq = String(toConsume).toLowerCase();
+    const idx = currentInv.findIndex(i =>
+      i.id === toConsume ||
+      i.name.toLowerCase() === lowerReq ||
+      i.name.toLowerCase().includes(lowerReq) ||
+      lowerReq.includes(i.name.toLowerCase())
+    );
+    if (idx !== -1 && (currentInv[idx].category === 'Kunci' || currentInv[idx].category === 'Obat' || currentInv[idx].category === 'Potion')) {
+      currentInv.splice(idx, 1);
+    }
+  }
+
+  if (stateUpdates.receivedItem && currentInv.length < 6) {
+    currentInv.push(stateUpdates.receivedItem);
+  }
+  character.inventory = currentInv;
+  await character.save();
+
+  // Update world ledger (quest flags & persistent faction reputation)
+  const ledger = session.worldLedger || { questFlags: {}, reputation: {} };
+  if (!ledger.reputation) ledger.reputation = {};
+  if (!ledger.questFlags) ledger.questFlags = {};
+  if (stateUpdates.addLedgerFact) {
+    ledger.questFlags[`turn_${session.turnCount + 1}`] = stateUpdates.addLedgerFact;
+  }
+  if (stateUpdates.reputation && typeof stateUpdates.reputation === 'object') {
+    for (const [faction, delta] of Object.entries(stateUpdates.reputation)) {
+      ledger.reputation[faction] = (ledger.reputation[faction] || 0) + Number(delta);
+    }
+  }
+  session.worldLedger = ledger;
+  session.turnCount += 1;
+  if (character.hp <= 0) {
+    session.isGameOver = true;
+  }
+
+  // Create next node with character state snapshot for precise rewind
+  const newNode = await StoryNode.create({
+    sessionId: session.id,
+    parentNodeId: currentNode.id,
+    chapterTitle: nextScene.chapterTitle,
+    location: nextScene.location,
+    backgroundId: nextScene.backgroundId,
+    speaker: nextScene.speaker,
+    characterId: nextScene.characterId,
+    mood: nextScene.mood,
+    dialogueText: nextScene.dialogue,
+    consequenceNote: nextScene.consequenceNote,
+    choices: nextScene.choices,
+    combatEncounter: nextScene.combatEncounter || null,
+    characterSnapshot: {
+      hp: character.hp,
+      maxHp: character.maxHp,
+      mana: character.mana,
+      maxMana: character.maxMana,
+      gold: character.gold,
+      inventory: [...character.inventory],
+      turnCount: session.turnCount
+    }
+  });
+
+  session.currentSceneId = newNode.id;
+  await session.save();
+
+  return newNode;
+}
+
 
 exports.getCampaigns = async (req, res) => {
   try {
@@ -223,17 +322,7 @@ exports.submitAction = async (req, res) => {
     }
 
     const character = session.Character;
-    const choiceList = currentNode.choices || [];
-    const chosenChoice = choiceList.find(c => c.id === choiceId) || {
-      id: choiceId || 'custom',
-      text: req.body.customText || 'Melangkah maju dengan waspada',
-      statType: statType || 'STR',
-      dc: dc || 12,
-      tone: req.body.tone || 'kreatif'
-    };
-
-    const diceEngine = require('../utils/diceEngine');
-    const { getEffectiveStats } = require('../utils/statEngine');
+    const chosenChoice = resolveChoice(currentNode, choiceId, req.body.customText, statType, dc, req.body.tone);
     const effectiveChar = getEffectiveStats(character);
 
     // D&D 5E Dice Check resolution
@@ -256,94 +345,13 @@ exports.submitAction = async (req, res) => {
       checkResult
     });
 
-    // Apply state updates to character (HP, Mana, Gold)
-    const stateUpdates = nextScene.stateUpdates || {};
-
-    // Hazard enforcement: if player deliberately dove into fatal hazards and LLM was too lenient
-    const lethalWords = ['lahar', 'magma', 'kawah', 'racun maut', 'jurang', 'bunuh diri', 'tanpa perlindungan'];
-    const actTextLower = (chosenChoice.text || '').toLowerCase();
-    if (lethalWords.some(w => actTextLower.includes(w)) && (!stateUpdates.hpChange || stateUpdates.hpChange >= 0)) {
-      stateUpdates.hpChange = -25;
-    }
-
-    let newHp = character.hp + (stateUpdates.hpChange || 0);
-    newHp = Math.max(0, Math.min(character.maxHp, newHp));
-    character.hp = newHp;
-
-    let newMana = character.mana + (stateUpdates.manaChange || 0);
-    newMana = Math.max(0, Math.min(character.maxMana, newMana));
-    character.mana = newMana;
-
-    let newGold = character.gold + (stateUpdates.goldChange || 0);
-    character.gold = Math.max(0, newGold);
-
-    // Process inventory: consumption and receiving
-    let currentInv = [...(character.inventory || [])];
-    const toConsume = stateUpdates.consumedItem || (chosenChoice.requiredItem ? chosenChoice.requiredItem : null);
-    if (toConsume) {
-      const lowerReq = String(toConsume).toLowerCase();
-      const idx = currentInv.findIndex(i => 
-        i.id === toConsume || 
-        i.name.toLowerCase() === lowerReq || 
-        i.name.toLowerCase().includes(lowerReq) ||
-        lowerReq.includes(i.name.toLowerCase())
-      );
-      if (idx !== -1 && (currentInv[idx].category === 'Kunci' || currentInv[idx].category === 'Obat' || currentInv[idx].category === 'Potion')) {
-        currentInv.splice(idx, 1);
-      }
-    }
-
-    if (stateUpdates.receivedItem && currentInv.length < 6) {
-      currentInv.push(stateUpdates.receivedItem);
-    }
-    character.inventory = currentInv;
-    await character.save();
-
-    // Update world ledger (quest flags & persistent faction reputation)
-    const ledger = session.worldLedger || { questFlags: {}, reputation: {} };
-    if (!ledger.reputation) ledger.reputation = {};
-    if (!ledger.questFlags) ledger.questFlags = {};
-    if (stateUpdates.addLedgerFact) {
-      ledger.questFlags[`turn_${session.turnCount + 1}`] = stateUpdates.addLedgerFact;
-    }
-    if (stateUpdates.reputation && typeof stateUpdates.reputation === 'object') {
-      for (const [faction, delta] of Object.entries(stateUpdates.reputation)) {
-        ledger.reputation[faction] = (ledger.reputation[faction] || 0) + Number(delta);
-      }
-    }
-    session.worldLedger = ledger;
-    session.turnCount += 1;
-    if (newHp <= 0) {
-      session.isGameOver = true;
-    }
-
-    // Create next node with character state snapshot for precise rewind
-    const newNode = await StoryNode.create({
-      sessionId: session.id,
-      parentNodeId: currentNode.id,
-      chapterTitle: nextScene.chapterTitle,
-      location: nextScene.location,
-      backgroundId: nextScene.backgroundId,
-      speaker: nextScene.speaker,
-      characterId: nextScene.characterId,
-      mood: nextScene.mood,
-      dialogueText: nextScene.dialogue,
-      consequenceNote: nextScene.consequenceNote,
-      choices: nextScene.choices,
-      combatEncounter: nextScene.combatEncounter || null,
-      characterSnapshot: {
-        hp: character.hp,
-        maxHp: character.maxHp,
-        mana: character.mana,
-        maxMana: character.maxMana,
-        gold: character.gold,
-        inventory: [...character.inventory],
-        turnCount: session.turnCount
-      }
+    const newNode = await advanceStoryState({
+      session,
+      character,
+      currentNode,
+      chosenChoice,
+      nextScene
     });
-
-    session.currentSceneId = newNode.id;
-    await session.save();
 
     res.json({
       success: true,
@@ -465,8 +473,6 @@ exports.combatAction = async (req, res) => {
 
     const character = session.Character;
     const currentNode = await StoryNode.findByPk(session.currentSceneId);
-    const diceEngine = require('../utils/diceEngine');
-    const { getEffectiveStats } = require('../utils/statEngine');
     const effectiveChar = getEffectiveStats(character);
 
     // Initialize or load combatState
@@ -653,17 +659,7 @@ exports.actionStream = async (req, res) => {
     }
 
     const character = session.Character;
-    const choiceList = currentNode.choices || [];
-    const chosenChoice = choiceList.find(c => c.id === choiceId) || {
-      id: choiceId || 'custom',
-      text: customText || 'Melangkah maju dengan waspada',
-      statType: statType || 'STR',
-      dc: dc ? Number(dc) : 12,
-      tone: 'kreatif'
-    };
-
-    const diceEngine = require('../utils/diceEngine');
-    const { getEffectiveStats } = require('../utils/statEngine');
+    const chosenChoice = resolveChoice(currentNode, choiceId, customText, statType, dc ? Number(dc) : undefined, 'kreatif');
     const effectiveChar = getEffectiveStats(character);
 
     const checkStat = statType || chosenChoice.statType || 'STR';
@@ -690,61 +686,13 @@ exports.actionStream = async (req, res) => {
       res.write(`data: ${JSON.stringify({ type: 'chunk', text: (i === 0 ? '' : ' ') + words[i] })}\n\n`);
     }
 
-    // Apply updates
-    const stateUpdates = nextScene.stateUpdates || {};
-    let newHp = Math.max(0, Math.min(character.maxHp, character.hp + (stateUpdates.hpChange || 0)));
-    character.hp = newHp;
-    character.mana = Math.max(0, Math.min(character.maxMana, character.mana + (stateUpdates.manaChange || 0)));
-    character.gold = Math.max(0, character.gold + (stateUpdates.goldChange || 0));
-
-    let currentInv = [...(character.inventory || [])];
-    if (stateUpdates.receivedItem && currentInv.length < 6) {
-      currentInv.push(stateUpdates.receivedItem);
-    }
-    character.inventory = currentInv;
-    await character.save();
-
-    const ledger = session.worldLedger || { questFlags: {}, reputation: {} };
-    if (!ledger.reputation) ledger.reputation = {};
-    if (!ledger.questFlags) ledger.questFlags = {};
-    if (stateUpdates.addLedgerFact) {
-      ledger.questFlags[`turn_${session.turnCount + 1}`] = stateUpdates.addLedgerFact;
-    }
-    if (stateUpdates.reputation && typeof stateUpdates.reputation === 'object') {
-      for (const [faction, delta] of Object.entries(stateUpdates.reputation)) {
-        ledger.reputation[faction] = (ledger.reputation[faction] || 0) + Number(delta);
-      }
-    }
-    session.worldLedger = ledger;
-    session.turnCount += 1;
-    if (newHp <= 0) session.isGameOver = true;
-
-    const newNode = await StoryNode.create({
-      sessionId: session.id,
-      parentNodeId: currentNode.id,
-      chapterTitle: nextScene.chapterTitle,
-      location: nextScene.location,
-      backgroundId: nextScene.backgroundId,
-      speaker: nextScene.speaker,
-      characterId: nextScene.characterId,
-      mood: nextScene.mood,
-      dialogueText: nextScene.dialogue,
-      consequenceNote: nextScene.consequenceNote,
-      choices: nextScene.choices,
-      combatEncounter: nextScene.combatEncounter || null,
-      characterSnapshot: {
-        hp: character.hp,
-        maxHp: character.maxHp,
-        mana: character.mana,
-        maxMana: character.maxMana,
-        gold: character.gold,
-        inventory: [...character.inventory],
-        turnCount: session.turnCount
-      }
+    const newNode = await advanceStoryState({
+      session,
+      character,
+      currentNode,
+      chosenChoice,
+      nextScene
     });
-
-    session.currentSceneId = newNode.id;
-    await session.save();
 
     res.write(`data: ${JSON.stringify({
       type: 'done',
@@ -761,6 +709,3 @@ exports.actionStream = async (req, res) => {
     res.end();
   }
 };
-
-
-
