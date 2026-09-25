@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Save, Download, Upload, X, Clock, MapPin, Heart, Shield, RefreshCw, Check } from 'lucide-react';
 import audio from '../services/audioService';
 
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:5000/api/story';
+
 export default function SaveLoadModal({
   isOpen,
   onClose,
@@ -15,7 +17,7 @@ export default function SaveLoadModal({
 
   const fetchSlots = () => {
     setLoading(true);
-    fetch('http://127.0.0.1:5000/api/story/saves')
+    fetch(`${API_BASE}/saves`)
       .then(res => res.json())
       .then(data => {
         if (data.success) {
@@ -43,7 +45,7 @@ export default function SaveLoadModal({
     if (!sessionId) return;
     audio.playSelect();
     try {
-      const res = await fetch('http://127.0.0.1:5000/api/story/saves/save', {
+      const res = await fetch(`${API_BASE}/saves/save`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -66,7 +68,7 @@ export default function SaveLoadModal({
   const handleLoadFromSlot = async (slotNumber) => {
     audio.playSelect();
     try {
-      const res = await fetch(`http://127.0.0.1:5000/api/story/saves/load/${slotNumber}`);
+      const res = await fetch(`${API_BASE}/saves/load/${slotNumber}`);
       const data = await res.json();
       if (data.success) {
         onLoadSession(data.data);
@@ -82,7 +84,7 @@ export default function SaveLoadModal({
   const handleExportJson = () => {
     if (!sessionId) return;
     audio.playClick();
-    window.open(`http://127.0.0.1:5000/api/story/saves/export/${sessionId}`, '_blank');
+    window.open(`${API_BASE}/saves/export/${sessionId}`, '_blank');
   };
 
   const handleImportJson = (e) => {
@@ -92,7 +94,7 @@ export default function SaveLoadModal({
     reader.onload = async (event) => {
       try {
         const sessionData = JSON.parse(event.target.result);
-        const res = await fetch('http://127.0.0.1:5000/api/story/saves/import', {
+        const res = await fetch(`${API_BASE}/saves/import`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ sessionData })

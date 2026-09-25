@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { BookOpen, X, MessageSquare, MapPin } from 'lucide-react';
 import audio from '../services/audioService';
 
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:5000/api/story';
+
 export default function BacklogModal({ isOpen, onClose, sessionId }) {
   const [backlog, setBacklog] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -9,7 +11,7 @@ export default function BacklogModal({ isOpen, onClose, sessionId }) {
   useEffect(() => {
     if (!isOpen || !sessionId) return;
     setLoading(true);
-    fetch(`http://127.0.0.1:5000/api/story/backlog/${sessionId}`)
+    fetch(`${API_BASE}/backlog/${sessionId}`)
       .then(res => res.json())
       .then(data => {
         if (data.success) {

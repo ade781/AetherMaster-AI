@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { GitFork, RotateCcw, X, MapPin, MessageSquare, AlertCircle, CheckCircle } from 'lucide-react';
 import audio from '../services/audioService';
 
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:5000/api/story';
+
 export default function StoryTreeModal({
   isOpen,
   onClose,
@@ -16,7 +18,7 @@ export default function StoryTreeModal({
   useEffect(() => {
     if (!isOpen || !sessionId) return;
     setLoading(true);
-    fetch(`http://127.0.0.1:5000/api/story/tree/${sessionId}`)
+    fetch(`${API_BASE}/tree/${sessionId}`)
       .then(res => res.json())
       .then(data => {
         if (data.success) {
