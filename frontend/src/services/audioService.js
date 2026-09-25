@@ -8,6 +8,7 @@ class AudioService {
     this.ctx = null;
     this.isMuted = false;
     this.ambientNode = null;
+    this.heartbeatTimer = null;
     this.isSpeechEnabled = false;
   }
 
@@ -21,11 +22,16 @@ class AudioService {
     }
   }
 
-  toggleMute() {
-    this.isMuted = !this.isMuted;
-    if (this.isMuted && this.ambientNode) {
+  setMuted(muted) {
+    this.isMuted = Boolean(muted);
+    if (this.isMuted) {
       this.stopAmbient();
+      this.stopHeartbeat();
     }
+  }
+
+  toggleMute() {
+    this.setMuted(!this.isMuted);
     return this.isMuted;
   }
 
@@ -189,6 +195,52 @@ class AudioService {
     this.playClick();
   }
 
+  // --- REACTIVE HEARTBEAT SYNTH (< 20% HP) ---
+
+  startHeartbeat() {
+    if (this.isMuted || this.heartbeatTimer) return;
+    this.init();
+
+    const triggerThump = () => {
+      if (this.isMuted || !this.ctx) return;
+      try {
+        const now = this.ctx.currentTime;
+        // Two thumps: lub - dub
+        [0, 0.16].forEach((offset, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+
+          osc.type = 'sine';
+          const freq = idx === 0 ? 55 : 45;
+          osc.frequency.setValueAtTime(freq, now + offset);
+          osc.frequency.exponentialRampToValueAtTime(30, now + offset + 0.12);
+
+          const vol = idx === 0 ? 0.35 : 0.25;
+          gain.gain.setValueAtTime(vol, now + offset);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.14);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          osc.start(now + offset);
+          osc.stop(now + offset + 0.15);
+        });
+      } catch (e) {
+        console.warn('Heartbeat thump error:', e);
+      }
+    };
+
+    triggerThump();
+    this.heartbeatTimer = setInterval(triggerThump, 900);
+  }
+
+  stopHeartbeat() {
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
+    }
+  }
+
   // --- AMBIENT SOUNDSCAPE ---
 
   startAmbient(type = 'tavern') {
@@ -199,7 +251,6 @@ class AudioService {
     }
 
     try {
-      // Noise buffer for atmospheric hum
       const bufferSize = this.ctx.sampleRate * 2;
       const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
       const output = noiseBuffer.getChannelData(0);
@@ -212,11 +263,26 @@ class AudioService {
       whiteNoise.loop = true;
 
       const filter = this.ctx.createBiquadFilter();
-      filter.type = 'lowpass';
-      filter.frequency.value = type === 'tavern' ? 260 : 180;
-
       const gain = this.ctx.createGain();
-      gain.gain.setValueAtTime(0.04, this.ctx.currentTime);
+
+      // Atmospheric presets
+      if (type.includes('frost') || type.includes('peak') || type === 'frost') {
+        // High whistly howling cold wind
+        filter.type = 'bandpass';
+        filter.frequency.value = 420;
+        filter.Q.value = 3.5;
+        gain.gain.setValueAtTime(0.05, this.ctx.currentTime);
+      } else if (type.includes('ocean') || type.includes('citadel') || type.includes('cave') || type === 'ocean') {
+        // Deep resonant ocean swell
+        filter.type = 'lowpass';
+        filter.frequency.value = 160;
+        gain.gain.setValueAtTime(0.06, this.ctx.currentTime);
+      } else {
+        // Warm tavern / room ambiance
+        filter.type = 'lowpass';
+        filter.frequency.value = 260;
+        gain.gain.setValueAtTime(0.04, this.ctx.currentTime);
+      }
 
       whiteNoise.connect(filter);
       filter.connect(gain);
