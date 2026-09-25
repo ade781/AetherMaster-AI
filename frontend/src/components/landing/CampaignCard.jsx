@@ -11,12 +11,9 @@ export default function CampaignCard({
   if (!campaign) return null;
 
   const getCoverSrc = () => {
-    if (campaign.coverImage) return campaign.coverImage;
     if (campaign.defaultBackgroundId) return `/assets/backgrounds/${campaign.defaultBackgroundId}.png`;
-    if (campaign.id === 'whispering_tavern') return '/assets/bg_tavern.jpg';
-    if (campaign.id === 'crypt_of_crimson') return '/assets/bg_crypt.jpg';
-    if (campaign.id === 'abyssal_citadel') return '/assets/bg_sunken_citadel.jpg';
-    return '/assets/bg_tavern.jpg';
+    if (campaign.coverImage) return campaign.coverImage;
+    return '/assets/backgrounds/bg_01_tavern.png';
   };
 
   const getGenreColor = (genre) => {
@@ -56,7 +53,13 @@ export default function CampaignCard({
           src={getCoverSrc()}
           alt={campaign.title}
           className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
-          onError={(e) => { e.target.src = '/assets/bg_tavern.jpg'; }}
+          onError={(e) => {
+            if (campaign.defaultBackgroundId && !e.target.src.includes(campaign.defaultBackgroundId)) {
+              e.target.src = `/assets/backgrounds/${campaign.defaultBackgroundId}.png`;
+            } else {
+              e.target.src = '/assets/backgrounds/bg_01_tavern.png';
+            }
+          }}
           loading="lazy"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />

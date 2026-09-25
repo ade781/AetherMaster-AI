@@ -123,6 +123,7 @@ function MainGame() {
         onOpenStoryTree={() => setIsStoryTreeOpen(true)}
         onOpenBacklog={() => setIsBacklogOpen(true)}
         onOpenSaveLoad={() => setIsSaveLoadOpen(true)}
+        onToggleInventory={() => setIsInventoryOpen(prev => !prev)}
         isLoading={isLoading}
         hudComponent={
           <CharacterHUD

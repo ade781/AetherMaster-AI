@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Volume2, VolumeX, Mic, MicOff, BookOpen, GitFork, Save, 
-  Sparkles, Swords, Send, ArrowRight, Shield
+  Sparkles, Send
 } from 'lucide-react';
 import audio from '../services/audioService';
 import FantasyAvatar from './common/FantasyAvatar';
@@ -15,6 +15,7 @@ export default function VisualNovelStage({
   onOpenStoryTree,
   onOpenBacklog,
   onOpenSaveLoad,
+  onToggleInventory,
   onResolveCombat,
   isLoading,
   hudComponent
@@ -39,18 +40,30 @@ export default function VisualNovelStage({
     }
   }, [isTyping, fullText]);
 
-  // Keyboard shortcut listener: Space or Enter skips typewriter
+  // Keyboard shortcut listener: Space/Enter skips, I toggles inventory, M opens story tree, L opens backlog
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (['INPUT', 'TEXTAREA'].includes(e.target?.tagName)) return;
       if (e.key === ' ' || e.key === 'Enter') {
         e.preventDefault();
         handleSkipTypewriter();
+      } else if (e.key === 'i' || e.key === 'I') {
+        e.preventDefault();
+        audio.playClick();
+        onToggleInventory?.();
+      } else if (e.key === 'm' || e.key === 'M') {
+        e.preventDefault();
+        audio.playClick();
+        onOpenStoryTree?.();
+      } else if (e.key === 'l' || e.key === 'L') {
+        e.preventDefault();
+        audio.playClick();
+        onOpenBacklog?.();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleSkipTypewriter]);
+  }, [handleSkipTypewriter, onToggleInventory, onOpenStoryTree, onOpenBacklog]);
 
   // Ambient soundscape sync based on scene background
   useEffect(() => {
@@ -282,9 +295,12 @@ export default function VisualNovelStage({
                 </p>
               </div>
 
-              <div className="mt-3 text-right">
-                <span className="text-[10px] text-slate-500 font-mono tracking-widest uppercase">
-                  {isTyping ? 'Tekan Spasi / Klik untuk mempercepat' : 'Pilih tindakan di bawah'}
+              <div className="mt-3 pt-2.5 border-t border-white/5 flex items-center justify-between text-[10px] text-slate-500 font-mono">
+                <span className="hidden sm:inline text-slate-400">
+                  Pintas: <kbd className="px-1 py-0.5 rounded bg-white/10 text-amber-300">Spasi</kbd> Lanjut • <kbd className="px-1 py-0.5 rounded bg-white/10 text-amber-300">I</kbd> Tas • <kbd className="px-1 py-0.5 rounded bg-white/10 text-cyan-300">M</kbd> Peta • <kbd className="px-1 py-0.5 rounded bg-white/10 text-amber-300">L</kbd> Log
+                </span>
+                <span className="tracking-wider uppercase ml-auto">
+                  {isTyping ? 'Klik / Spasi Percepat' : 'Pilih tindakan di bawah'}
                 </span>
               </div>
             </div>

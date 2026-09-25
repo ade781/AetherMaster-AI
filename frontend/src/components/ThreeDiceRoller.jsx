@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import confetti from 'canvas-confetti';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Skull, CheckCircle2, XCircle, ArrowRight } from 'lucide-react';
+import { Skull, CheckCircle2, XCircle, ArrowRight } from 'lucide-react';
 import audio from '../services/audioService';
 
 export default function ThreeDiceRoller({

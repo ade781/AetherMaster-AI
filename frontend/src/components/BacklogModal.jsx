@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, X, MessageSquare, MapPin } from 'lucide-react';
+import { BookOpen, X, MapPin } from 'lucide-react';
 import audio from '../services/audioService';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:5000/api/story';

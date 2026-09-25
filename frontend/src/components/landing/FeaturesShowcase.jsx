@@ -1,5 +1,5 @@
 import React from 'react';
-import { GitFork, Backpack, Volume2, Shield, Sparkles, Dices } from 'lucide-react';
+import { GitFork, Backpack, Volume2, Sparkles, Dices } from 'lucide-react';
 
 export default function FeaturesShowcase() {
   const features = [

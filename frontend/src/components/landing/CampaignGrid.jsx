@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Compass, RefreshCw, Sparkles, Play, Shield } from 'lucide-react';
+import { Search, Compass, RefreshCw, Play } from 'lucide-react';
 import CampaignCard from './CampaignCard';
 import audio from '../../services/audioService';
 
@@ -101,10 +101,16 @@ export default function CampaignGrid({
             {/* Visual Cover (5 cols) */}
             <div className="lg:col-span-5 relative h-64 lg:h-auto min-h-[220px] overflow-hidden bg-slate-950">
               <img
-                src={activeCampaign.coverImage || (activeCampaign.defaultBackgroundId ? `/assets/backgrounds/${activeCampaign.defaultBackgroundId}.png` : '/assets/bg_tavern.jpg')}
+                src={(activeCampaign.defaultBackgroundId ? `/assets/backgrounds/${activeCampaign.defaultBackgroundId}.png` : activeCampaign.coverImage) || '/assets/backgrounds/bg_01_tavern.png'}
                 alt={activeCampaign.title}
                 className="w-full h-full object-cover"
-                onError={(e) => { e.target.src = '/assets/bg_tavern.jpg'; }}
+                onError={(e) => {
+                  if (activeCampaign.defaultBackgroundId && !e.target.src.includes(activeCampaign.defaultBackgroundId)) {
+                    e.target.src = `/assets/backgrounds/${activeCampaign.defaultBackgroundId}.png`;
+                  } else {
+                    e.target.src = '/assets/backgrounds/bg_01_tavern.png';
+                  }
+                }}
               />
               <div className="absolute inset-0 bg-gradient-to-t lg:bg-gradient-to-r from-slate-900 via-transparent to-transparent" />
               <div className="absolute top-4 left-4">

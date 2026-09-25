@@ -1,20 +1,8 @@
-import React, { useState } from 'react';
-import { Play, Scroll, Check, Copy } from 'lucide-react';
+import React from 'react';
+import { Play, Scroll } from 'lucide-react';
 import audio from '../../services/audioService';
 
 export default function HeroBanner({ onStartAdventure, onOpenRules, showToast }) {
-  const [copied, setCopied] = useState(false);
-  const launchCommand = "npx aethermaster-ai";
-
-  const handleCopyCommand = (e) => {
-    if (e && e.stopPropagation) e.stopPropagation();
-    navigator.clipboard.writeText(launchCommand);
-    setCopied(true);
-    audio.playClick();
-    if (showToast) showToast('Perintah npx disalin ke clipboard!', 'success');
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   return (
     <section className="relative min-h-[90vh] md:min-h-screen w-full flex flex-col justify-between overflow-hidden">
       {/* Background Image with Cinematic Scrim and Vignette */}
@@ -28,10 +16,10 @@ export default function HeroBanner({ onStartAdventure, onOpenRules, showToast })
 
       {/* Center Hero Content */}
       <div className="relative z-10 max-w-4xl mx-auto px-6 text-center my-auto pt-24 md:pt-28 pb-12 flex flex-col items-center">
-        {/* Creator Badge */}
+        {/* Feature Badge */}
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/80 border border-amber-500/40 text-amber-400 text-xs font-mono font-semibold tracking-wider shadow-lg mb-4 backdrop-blur-md">
-          <span>✨</span>
-          <span>Made by ADE7</span>
+          <span>⚔️</span>
+          <span>D&amp;D 5E Virtual Tabletop Engine</span>
         </div>
 
         {/* Main Display Headline */}
@@ -43,34 +31,6 @@ export default function HeroBanner({ onStartAdventure, onOpenRules, showToast })
         <p className="mt-6 max-w-2xl text-base md:text-lg text-slate-200 font-light leading-relaxed drop-shadow-sm">
           Petualangan RPG D&amp;D 5E interaktif dengan narasi cabang adaptif, evaluasi aksi taktis server-authoritative, dan visual novel dinamis.
         </p>
-
-        {/* Glassmorphism Command Pill */}
-        <div className="mt-8 flex flex-col items-center gap-3">
-          <div 
-            onClick={handleCopyCommand}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCopyCommand(e); }}
-            className="group cursor-pointer px-5 py-3 rounded-full bg-slate-900/70 hover:bg-slate-900/90 border border-white/20 hover:border-amber-400/60 backdrop-blur-xl shadow-2xl transition-all duration-200 flex items-center gap-4 text-xs md:text-sm font-mono text-slate-200"
-            title="Klik untuk menyalin perintah peluncur"
-          >
-            <div className="flex items-center gap-2.5 text-amber-300">
-              <span className="text-amber-400 font-bold">$</span>
-              <span className="text-white font-medium">{launchCommand}</span>
-            </div>
-
-            <div className="h-4 w-[1px] bg-white/20" />
-
-            <button
-              type="button"
-              onClick={handleCopyCommand}
-              aria-label="Salin perintah ke clipboard"
-              className="p-1 rounded-md hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
-            >
-              {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-            </button>
-          </div>
-        </div>
 
         {/* Dual Action CTA Buttons */}
         <div className="mt-10 flex flex-wrap items-center justify-center gap-4">

@@ -3,15 +3,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Swords, 
   Sparkles, 
-  Backpack, 
   Footprints, 
   Shield, 
   Heart, 
   Flame, 
-  Zap, 
-  Activity,
-  ScrollText,
-  AlertTriangle
+  ScrollText
 } from 'lucide-react';
 import audio from '../services/audioService';
 
