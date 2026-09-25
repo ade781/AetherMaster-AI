@@ -1,12 +1,28 @@
 const express = require('express');
 const router = express.Router();
+const rateLimit = require('express-rate-limit');
 const storyController = require('../controllers/storyController');
 const saveLoadController = require('../controllers/saveLoadController');
 
+// Rate limiter for LLM / narrative endpoints (Fase 6: Max 30 req/min per IP)
+const storyAiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    error: 'Terlalu banyak permintaan cerita AI. Mohon tunggu sejenak sebelum mencoba lagi.'
+  }
+});
+
 // Campaign & Story Flow Routes
 router.get('/campaigns', storyController.getCampaigns);
-router.post('/start', storyController.startCampaign);
-router.post('/action', storyController.submitAction);
+router.post('/start', storyAiLimiter, storyController.startCampaign);
+router.post('/action', storyAiLimiter, storyController.submitAction);
+router.get('/action-stream', storyAiLimiter, storyController.actionStream);
+router.post('/action-stream', storyAiLimiter, storyController.actionStream);
+router.post('/combat/action', storyController.combatAction);
 router.post('/use-item', storyController.useItem);
 router.post('/rewind', storyController.rewindToNode);
 router.get('/tree/:sessionId', storyController.getStoryTree);

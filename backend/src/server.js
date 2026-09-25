@@ -1,5 +1,7 @@
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const compression = require('compression');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
@@ -8,6 +10,12 @@ const storyRoutes = require('./routes/storyRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Security & Performance Middlewares (Fase 6)
+app.use(helmet({
+  crossOriginResourcePolicy: false
+}));
+app.use(compression());
 
 app.use(cors({
   origin: ['http://localhost:5173', 'http://127.0.0.1:5173'],
@@ -33,11 +41,20 @@ app.use((err, req, res, next) => {
   res.status(500).json({ success: false, error: err.message || 'Internal Server Error' });
 });
 
-initDb().then(() => {
+let server = null;
+const startServer = async () => {
+  await initDb();
   console.log('[SQLite DB] Database synced & seeded successfully.');
-  app.listen(PORT, () => {
+  server = app.listen(PORT, () => {
     console.log(`[AetherMaster Server] Running at http://localhost:${PORT}`);
   });
-}).catch(err => {
-  console.error('[Database Init Error]', err);
-});
+  return server;
+};
+
+if (require.main === module) {
+  startServer().catch(err => {
+    console.error('[Database Init Error]', err);
+  });
+}
+
+module.exports = { app, startServer };

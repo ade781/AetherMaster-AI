@@ -7,7 +7,9 @@ const choiceSchema = z.object({
   id: z.string(),
   text: z.string(),
   requiredItem: z.string().nullable().optional(),
-  tone: z.string().optional()
+  tone: z.string().optional(),
+  statType: z.string().optional(),
+  dc: z.number().optional()
 });
 
 const sceneSchema = z.object({
@@ -51,135 +53,103 @@ function parseSceneJson(rawText) {
   return sceneSchema.parse(parsed);
 }
 
-// Fallback Deterministic Scene Generator
+// Dynamic Deterministic Scene Generator reading directly from database Campaign model
 function getFallbackOpening(campaign, character) {
   const charName = character?.name || 'Petualang';
   const charClass = character?.characterClass || 'Warrior';
+  const title = campaign?.title || 'Petualangan Aether';
+  const location = campaign?.title ? `Wilayah ${campaign.title}` : 'Kedai Whispering Tavern';
+  const bgId = campaign?.defaultBackgroundId || 'bg_01_tavern';
+  const npcId = campaign?.defaultNpcId || 'char_npc_01_barkeep';
 
+  const npcNames = {
+    char_npc_01_barkeep: 'Eldrin sang Barkeep',
+    char_npc_02_informant: 'Informan Bayangan',
+    char_npc_03_vampire: 'Lord Cassian',
+    char_npc_05_dryad: 'Sylvanis sang Dryad',
+    char_npc_06_goblin: 'Pedagang Goblin',
+    char_npc_07_guard: 'Kapten Penjaga',
+    char_npc_08_cultist: 'Pemuja Samudra Silus',
+    char_npc_09_lich: 'Kaisar Tengkorak Purba',
+    char_hero_01_paladin: 'Ksatria Aliansi',
+    char_hero_02_ranger: 'Pemandu Rimba Lyra',
+    char_hero_03_wizard: 'Pustakawan Bintang',
+    char_hero_04_dwarf: 'Penambang Kurcaci Torin',
+    char_hero_05_rogue: 'Penyusup Bayangan',
+    char_hero_06_cleric: 'Pendeta Cahaya',
+    char_hero_07_warlock: 'Penyihir Dimensi Malakor',
+    char_hero_08_dragonborn: 'Prajurit Api Ignis',
+    char_hero_09_bard: 'Penyair Pengelana Mandolin'
+  };
+  const speaker = npcNames[npcId] || 'Pemandu Petualangan';
+
+  let dialogue = '';
+  if (campaign?.introDialogue) {
+    dialogue = `${campaign.introDialogue}\n\nDi hadapanmu, ${charName} sang ${charClass}, takdir kini memanggil untuk bertindak.`;
+  } else if (campaign?.premise) {
+    dialogue = `${campaign.premise}\n\n${charName}, petualang ${charClass} yang tangguh, kini berdiri di ambang misteri ini.`;
+  } else {
+    dialogue = `Selamat datang di ${title}, ${charName}. Petualangan epikmu baru saja dimulai.`;
+  }
+
+  // Campaign specific starting bonus item if available
+  let receivedItem = null;
   if (campaign?.id === 'crypt_of_crimson') {
-    return {
-      chapterTitle: 'Babak I: Gerbang Makam Merah Darah',
-      location: 'Koridor Bawah Tanah Makam Merah',
-      backgroundId: 'bg_04_crimson_crypt',
-      speaker: 'Informan Bayangan',
-      characterId: 'char_npc_02_informant',
-      mood: 'ominous',
-      dialogue: `Lilin merah menyala di sepanjang dinding batu bertabur tengkorak. Hawa dingin merayap di kulitmu, ${charName}. Informan bertudung menoleh padamu dan berbisik pelan, memperingatkan bahwa Malakor si Necromancer telah membuka segel peti mati terlarang.`,
-      consequenceNote: 'Kamu berhasil menyusup ke makam bawah tanah tanpa menarik perhatian pengawal luar.',
-      stateUpdates: {
-        hpChange: 0,
-        goldChange: 0,
-        receivedItem: {
-          id: 'item_06_skeleton_key',
-          name: 'Kunci Tengkorak Kuno',
-          category: 'Kunci',
-          effect: 'Dapat membuka gembok makam bawah tanah',
-          icon: 'item_06_skeleton_key'
-        },
-        consumedItem: null,
-        addLedgerFact: 'Menyusup ke Makam Merah bersama Informan Bayangan.'
-      },
-      choices: [
-        {
-          id: 'c1',
-          text: 'Periksa dinding batu bertuliskan mantra pemanggil arwah',
-          tone: 'curious'
-        },
-        {
-          id: 'c2',
-          text: 'Mengendap maju menembus koridor gelap tanpa suara rantai bergemerincing',
-          tone: 'cautious'
-        },
-        {
-          id: 'c3',
-          text: 'Dobrak pintu besi berlambang segel darah dengan sekuat tenaga',
-          tone: 'bold'
-        }
-      ]
+    receivedItem = {
+      id: 'item_06_skeleton_key',
+      name: 'Kunci Tengkorak Kuno',
+      category: 'Kunci',
+      effect: 'Dapat membuka gembok makam bawah tanah',
+      icon: 'item_06_skeleton_key'
+    };
+  } else if (campaign?.id === 'whispering_tavern') {
+    receivedItem = {
+      id: 'item_01_potion_heal',
+      name: 'Ramuan Penyembuh Darah',
+      category: 'Obat',
+      effect: 'Memulihkan 25 Hit Points seketika',
+      icon: 'item_01_potion_heal'
     };
   }
 
-  if (campaign?.id === 'abyssal_citadel') {
-    return {
-      chapterTitle: 'Babak I: Reruntuhan yang Tenggelam',
-      location: 'Kuil Abyssal Sunken Citadel',
-      backgroundId: 'bg_03_sunken_citadel',
-      speaker: 'Silus sang Pemuja Samudra',
-      characterId: 'char_npc_08_cultist',
-      mood: 'mysterious',
-      dialogue: `Gelembung udara mengambang lambat di antara pilar batu berkepala gurita. Cahaya biru toska berpendar dari anemon laut di kakimu. Silus menatapmu dengan mata berkilat aneh, menyambut kedatanganmu di makam sang dewa laut.`,
-      consequenceNote: 'Kamu menghirup aether pelindung pernapasan bawah air.',
-      stateUpdates: {
-        hpChange: 0,
-        goldChange: 0,
-        receivedItem: {
-          id: 'item_07_golden_compass',
-          name: 'Kompas Bintang Emas',
-          category: 'Relik',
-          effect: '+2 Bonus WIS saat menentukan arah',
-          icon: 'item_07_golden_compass'
-        },
-        consumedItem: null,
-        addLedgerFact: 'Tiba di Kuil Sunken Citadel dengan restu kompas bintang.'
-      },
-      choices: [
-        {
-          id: 'c1',
-          text: 'Tafsirkan ukiran kuno persembahan dewa samudra pada prasasti altar',
-          tone: 'cautious'
-        },
-        {
-          id: 'c2',
-          text: 'Berenang menyelinap di balik reruntuhan pilar menjauhi penjaga gurita',
-          tone: 'cautious'
-        },
-        {
-          id: 'c3',
-          text: 'Intimidasi Silus agar menyerahkan mutiara pelindung tanpa teka-teki',
-          tone: 'bold'
-        }
-      ]
-    };
-  }
-
-  // Default: Whispering Tavern
   return {
-    chapterTitle: 'Babak I: Nyala Lilin di Kedai Kuno',
-    location: 'Kedai Whispering Tavern',
-    backgroundId: 'bg_01_tavern',
-    speaker: 'Eldrin sang Barkeep',
-    characterId: 'char_npc_01_barkeep',
+    chapterTitle: `Babak I: ${title}`,
+    location,
+    backgroundId: bgId,
+    speaker,
+    characterId: npcId,
     mood: 'mysterious',
-    dialogue: `Hujan deras menghantam jendela kedai berkaca patri. Di dekat perapian bata yang hangat, Eldrin meletakkan cangkir ale berbusa tebal di hadapanmu. Matanya melirik ke arah pintu ruang bawah tanah yang digembok rapat, memberi isyarat bahwa malam ini ada rahasia gelap yang menuntut keberanianmu.`,
-    consequenceNote: 'Kamu tiba di kedai saat badai melanda kota.',
+    dialogue: cleanText(dialogue),
+    consequenceNote: `Memulai babak pertama kampanye ${title}.`,
     stateUpdates: {
       hpChange: 0,
-      goldChange: 15,
-      receivedItem: {
-        id: 'item_01_potion_heal',
-        name: 'Ramuan Penyembuh Darah',
-        category: 'Obat',
-        effect: 'Memulihkan 25 Hit Points seketika',
-        icon: 'item_01_potion_heal'
-      },
+      manaChange: 0,
+      goldChange: 10,
+      receivedItem,
       consumedItem: null,
-      addLedgerFact: 'Bertemu Eldrin di Whispering Tavern saat badai.'
+      addLedgerFact: `Memulai petualangan di ${title}.`
     },
     choices: [
       {
         id: 'c1',
-        text: 'Tanyakan asal mula ketukan aneh dari pintu ruang bawah tanah kedai',
-        tone: 'shrewd'
+        text: 'Amati situasi sekitar dengan saksama dan cari petunjuk tersembunyi',
+        tone: 'cautious',
+        statType: 'WIS',
+        dc: 10
       },
       {
         id: 'c2',
-        text: 'Amati gerak-gerik tamu mencurigakan di sudut remang kedai',
-        tone: 'cautious'
+        text: 'Melangkah maju mendekati sumber suara atau sosok di hadapanmu',
+        tone: 'bold',
+        statType: 'STR',
+        dc: 12
       },
       {
         id: 'c3',
-        text: 'Tenggak habis ale lalu tawarkan jasamu menumpas ancaman bawah tanah',
-        tone: 'bold'
+        text: 'Selidiki ornamen dan energi gaib yang terpancar di sekitar tempat ini',
+        tone: 'curious',
+        statType: 'INT',
+        dc: 11
       }
     ]
   };
@@ -454,29 +424,42 @@ class GeminiService {
 
     let lastError = null;
     for (const model of candidateModels) {
-      try {
-        const generatePromise = this.client.models.generateContent({
-          model,
-          contents: [
-            {
-              role: 'user',
-              parts: [{ text: `${systemPrompt ? systemPrompt + '\n\n' : ''}${prompt}` }]
-            }
-          ]
-        });
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          if (attempt > 0) {
+            const jitter = Math.floor(Math.random() * 500) + 500;
+            await new Promise(r => setTimeout(r, jitter));
+          }
 
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error(`Timeout: Model ${model} took longer than 5000ms`)), 5000)
-        );
+          const generatePromise = this.client.models.generateContent({
+            model,
+            contents: [
+              {
+                role: 'user',
+                parts: [{ text: `${systemPrompt ? systemPrompt + '\n\n' : ''}${prompt}` }]
+              }
+            ]
+          });
 
-        const response = await Promise.race([generatePromise, timeoutPromise]);
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error(`Timeout: Model ${model} took longer than 15000ms`)), 15000)
+          );
 
-        if (response && response.text) {
-          return response.text.trim();
+          const response = await Promise.race([generatePromise, timeoutPromise]);
+
+          if (response && response.text) {
+            return response.text.trim();
+          }
+        } catch (err) {
+          lastError = err;
+          const is503 = err.message && (err.message.includes('503') || err.message.includes('high demand') || err.message.includes('UNAVAILABLE') || err.message.includes('Overloaded'));
+          if (attempt === 0 && is503) {
+            console.warn(`[GeminiService] Model '${model}' returned 503 high demand. Retrying once with jitter...`);
+            continue;
+          }
+          console.warn(`[GeminiService] Model '${model}' call failed (${err.message}). Cascading to next candidate...`);
+          break;
         }
-      } catch (err) {
-        lastError = err;
-        console.warn(`[GeminiService] Model '${model}' call failed (${err.message}). Cascading to next candidate...`);
       }
     }
 
@@ -566,6 +549,11 @@ PENTING: Pada teks 'dialogue', sampaikan terlebih dahulu Latar Belakang Cerita (
   * Jika pemain kabur, narasikan pelarian dan set 'combatEncounter': null.
 ` : '';
 
+    const repEntries = Object.entries(session?.worldLedger?.reputation || {});
+    const repSummary = repEntries.length > 0
+      ? repEntries.map(([f, score]) => `${f}: ${score >= 0 ? '+' + score : score}`).join(', ')
+      : 'Netral (0)';
+
     const systemPrompt = `Kamu adalah Dungeon Master (DM) legendaris untuk game Visual Novel RPG Tabletop.
 TUGAS UTAMA: Menulis adegan narasi berikutnya yang SEPENUHNYA TANGGAP dan REAKTIF terhadap aksi pemain.
 
@@ -575,6 +563,7 @@ KONTEKS DUNIA SAAT INI:
 - Narasi Situasi Sebelumnya: "${prevDialogue}"
 - Karakter Pemain: ${character.name} (Kelas: ${character.characterClass}, HP: ${character.hp}/${character.maxHp}, Mana: ${character.mana}/${character.maxMana})
 - Catatan Petualangan Sebelumnya: ${ledgerFacts}
+- Reputasi Fraksi Pemain: ${repSummary} (NPC setempat bereaksi sesuai skor reputasi ini)
 ${combatContext}
 
 TINDAKAN YANG DIPILIH PEMAIN:
