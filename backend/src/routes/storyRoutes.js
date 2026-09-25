@@ -27,6 +27,7 @@ router.post('/use-item', storyController.useItem);
 router.post('/rewind', storyController.rewindToNode);
 router.get('/tree/:sessionId', storyController.getStoryTree);
 router.get('/backlog/:sessionId', storyController.getBacklog);
+router.get('/summary/:sessionId', storyController.getGameSummary);
 
 // Multi-Slot Save / Load Routes
 router.get('/saves', saveLoadController.getSaveSlots);

@@ -163,6 +163,7 @@ function MainGame() {
       <GameOverModal
         isOpen={Boolean(character && (character.hp <= 0 || session?.isGameOver))}
         character={character}
+        session={session}
         onRewind={() => setIsStoryTreeOpen(true)}
         onLoadGame={() => setIsSaveLoadOpen(true)}
         onRestart={() => {
