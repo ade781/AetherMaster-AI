@@ -42,6 +42,14 @@ export default function CombatStage({
   const enemyHpPercent = Math.max(0, Math.min(100, Math.round((enemyHp / maxEnemyHp) * 100)));
   const playerHpPercent = Math.max(0, Math.min(100, Math.round((playerHp / (character?.maxHp || 20)) * 100)));
 
+  // Play epic combat BGM during battle encounter
+  useEffect(() => {
+    audio.playBGM('combat', 0.26);
+    return () => {
+      audio.stopBGM();
+    };
+  }, []);
+
   const addFloating = (text, type, target) => {
     const id = Date.now() + Math.random();
     setFloatingTexts(prev => [...prev, { id, text, type, target }]);
@@ -79,19 +87,19 @@ export default function CombatStage({
       const newEnemyHp = Math.max(0, enemyHp - dmg);
       setEnemyHp(newEnemyHp);
       addFloating(`-${dmg}`, 'damage', 'enemy');
-      addLog(`Ronde ${round}: Seranganmu (${roll} + ${strMod} = ${attackTotal}) MENGENAI ${enemyData.name}! Memberikan ${dmg} damage fisik.${isCrit ? ' [CRITICAL HIT!]' : ''}`);
+      addLog(`⚔️ Ronde ${round}: ${isCrit ? 'CRITICAL HIT! Tebasan mematikan menembus zirah lawan' : 'Serangan telak mendarat'} (${roll} + ${strMod} = ${attackTotal} vs AC ${enemyData.ac || 13}), menorehkan ${dmg} damage!`);
 
       if (newEnemyHp <= 0) {
         audio.playCriticalSuccess();
-        addLog(`🏆 ${enemyData.name} telah dikalahkan! Kemenangan mutlak.`);
+        addLog(`🏆 Kemenangan mutlak! Tubuh ${enemyData.name} ambruk binasa tak bernyawa.`);
         setTimeout(() => {
           onResolveCombat?.({ victory: true, enemyHp: 0, playerHp });
         }, 1800);
         return;
       }
     } else {
-      addFloating('LUUPUT!', 'miss', 'enemy');
-      addLog(`Ronde ${round}: Seranganmu (${roll} + ${strMod} = ${attackTotal}) meleset dari AC ${enemyData.ac || 13}.`);
+      addFloating('LUPUT!', 'miss', 'enemy');
+      addLog(`💨 Ronde ${round}: Ayunan senjatamu (${roll} + ${strMod} = ${attackTotal}) meleset tipis dari celah zirah ${enemyData.name}.`);
     }
 
     // Enemy Counter-attack after short delay
@@ -112,11 +120,11 @@ export default function CombatStage({
       const newEnemyHp = Math.max(0, enemyHp - dmg);
       setEnemyHp(newEnemyHp);
       addFloating(`-${dmg}`, 'damage', 'enemy');
-      addLog(`Ronde ${round}: Kamu melancarkan Fireball! Ledakan api membakar ${enemyData.name} sebesar ${dmg} damage api!`);
+      addLog(`🔥 Ronde ${round}: Mantra Fireball membuncah! Kobaran api arkanum melalap ${enemyData.name} sebesar ${dmg} damage api!`);
 
       if (newEnemyHp <= 0) {
         audio.playCriticalSuccess();
-        addLog(`🏆 ${enemyData.name} hangus terbakar! Pertarungan usai.`);
+        addLog(`🏆 Tubuh ${enemyData.name} hangus terbakar menjadi abu! Pertarungan usai.`);
         setTimeout(() => {
           onResolveCombat?.({ victory: true, enemyHp: 0, playerHp });
         }, 1800);
@@ -128,7 +136,7 @@ export default function CombatStage({
       const newHp = Math.min(character?.maxHp || 25, playerHp + healAmt);
       setPlayerHp(newHp);
       addFloating(`+${healAmt}`, 'heal', 'player');
-      addLog(`Ronde ${round}: Kamu merapalkan Holy Heal! Memulihkan ${healAmt} HP.`);
+      addLog(`✨ Ronde ${round}: Cahaya pemulihan Holy Heal terpancar! Memulihkan ${healAmt} HP ragamu.`);
     }
 
     setTimeout(() => {
@@ -148,11 +156,11 @@ export default function CombatStage({
       const newHp = Math.max(0, playerHp - dmg);
       setPlayerHp(newHp);
       addFloating(`-${dmg}`, 'damage', 'player');
-      addLog(`Ronde ${round}: ${enemyData.name} menyerang balik (${enemyRoll} + ${enemyData.attackBonus || 2} = ${enemyAtk})! Kamu terkena ${dmg} damage.`);
+      addLog(`🩸 Ronde ${round}: ${enemyData.name} menerjang ganas (${enemyRoll} + ${enemyData.attackBonus || 2} = ${enemyAtk} vs AC ${playerAc})! Kamu terhantam ${dmg} damage.`);
 
       if (newHp <= 0) {
         audio.playCriticalFailure();
-        addLog(`💀 Karaktermu tumbang tak sadarkan diri dalam pertempuran...`);
+        addLog(`💀 Karaktermu tumbang tak berdaya menahan serangan maut ${enemyData.name}...`);
         setTimeout(() => {
           onResolveCombat?.({ victory: false, playerHp: 0 });
         }, 1800);
@@ -160,7 +168,7 @@ export default function CombatStage({
       }
     } else {
       addFloating('TANGKIS!', 'miss', 'player');
-      addLog(`Ronde ${round}: Serangan ${enemyData.name} (${enemyRoll} + ${enemyData.attackBonus || 2} = ${enemyAtk}) berhasil kamu tangkis!`);
+      addLog(`🛡️ Ronde ${round}: Tangkisan tangguh! Kamu berhasil menepis serangan ${enemyData.name} (${enemyRoll} + ${enemyData.attackBonus || 2} = ${enemyAtk} vs AC ${playerAc})!`);
     }
 
     setRound(r => r + 1);

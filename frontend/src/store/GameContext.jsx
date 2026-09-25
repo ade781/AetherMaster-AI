@@ -103,26 +103,28 @@ export function GameProvider({ children }) {
         const nextChar = data.data.character;
         const nextSess = data.data.session;
 
-        // If choice had a stat check or dice roll, show 3D dice overlay with server-authoritative result
-        if (choice.statType && choice.dc) {
-          const check = data.data?.checkResult;
-          const mod = typeof check?.modifier === 'number'
+        // If backend resolved a dice check (for suggested choices or auto-detected free-text actions)
+        const check = data.data?.checkResult;
+        if (check) {
+          const statType = (check.statType || choice.statType || 'STR').toUpperCase();
+          const mod = typeof check.modifier === 'number'
             ? check.modifier
-            : Math.floor(((nextChar?.[choice.statType.toLowerCase()] || 10) - 10) / 2);
-          const rawDice = typeof check?.roll === 'number'
+            : Math.floor(((nextChar?.[statType.toLowerCase()] || 10) - 10) / 2);
+          const rawDice = typeof check.roll === 'number'
             ? check.roll
             : Math.floor(Math.random() * 20) + 1;
-          const total = typeof check?.total === 'number' ? check.total : rawDice + mod;
-          const isSuccess = typeof check?.isSuccess === 'boolean' ? check.isSuccess : total >= choice.dc;
-          const isCritSuccess = typeof check?.isNat20 === 'boolean' ? check.isNat20 : rawDice === 20;
-          const isCritFail = typeof check?.isNat1 === 'boolean' ? check.isNat1 : rawDice === 1;
+          const total = typeof check.total === 'number' ? check.total : rawDice + mod;
+          const checkDc = typeof check.dc === 'number' ? check.dc : (choice.dc || 10);
+          const isSuccess = typeof check.isSuccess === 'boolean' ? check.isSuccess : total >= checkDc;
+          const isCritSuccess = typeof check.isNat20 === 'boolean' ? check.isNat20 : rawDice === 20;
+          const isCritFail = typeof check.isNat1 === 'boolean' ? check.isNat1 : rawDice === 1;
 
           setDiceModal({
             diceValue: rawDice,
-            statType: (check?.statType || choice.statType).toUpperCase(),
+            statType,
             mod,
             total,
-            dc: check?.dc || choice.dc,
+            dc: checkDc,
             isSuccess,
             isCritSuccess,
             isCritFail,

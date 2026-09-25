@@ -10,6 +10,8 @@ class AudioService {
     this.ambientNode = null;
     this.heartbeatTimer = null;
     this.isSpeechEnabled = false;
+    this.bgmAudio = null;
+    this.currentBgmSrc = null;
   }
 
   init() {
@@ -25,7 +27,7 @@ class AudioService {
   setMuted(muted) {
     this.isMuted = Boolean(muted);
     if (this.isMuted) {
-      this.stopAmbient();
+      this.stopBGM();
       this.stopHeartbeat();
     }
   }
@@ -302,6 +304,49 @@ class AudioService {
       } catch (e) {}
       this.ambientNode = null;
     }
+  }
+
+  // --- BACKGROUND MUSIC (BGM) TRACKS ---
+
+  playBGM(type = 'tavern', volume = 0.22) {
+    if (this.isMuted) return;
+    const sources = {
+      tavern: '/assets/audio/bgm_tavern.mp3',
+      dungeon: '/assets/audio/bgm_dungeon.mp3',
+      combat: '/assets/audio/bgm_combat.mp3'
+    };
+    const src = sources[type] || sources.tavern;
+    if (this.currentBgmSrc === src && this.bgmAudio && !this.bgmAudio.paused) {
+      return;
+    }
+    this.stopBGM();
+    try {
+      this.bgmAudio = new Audio(src);
+      this.bgmAudio.loop = true;
+      this.bgmAudio.volume = volume;
+      this.currentBgmSrc = src;
+      const playPromise = this.bgmAudio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {
+          // Autoplay policy or load fallback
+          this.startAmbient(type);
+        });
+      }
+    } catch (e) {
+      this.startAmbient(type);
+    }
+  }
+
+  stopBGM() {
+    if (this.bgmAudio) {
+      try {
+        this.bgmAudio.pause();
+        this.bgmAudio.currentTime = 0;
+      } catch (e) {}
+      this.bgmAudio = null;
+      this.currentBgmSrc = null;
+    }
+    this.stopAmbient();
   }
 
   // --- WEB SPEECH API NARRATION ---

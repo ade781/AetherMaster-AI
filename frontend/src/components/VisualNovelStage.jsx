@@ -65,15 +65,13 @@ export default function VisualNovelStage({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleSkipTypewriter, onToggleInventory, onOpenStoryTree, onOpenBacklog]);
 
-  // Ambient soundscape sync based on scene background
+  // Background music & ambient soundscape sync based on scene background
   useEffect(() => {
-    const bgId = node?.backgroundId || '';
-    if (bgId.includes('frost') || bgId.includes('peak')) {
-      audio.startAmbient('frost');
-    } else if (bgId.includes('ocean') || bgId.includes('sunken') || bgId.includes('cave')) {
-      audio.startAmbient('ocean');
+    const bgId = (node?.backgroundId || '').toLowerCase();
+    if (bgId.includes('crypt') || bgId.includes('dungeon') || bgId.includes('graveyard') || bgId.includes('woods') || bgId.includes('vampire') || bgId.includes('shadow')) {
+      audio.playBGM('dungeon');
     } else {
-      audio.startAmbient('tavern');
+      audio.playBGM('tavern');
     }
   }, [node?.backgroundId]);
 
@@ -319,59 +317,19 @@ export default function VisualNovelStage({
                 </span>
               </div>
             ) : (
-              <div className="flex flex-col gap-2.5">
-                {choices.map((choice, idx) => {
-                  const hasReqItem = !choice.requiredItem || (character?.inventory || []).some(i => {
-                    if (!choice.requiredItem) return true;
-                    const req = String(choice.requiredItem).toLowerCase().trim();
-                    const itemId = String(i.id || '').toLowerCase().trim();
-                    const itemName = String(i.name || '').toLowerCase().trim();
-                    return itemId === req || itemName === req || itemName.includes(req) || req.includes(itemName);
-                  });
+              <div className="flex flex-col gap-3">
+                {/* Prominent Free Action Input (Roleplay Bebas) */}
+                <div className="bg-black/50 border border-amber-500/30 hover:border-amber-400/60 focus-within:border-amber-400 rounded-2xl p-3 shadow-xl transition-all backdrop-blur-md">
+                  <div className="flex items-center justify-between gap-2 mb-2 px-1">
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-300">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+                      <span>Ketik Aksi Bebas (Roleplay)</span>
+                    </div>
+                    <span className="text-[10px] text-amber-400/80 font-mono bg-amber-400/10 border border-amber-400/20 px-2 py-0.5 rounded-full font-bold">
+                      🎲 Auto Audit Dadu 5E
+                    </span>
+                  </div>
 
-                  return (
-                    <button
-                      key={choice.id || idx}
-                      disabled={!hasReqItem}
-                      onClick={() => {
-                        audio.playClick();
-                        onChooseAction(choice);
-                      }}
-                      className={`px-4 py-3 rounded-xl border text-left flex items-start gap-3 transition-all min-h-[48px] ${
-                        !hasReqItem
-                          ? 'bg-black/40 border-slate-800 text-slate-500 opacity-50 cursor-not-allowed'
-                          : 'bg-white/5 hover:bg-white/10 border-white/5 hover:border-white/20 text-slate-200 hover:text-white shadow-md hover:-translate-y-0.5'
-                      }`}
-                    >
-                      <div className="mt-0.5 w-6 h-6 rounded-full bg-black/60 border border-white/10 flex items-center justify-center flex-shrink-0 text-amber-300 text-[11px] font-bold font-cinzel">
-                        {idx + 1}
-                      </div>
-                      <div className="flex-1 min-w-0 flex flex-col gap-1">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-[9px] px-2 py-0.5 rounded-full bg-white/10 text-slate-300 uppercase tracking-wider font-bold">
-                            {choice.tone || choice.statType || 'Aksi'}
-                          </span>
-                          {choice.dc && (
-                            <span className="text-[9px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-mono font-bold">
-                              DC {choice.dc} ({choice.statType || 'Check'})
-                            </span>
-                          )}
-                          {choice.requiredItem && !hasReqItem && (
-                            <span className="text-[9px] px-2 py-0.5 rounded-full bg-red-900/40 text-red-300 border border-red-800/50 uppercase font-bold">
-                              Butuh {choice.requiredItem}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs md:text-sm font-medium leading-snug">
-                          {choice.text}
-                        </p>
-                      </div>
-                    </button>
-                  );
-                })}
-
-                {/* Free Action Input */}
-                <div className="w-full pt-2 border-t border-white/5">
                   <form 
                     onSubmit={(e) => {
                       e.preventDefault();
@@ -380,25 +338,90 @@ export default function VisualNovelStage({
                       onChooseAction({ id: 'custom', customText: customActionText.trim(), tone: 'kreatif' });
                       setCustomActionText('');
                     }}
-                    className="flex items-center gap-2 bg-black/40 border border-white/10 hover:border-white/30 focus-within:border-amber-400 rounded-xl p-1.5 shadow-lg transition-all"
+                    className="flex items-center gap-2"
                   >
                     <input
                       type="text"
                       value={customActionText}
                       onChange={(e) => setCustomActionText(e.target.value)}
-                      placeholder="Ketik aksi bebasmu di sini..."
+                      placeholder="Ketik aksimu... (misal: 'Aku memeriksa celah dinding', 'Aku merapalkan sihir', dll.)"
                       disabled={isLoading}
-                      className="flex-1 bg-transparent border-none text-xs md:text-sm text-slate-200 placeholder-slate-500 px-3 py-2 outline-none font-outfit min-h-[40px]"
+                      className="flex-1 bg-white/5 hover:bg-white/10 focus:bg-white/10 border border-white/10 rounded-xl text-xs md:text-sm text-slate-100 placeholder-slate-500 px-3.5 py-2.5 outline-none font-outfit min-h-[42px] transition-colors"
                     />
                     <button
                       type="submit"
                       disabled={isLoading || !customActionText.trim()}
-                      className="p-2.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md min-h-[40px] min-w-[40px] flex items-center justify-center"
-                      title="Jalankan Aksi Bebas"
+                      className="px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-semibold text-xs disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md min-h-[42px] flex items-center gap-1.5 flex-shrink-0"
+                      title="Jalankan Aksi Bebas (Roll Dadu Otomatis)"
                     >
-                      <Send className="w-4 h-4" />
+                      <Send className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Lakukan</span>
                     </button>
                   </form>
+                </div>
+
+                {/* Divider to Quick Suggested Actions */}
+                {choices.length > 0 && (
+                  <div className="flex items-center gap-2 px-1 pt-1">
+                    <div className="flex-1 h-[1px] bg-white/10" />
+                    <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">
+                      atau pilih saran taktis
+                    </span>
+                    <div className="flex-1 h-[1px] bg-white/10" />
+                  </div>
+                )}
+
+                {/* Quick Suggested Choices */}
+                <div className="flex flex-col gap-2">
+                  {choices.map((choice, idx) => {
+                    const hasReqItem = !choice.requiredItem || (character?.inventory || []).some(i => {
+                      if (!choice.requiredItem) return true;
+                      const req = String(choice.requiredItem).toLowerCase().trim();
+                      const itemId = String(i.id || '').toLowerCase().trim();
+                      const itemName = String(i.name || '').toLowerCase().trim();
+                      return itemId === req || itemName === req || itemName.includes(req) || req.includes(itemName);
+                    });
+
+                    return (
+                      <button
+                        key={choice.id || idx}
+                        disabled={!hasReqItem}
+                        onClick={() => {
+                          audio.playClick();
+                          onChooseAction(choice);
+                        }}
+                        className={`px-3.5 py-2.5 rounded-xl border text-left flex items-start gap-3 transition-all min-h-[44px] ${
+                          !hasReqItem
+                            ? 'bg-black/40 border-slate-800 text-slate-500 opacity-50 cursor-not-allowed'
+                            : 'bg-white/5 hover:bg-white/10 border-white/5 hover:border-amber-400/30 text-slate-200 hover:text-white shadow-sm hover:-translate-y-0.5'
+                        }`}
+                      >
+                        <div className="mt-0.5 w-5 h-5 rounded-full bg-black/60 border border-white/10 flex items-center justify-center flex-shrink-0 text-amber-300 text-[10px] font-bold font-cinzel">
+                          {idx + 1}
+                        </div>
+                        <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-[9px] px-2 py-0.5 rounded-full bg-white/10 text-slate-300 uppercase tracking-wider font-bold">
+                              {choice.tone || choice.statType || 'Aksi'}
+                            </span>
+                            {choice.dc && (
+                              <span className="text-[9px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-mono font-bold">
+                                DC {choice.dc} ({choice.statType || 'Check'})
+                              </span>
+                            )}
+                            {choice.requiredItem && !hasReqItem && (
+                              <span className="text-[9px] px-2 py-0.5 rounded-full bg-red-900/40 text-red-300 border border-red-800/50 uppercase font-bold">
+                                Butuh {choice.requiredItem}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs md:text-[13px] font-medium leading-snug">
+                            {choice.text}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
