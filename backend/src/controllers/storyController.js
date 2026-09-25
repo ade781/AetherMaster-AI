@@ -343,7 +343,7 @@ exports.useItem = async (req, res) => {
 
 exports.submitAction = async (req, res) => {
   try {
-    const { sessionId, choiceId, statType, dc, advantage, disadvantage } = req.body;
+    const { sessionId, choiceId, customText, tone } = req.body;
 
     const session = await GameSession.findByPk(sessionId, {
       include: [Character, Campaign]
@@ -358,30 +358,17 @@ exports.submitAction = async (req, res) => {
     }
 
     const character = session.Character;
-    const chosenChoice = resolveChoice(currentNode, choiceId, req.body.customText, statType, dc, req.body.tone);
-    const effectiveChar = getEffectiveStats(character);
-
-    // D&D 5E Dice Check resolution
-    const checkStat = statType || chosenChoice.statType || 'STR';
-    const checkDc = typeof dc === 'number' ? dc : (typeof chosenChoice.dc === 'number' ? chosenChoice.dc : 10);
-    const checkResult = diceEngine.performCheck({
-      character: effectiveChar,
-      statType: checkStat,
-      dc: checkDc,
-      advantage: Boolean(advantage),
-      disadvantage: Boolean(disadvantage)
-    });
+    const chosenChoice = resolveChoice(currentNode, choiceId, customText, null, null, tone);
 
     // Fetch recent story history for rolling context window (last 4 steps)
     const recentHistory = await getRecentStoryHistory(session.id, currentNode.id, 4);
 
-    // Generate next scene with check result and rolling context passed in
+    // Generate next scene with pure narrative flow (NO DICE, NO COMBAT)
     const nextScene = await geminiService.generateNextScene({
       session,
       character,
       previousNode: currentNode,
       actionTaken: chosenChoice,
-      checkResult,
       recentHistory
     });
 
@@ -399,7 +386,7 @@ exports.submitAction = async (req, res) => {
         session,
         character,
         currentNode: newNode,
-        checkResult
+        checkResult: null
       }
     });
   } catch (err) {

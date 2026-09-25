@@ -8,7 +8,7 @@ import BacklogModal from './components/BacklogModal';
 import SaveLoadModal from './components/SaveLoadModal';
 import GameOverModal from './components/GameOverModal';
 import LandingPage from './components/LandingPage';
-import ThreeDiceRoller from './components/ThreeDiceRoller';
+
 
 function MainGame() {
   const {
@@ -99,27 +99,11 @@ function MainGame() {
     <div className="h-screen w-full bg-slate-950 text-slate-100 flex overflow-hidden selection:bg-amber-400 selection:text-slate-950">
       <ToastNotification />
 
-      {/* 3D Dice Roller Modal Overlay */}
-      {diceModal && (
-        <ThreeDiceRoller
-          diceValue={diceModal.diceValue}
-          statType={diceModal.statType}
-          mod={diceModal.mod}
-          dc={diceModal.dc}
-          isSuccess={diceModal.isSuccess}
-          isCritSuccess={diceModal.isCritSuccess}
-          isCritFail={diceModal.isCritFail}
-          onComplete={diceModal.onComplete}
-        />
-      )}
-
-      {/* Main Visual Novel / Tactical Combat Stage */}
+      {/* Main Visual Novel Narrative Stage */}
       <VisualNovelStage
         node={currentNode}
         character={character}
-        combatState={combatState}
         onChooseAction={handleChooseAction}
-        onResolveCombat={handleResolveCombat}
         onOpenStoryTree={() => setIsStoryTreeOpen(true)}
         onOpenBacklog={() => setIsBacklogOpen(true)}
         onOpenSaveLoad={() => setIsSaveLoadOpen(true)}

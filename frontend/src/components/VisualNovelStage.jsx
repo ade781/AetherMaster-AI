@@ -5,18 +5,15 @@ import {
 } from 'lucide-react';
 import audio from '../services/audioService';
 import FantasyAvatar from './common/FantasyAvatar';
-import CombatStage from './CombatStage';
 
 export default function VisualNovelStage({
   node,
   character,
-  combatState,
   onChooseAction,
   onOpenStoryTree,
   onOpenBacklog,
   onOpenSaveLoad,
   onToggleInventory,
-  onResolveCombat,
   isLoading,
   hudComponent
 }) {
@@ -25,12 +22,8 @@ export default function VisualNovelStage({
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [speechEnabled, setSpeechEnabled] = useState(false);
   const [customActionText, setCustomActionText] = useState('');
-  const [inCombatMode, setInCombatMode] = useState(false);
 
   const fullText = node?.dialogueText || 'Kisahmu dimulai di alam semesta AetherMaster...';
-
-  // Check if current node triggers combat encounter
-  const isCombatEncounter = Boolean(node?.combatEncounter || combatState || inCombatMode);
 
   // Skip typewriter handler
   const handleSkipTypewriter = useCallback(() => {
@@ -130,32 +123,6 @@ export default function VisualNovelStage({
   };
 
   const choices = node?.choices || [];
-
-  // If in combat encounter mode, show tactical combat stage
-  if (isCombatEncounter) {
-    return (
-      <div className="relative w-full h-full flex flex-col overflow-hidden bg-black select-none">
-        {hudComponent}
-        <CombatStage
-          character={character}
-          combatState={combatState}
-          onResolveCombat={(result) => {
-            setInCombatMode(false);
-            if (onResolveCombat) {
-              onResolveCombat(result);
-            } else {
-              // Standard action resolve
-              onChooseAction({ id: 'combat_victory', text: 'Melanjutkan setelah menang bertempur', tone: 'heroik' });
-            }
-          }}
-          onFleeCombat={() => {
-            setInCombatMode(false);
-            onChooseAction({ id: 'combat_flee', text: 'Berhasil melarikan diri dari pertarungan', tone: 'hati-hati' });
-          }}
-        />
-      </div>
-    );
-  }
 
   return (
     <div className="relative w-full h-full flex flex-col lg:flex-row overflow-hidden bg-black select-none">
@@ -324,7 +291,7 @@ export default function VisualNovelStage({
                       <span>Ketik Aksi Bebas (Roleplay)</span>
                     </div>
                     <span className="text-[10px] text-amber-400/80 font-mono bg-amber-400/10 border border-amber-400/20 px-2 py-0.5 rounded-full font-bold">
-                      🎲 Auto Audit Dadu 5E
+                      ✨ Aksi Narasi Bebas
                     </span>
                   </div>
 
@@ -342,7 +309,7 @@ export default function VisualNovelStage({
                       type="text"
                       value={customActionText}
                       onChange={(e) => setCustomActionText(e.target.value)}
-                      placeholder="Ketik aksimu... (misal: 'Aku memeriksa celah dinding', 'Aku merapalkan sihir', dll.)"
+                      placeholder="Ketik aksimu... (misal: 'Aku menginterogasi pedagang', 'Aku merapalkan sihir', dll.)"
                       disabled={isLoading}
                       className="flex-1 bg-white/5 hover:bg-white/10 focus:bg-white/10 border border-white/10 rounded-xl text-xs md:text-sm text-slate-100 placeholder-slate-500 px-3.5 py-2.5 outline-none font-outfit min-h-[42px] transition-colors"
                     />
@@ -350,7 +317,7 @@ export default function VisualNovelStage({
                       type="submit"
                       disabled={isLoading || !customActionText.trim()}
                       className="px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-semibold text-xs disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md min-h-[42px] flex items-center gap-1.5 flex-shrink-0"
-                      title="Jalankan Aksi Bebas (Roll Dadu Otomatis)"
+                      title="Kirim Aksi"
                     >
                       <Send className="w-3.5 h-3.5" />
                       <span className="hidden sm:inline">Lakukan</span>

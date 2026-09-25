@@ -103,45 +103,11 @@ export function GameProvider({ children }) {
         const nextChar = data.data.character;
         const nextSess = data.data.session;
 
-        // If backend resolved a dice check (for suggested choices or auto-detected free-text actions)
-        const check = data.data?.checkResult;
-        if (check) {
-          const statType = (check.statType || choice.statType || 'STR').toUpperCase();
-          const mod = typeof check.modifier === 'number'
-            ? check.modifier
-            : Math.floor(((nextChar?.[statType.toLowerCase()] || 10) - 10) / 2);
-          const rawDice = typeof check.roll === 'number'
-            ? check.roll
-            : Math.floor(Math.random() * 20) + 1;
-          const total = typeof check.total === 'number' ? check.total : rawDice + mod;
-          const checkDc = typeof check.dc === 'number' ? check.dc : (choice.dc || 10);
-          const isSuccess = typeof check.isSuccess === 'boolean' ? check.isSuccess : total >= checkDc;
-          const isCritSuccess = typeof check.isNat20 === 'boolean' ? check.isNat20 : rawDice === 20;
-          const isCritFail = typeof check.isNat1 === 'boolean' ? check.isNat1 : rawDice === 1;
-
-          setDiceModal({
-            diceValue: rawDice,
-            statType,
-            mod,
-            total,
-            dc: checkDc,
-            isSuccess,
-            isCritSuccess,
-            isCritFail,
-            onComplete: () => {
-              setSession(nextSess);
-              setCharacter(nextChar);
-              setCurrentNode(nextNode);
-              setCombatState(nextSess?.combatState || null);
-              setDiceModal(null);
-            }
-          });
-        } else {
-          setSession(nextSess);
-          setCharacter(nextChar);
-          setCurrentNode(nextNode);
-          setCombatState(nextSess?.combatState || null);
-        }
+        setSession(nextSess);
+        setCharacter(nextChar);
+        setCurrentNode(nextNode);
+        setCombatState(null);
+        setDiceModal(null);
       } else {
         showToast(data.error || 'Gagal mengambil tindakan.', 'error');
       }

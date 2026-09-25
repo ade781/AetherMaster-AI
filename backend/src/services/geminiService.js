@@ -263,264 +263,128 @@ function getFallbackNextScene(previousNode, actionTaken, checkResult, character,
     };
   }
 
-  // Active combat resolution if previous node had combat encounter
-  if (previousNode?.combatEncounter) {
-    const enemy = previousNode.combatEncounter;
-    if (actionTaken?.id === 'combat_flee' || lowerAction.includes('mundur') || lowerAction.includes('lari') || lowerAction.includes('kabur')) {
-      return {
-        chapterTitle: `Babak ${turnCount + 1}: Meloloskan Diri`,
-        location: prevLoc,
-        backgroundId: previousNode.backgroundId || 'bg_04_crimson_crypt',
-        speaker: 'Narator',
-        characterId: 'char_hero_01_paladin',
-        mood: 'tense',
-        dialogue: `Dengan refleks sigap dan langkah lincah, kamu berhasil menangkis ayunan cakar ${enemy.enemyName} lalu melompat mundur menyusuri celah koridor sempit. Musuh meraung geram namun kehilangan jejakmu di dalam kegelapan.`,
-        consequenceNote: `Berhasil mundur taktis dan selamat dari ancaman ${enemy.enemyName}.`,
-        stateUpdates: {
-          hpChange: 0,
-          manaChange: 0,
-          goldChange: 0,
-          receivedItem: null,
-          consumedItem: null,
-          addLedgerFact: `Berhasil meloloskan diri dari ${enemy.enemyName}.`
-        },
-        combatEncounter: null,
-        choices: [
-          { id: `c_${turnCount}_1`, text: 'Atur napas lalu telusuri rute alternatif yang lebih aman', tone: 'cautious' },
-          { id: `c_${turnCount}_2`, text: 'Cari tempat perlindungan untuk memeriksa sisa perbekalan', tone: 'curious' },
-          { id: `c_${turnCount}_3`, text: 'Siapkan posisi siaga bila musuh kembali mengejar', tone: 'bold' }
-        ]
-      };
-    }
-
-    const isSpell = actionTaken?.id === 'combat_spell' || lowerAction.includes('sihir') || lowerAction.includes('mantra') || lowerAction.includes('fireball') || lowerAction.includes('energi');
-    return {
-      chapterTitle: `Babak ${turnCount + 1}: Kemenangan Gemilang`,
-      location: prevLoc,
-      backgroundId: previousNode.backgroundId || 'bg_04_crimson_crypt',
-      speaker: 'Narator',
-      characterId: 'char_hero_01_paladin',
-      mood: 'triumphant',
-      dialogue: cleanText(
-        isSpell
-          ? `Semburan sihir berkobar menerjang telak ${enemy.enemyName}! Sambaran arkanum melumat persendian tulangnya hingga hancur berkeping-keping di lantai batu. Kutukan di ruangan ini sirna seketika meninggalkan rasa lega yang mendalam.`
-          : `Dengan ayunan senjata penuh keyakinan, tebasanmu membelah pertahanan ${enemy.enemyName}! Tubuh lawan ambruk terhempas dan hancur tak berdaya. Ancaman maut berhasil kamu tumpas tuntas!`
-      ),
-      consequenceNote: `Kemenangan mutlak! ${enemy.enemyName} berhasil ditumpas. Memperoleh ${enemy.rewardGold || 25} Koin Emas.`,
-      stateUpdates: {
-        hpChange: -3,
-        manaChange: isSpell ? -8 : 0,
-        goldChange: enemy.rewardGold || 25,
-        receivedItem: {
-          id: 'item_06_skeleton_key',
-          name: 'Kunci Tulang Tua',
-          category: 'Kunci',
-          effect: 'Dapat membuka peti besi terkutuk',
-          icon: 'item_06_skeleton_key'
-        },
-        consumedItem: null,
-        addLedgerFact: `Mengalahkan ${enemy.enemyName} dan menemukan Kunci Tulang Tua.`
-      },
-      combatEncounter: null,
-      choices: [
-        { id: `c_${turnCount}_1`, text: 'Gunakan Kunci Tulang Tua untuk membuka peti besi di sudut ruangan', tone: 'curious' },
-        { id: `c_${turnCount}_2`, text: 'Telusuri lorong lebih dalam menuju altar suci yang tersembunyi', tone: 'bold' },
-        { id: `c_${turnCount}_3`, text: 'Periksa sisa reruntuhan untuk mencari catatan rahasia musuh', tone: 'shrewd' }
-      ]
-    };
-  }
-
-  // Combat encounter if turn >= 3 and not already in combat
-  if (turnCount >= 3 && !previousNode?.combatEncounter) {
-    return {
-      chapterTitle: 'Babak Pertarungan: Teror di Balik Pintu Rahasia',
-      location: 'Ruang Bawah Tanah Kedai Kuno',
-      backgroundId: 'bg_04_crimson_crypt',
-      speaker: 'Prajurit Tengkorak Terkutuk',
-      characterId: 'monster_01_skeleton',
-      mood: 'tense',
-      dialogue: cleanText(
-        `Tindakanmu yang memutuskan untuk "${actionText}" memicu getaran keras di lantai batu! Debu berhamburan disusul derak tulang bergeretak. Sesosok Prajurit Tengkorak bangkit dengan pedang berkarat siap menerkam!`
-      ),
-      consequenceNote: `Aksimu "${actionText.slice(0, 45)}..." memicu kemunculan musuh.`,
-      stateUpdates: {
-        hpChange: -4,
-        manaChange: 0,
-        goldChange: 0,
-        receivedItem: null,
-        consumedItem: null,
-        addLedgerFact: `Menghadapi Prajurit Tengkorak setelah: ${actionText.slice(0, 40)}.`
-      },
-      combatEncounter: {
-        enemyName: 'Prajurit Tengkorak Terkutuk',
-        enemyHp: 24,
-        maxEnemyHp: 24,
-        enemyAC: 12,
-        enemyAttackBonus: 3,
-        enemyDamageDice: 6,
-        enemyDamageBonus: 1,
-        sprite: 'monster_01_skeleton',
-        rewardExp: 50,
-        rewardGold: 20
-      },
-      choices: [
-        {
-          id: 'combat_attack',
-          text: 'Tebas dengan ayunan senjata utama ke celah tulang rusuk lawan',
-          tone: 'bold'
-        },
-        {
-          id: 'combat_spell',
-          text: 'Lepaskan semburan energi sihir untuk melumat sendi tengkorak',
-          tone: 'bold'
-        },
-        {
-          id: 'combat_flee',
-          text: 'Gunakan perisai untuk menangkis lalu cari celah mundur taktis',
-          tone: 'cautious'
-        }
-      ]
-    };
-  }
-
-  // Regular progression across all visual novel environments
-  const locations = [
-    { title: 'Lorong Bawah Tanah', loc: 'Ruang Bawah Tanah Kuno', bg: 'bg_06_alchemy_lab', spk: 'Informan Bertudung', char: 'char_npc_02_informant', mood: 'mysterious' },
-    { title: 'Pustaka Terlarang', loc: 'Arcane Library', bg: 'bg_08_arcane_library', spk: 'Arwah Penyihir Perak', char: 'char_hero_03_wizard', mood: 'tense' },
-    { title: 'Singgasana Bayangan', loc: 'Ruang Takhta Kastil Vampir', bg: 'bg_05_vampire_castle', spk: 'Lord Valerius', char: 'char_npc_03_vampire', mood: 'ominous' },
-    { title: 'Reruntuhan Monolit', loc: 'Candi Kuno Elven Terlupakan', bg: 'bg_10_ancient_ruins', spk: 'Penjaga Monolit', char: 'char_hero_01_paladin', mood: 'mysterious' },
-    { title: 'Aula Takhta Gotik', loc: 'Katedral Kuno Kerajaan', bg: 'bg_11_throne_room', spk: 'Kanselir Kerajaan', char: 'char_npc_01_barkeep', mood: 'tense' },
-    { title: 'Kedalaman Underdark', loc: 'Gua Kristal Bioluminesensi', bg: 'bg_12_underdark_cavern', spk: 'Pengelana Bawah Tanah', char: 'char_hero_02_rogue', mood: 'mysterious' },
-    { title: 'Bengkel Vulkanik', loc: 'Tempa Lahar Kurcaci', bg: 'bg_13_lava_forge', spk: 'Pandai Besi Magma', char: 'char_hero_01_paladin', mood: 'triumphant' },
-    { title: 'Puncak Badai Es', loc: 'Tebing Frost Peak', bg: 'bg_14_frost_peak', spk: 'Roh Gargoyle Es', char: 'char_hero_03_wizard', mood: 'ominous' },
-    { title: 'Makam Gotik Berkabut', loc: 'Pemakaman Tua Malakor', bg: 'bg_15_haunted_graveyard', spk: 'Penjaga Kubur', char: 'char_npc_02_informant', mood: 'ominous' },
-    { title: 'Pondok Rawa Penyihir', loc: 'Rawa Primordial Bayou', bg: 'bg_16_swamp_huts', spk: 'Nenek Sihir Rawa', char: 'char_npc_02_informant', mood: 'mysterious' },
-    { title: 'Kuil Pasir Terkubur', loc: 'Piramida Necropolis Gurun', bg: 'bg_17_desert_temple', spk: 'Guardian Anubis', char: 'char_hero_01_paladin', mood: 'mysterious' },
-    { title: 'Sanctum Astral', loc: 'Platform Rasi Bintang Bintang', bg: 'bg_18_celestial_sanctum', spk: 'Entitas Bintang', char: 'char_hero_03_wizard', mood: 'peaceful' },
-    { title: 'Benteng Gerhana', loc: 'Spire Dimensi Shadowfell', bg: 'bg_19_shadowfell_citadel', spk: 'Panglima Bayangan', char: 'char_npc_03_vampire', mood: 'ominous' },
-    { title: 'Geladak Badai', loc: 'Galleon Samudra Lepas', bg: 'bg_20_pirate_ship_deck', spk: 'Kapten Bajak Laut', char: 'char_hero_02_rogue', mood: 'tense' },
-    { title: 'Benteng Perang Goblin', loc: 'Perkemahan Api Unggun', bg: 'bg_21_goblin_war_camp', spk: 'Kepala Suku Goblin', char: 'char_npc_01_barkeep', mood: 'tense' },
-    { title: 'Gua Kristal Aether', loc: 'Tambang Kristal Energi', bg: 'bg_22_crystal_mines', spk: 'Pencari Kristal', char: 'char_hero_03_wizard', mood: 'mysterious' },
-    { title: 'Ruang Jeruji Besi', loc: 'Penjara Bawah Tanah Kuno', bg: 'bg_23_dungeon_torture_chamber', spk: 'Sipir Bertopeng Besi', char: 'char_npc_02_informant', mood: 'ominous' },
-    { title: 'Hutan Senja Feywild', loc: 'Lembah Flora Bercahaya', bg: 'bg_24_feywild_glade', spk: 'Peri Feywild', char: 'char_hero_03_wizard', mood: 'peaceful' },
-    { title: 'Reruntuhan Katedral', loc: 'Nave Katedral Mawar Pecah', bg: 'bg_25_abandoned_cathedral', spk: 'Uskup Arwah', char: 'char_hero_01_paladin', mood: 'mysterious' },
-    { title: 'Brankas Roda Gigi', loc: 'Kubah Mesin Mechanus', bg: 'bg_26_clockwork_vault', spk: 'Penjaga Otomaton', char: 'char_hero_02_rogue', mood: 'tense' },
-    { title: 'Gunung Harta Karun', loc: 'Sarang Naga Emas', bg: 'bg_27_dragon_hoard', spk: 'Naga Purba Wyrm', char: 'char_hero_01_paladin', mood: 'triumphant' },
-    { title: 'Lorong Kota Basah', loc: 'Gang Pasar Gotik Malam Hari', bg: 'bg_28_city_market_alley', spk: 'Pedagang Bayangan', char: 'char_npc_02_informant', mood: 'mysterious' },
-    { title: 'Pusaran Dimensi Abyssal', loc: 'Retakan Kosmis Jurang', bg: 'bg_29_abyssal_rift', spk: 'Penjaga Portal Void', char: 'char_hero_03_wizard', mood: 'ominous' }
-  ];
-
-  // Spatial Anchoring: Preserve current location & background unless player explicitly travels
-  const travelKeywords = ['pindah', 'keluar', 'masuk', 'portal', 'gerbang', 'lorong', 'jalan', 'menuju', 'tinggalkan', 'pergi', 'telusuri', 'menjelajah'];
-  const isTravel = travelKeywords.some(k => lowerAction.includes(k));
-
-  let chosenLoc = {
-    title: previousNode?.chapterTitle ? `${previousNode.chapterTitle} (Lanjutan)` : 'Eksplorasi Ruangan',
-    loc: prevLoc,
-    bg: previousNode?.backgroundId || 'bg_01_tavern',
-    spk: prevSpk,
-    char: previousNode?.characterId || 'char_npc_01_barkeep',
-    mood: previousNode?.mood || 'mysterious'
-  };
-
-  if (isTravel) {
-    const locIdx = Math.min(locations.length - 1, Math.max(0, turnCount % locations.length));
-    chosenLoc = locations[locIdx];
-  }
-
-  let consequence = '';
-  let outcomeDialogue = '';
+  // 4. Contextual Story Reaction based on player's action
+  let chapterTitle = `Babak ${turnCount + 1}: Investigasi Lanjutan`;
+  let dialogue = '';
+  let consequenceNote = '';
   let hpDelta = 0;
   let manaDelta = 0;
   let goldDelta = 0;
+  let receivedItem = null;
+  let choices = [];
 
-  // D&D 5E Dice Check Integration
-  let dicePrefix = '';
-  if (checkResult) {
-    if (checkResult.isNat20) {
-      dicePrefix = '[D20: NATURAL 20 CRITICAL SUCCESS!] ';
-      goldDelta += 15;
-    } else if (checkResult.isNat1) {
-      dicePrefix = '[D20: NATURAL 1 CRITICAL FAILURE!] ';
-      hpDelta -= 5;
-    } else if (checkResult.isSuccess) {
-      dicePrefix = `[D20: SUKSES (${checkResult.total} vs DC ${checkResult.dc})] `;
-    } else {
-      dicePrefix = `[D20: GAGAL (${checkResult.total} vs DC ${checkResult.dc})] `;
-      hpDelta -= 2;
-    }
+  // A. Interogasi / Bicara / Tanya / Selidiki NPC (e.g. Pedagang Goblin, Barkeep, Informan)
+  if (lowerAction.includes('interogasi') || lowerAction.includes('intrograsi') || lowerAction.includes('tanya') || lowerAction.includes('bicara') || lowerAction.includes('gertak') || lowerAction.includes('ancam') || lowerAction.includes('goblin') || lowerAction.includes('pedagang')) {
+    chapterTitle = `Babak ${turnCount + 1}: Kesaksian di Balik Bayang`;
+    consequenceNote = `Interogasi berhasil! ${prevSpk} membocorkan petunjuk rahasia penting.`;
+    dialogue = cleanText(
+      `Mata ${charName} menatap tajam ke arah lawan bicara saat kamu memutuskan untuk: "${actionText}". Terpojok oleh wibawa dan ancaman nyata sang ${charClass}, sosok di hadapanmu gemetar panik. "Tunggu! Jangan sakiti aku!" rintihnya dengan suara bergetar. Sembari menelan ludah, ia terpaksa membocorkan apa yang ia sembunyikan selama ini: sebuah rute rahasia yang melintasi koridor terkunci, serta peringatan mengenai dalang sebenarnya yang memantau setiap gerak-gerikmu dari kejauhan!`
+    );
+    goldDelta = 15;
+    receivedItem = {
+      id: 'item_01_health_potion',
+      name: 'Ramuan Rahasia Tercecer',
+      category: 'Potion',
+      effect: 'Memulihkan 25 HP',
+      icon: 'item_01_health_potion'
+    };
+    choices = [
+      { id: `c_${turnCount}_1`, text: 'Desak lebih jauh mengenai siapa dalang yang mengawasimu', tone: 'bold' },
+      { id: `c_${turnCount}_2`, text: 'Gunakan informasi rute rahasia tersebut untuk menyelinap ke ruang dalam', tone: 'cautious' },
+      { id: `c_${turnCount}_3`, text: 'Ambil ramuan yang tercecer dan amankan area sekitar', tone: 'curious' }
+    ];
   }
-
-  if (lowerAction.includes('sihir') || lowerAction.includes('mantra') || lowerAction.includes('spell') || lowerAction.includes('fireball') || lowerAction.includes('arkana')) {
+  // B. Penyelidikan / Pemeriksaan / Geledah / Buka Peti
+  else if (lowerAction.includes('periksa') || lowerAction.includes('selidiki') || lowerAction.includes('geledah') || lowerAction.includes('buka') || lowerAction.includes('cari') || lowerAction.includes('peti') || lowerAction.includes('manuskrip') || lowerAction.includes('amati')) {
+    chapterTitle = `Babak ${turnCount + 1}: Tabir Rahasia Tersingkap`;
+    consequenceNote = `Penyelidikan cermat mengungkap petunjuk berharga di lokasi.`;
+    dialogue = cleanText(
+      `Dengan ketelitian tinggi, ${charName} segera melakukan: "${actionText}". Di bawah lapisan debu tebal dan sisa puing di ${prevLoc}, jemarimu menyentuh ukiran tersembunyi yang membentuk lambang fraksi kuno. Sebuah celah rahasia terbuka dengan bunyi klik pelan, menampakkan benda peninggalan yang masih memancarkan aura magis hangat.`
+    );
+    goldDelta = 20;
+    receivedItem = {
+      id: 'item_04_silver_dagger',
+      name: 'Pusaka Ukiran Kuno',
+      category: 'Pusaka',
+      effect: 'Meningkatkan intuisi petualangan',
+      icon: 'item_04_silver_dagger'
+    };
+    choices = [
+      { id: `c_${turnCount}_1`, text: 'Amati simbol pada pusaka kuno tersebut untuk mencari arti maknanya', tone: 'curious' },
+      { id: `c_${turnCount}_2`, text: 'Simpan pusaka dan segera susuri lorong baru yang terbuka', tone: 'bold' }
+    ];
+  }
+  // C. Tindakan Fisik / Dobrak / Serang Hambatan
+  else if (lowerAction.includes('serang') || lowerAction.includes('tebas') || lowerAction.includes('hantam') || lowerAction.includes('dobrak') || lowerAction.includes('pukul') || lowerAction.includes('tendang')) {
+    chapterTitle = `Babak ${turnCount + 1}: Terobosan Tegas`;
+    consequenceNote = `Aksi fisik tegas berhasil menyingkirkan hambatan di depanmu.`;
+    dialogue = cleanText(
+      `Tanpa ragu, ${charName} sang ${charClass} melancarkan: "${actionText}". Dentuman keras bergema saat kekuatan fisikmu menghancurkan rintangan yang menghalangi jalan. Reruntuhan berserakan di lantai, membuka jalan tembus yang sebelumnya tertutup rapat. Keberanianmu membuat suasana di ${prevLoc} seketika bergeser menguntungkanmu.`
+    );
+    hpDelta = -2;
+    choices = [
+      { id: `c_${turnCount}_1`, text: 'Melangkah mantap melewati rintangan yang telah dihancurkan', tone: 'bold' },
+      { id: `c_${turnCount}_2`, text: 'Pasang kuda-kuda siaga memastikan tidak ada jebakan di balik puing', tone: 'cautious' }
+    ];
+  }
+  // D. Penggunaan Mantra / Sihir
+  else if (lowerAction.includes('sihir') || lowerAction.includes('mantra') || lowerAction.includes('arkana') || lowerAction.includes('spell') || lowerAction.includes('cahaya') || lowerAction.includes('api')) {
+    chapterTitle = `Babak ${turnCount + 1}: Resonansi Magis`;
+    consequenceNote = `Mantra arkanum berhasil mengubah struktur energi di sekitar.`;
+    dialogue = cleanText(
+      `Dengan konsentrasi penuh, ${charName} merapalkan: "${actionText}". Kilatan cahaya sihir membuncah dari ujung jemarimu, menerangi setiap sudut ${prevLoc} yang gelap gulita. Pola-pola magis di dinding bereaksi menyambut energi tersebut, melenyapkan kabut keraguan dan mengungkap keberadaan jalur tersembunyi.`
+    );
     manaDelta = -6;
+    choices = [
+      { id: `c_${turnCount}_1`, text: 'Fokuskan energi sihir untuk memindai bahaya di jalur tersembunyi', tone: 'curious' },
+      { id: `c_${turnCount}_2`, text: 'Segera melangkah maju sebelum pendar magis memudar', tone: 'bold' }
+    ];
   }
-
-  const lethalKeywords = ['lahar', 'magma', 'kawah', 'racun', 'jurang', 'bunuh diri', 'terjun', 'tanpa perlindungan'];
-  const isLethal = lethalKeywords.some(k => lowerAction.includes(k));
-
-  if (isLethal) {
-    hpDelta = -25;
-    consequence = `${dicePrefix}Dampak fatal: Aksi ceroboh menerjang bahaya maut mengakibatkan luka parah dan kehancuran fisik!`;
-    outcomeDialogue = `Kamu nekat memutuskan untuk: "${actionText}". Tanpa perlindungan memadai, kobaran bahaya mematikan seketika melalap tubuhmu, membakar daging dan meremukkan daya tahan ragamu hingga ke batas maut!`;
-  } else if (lowerAction.includes('serang') || lowerAction.includes('tebas') || lowerAction.includes('kekuatan') || lowerAction.includes('hantam') || actionTone === 'bold') {
-    consequence = `${dicePrefix}Dampak: Aksi fisik berhasil menembus hambatan.`;
-    outcomeDialogue = `Kamu memutuskan untuk: "${actionText}". Dengan pengerahan tenaga penuh, langkah agresifmu membuahkan hasil nyata, meremukkan rintangan dan membuka celah di ${chosenLoc.loc}. ${chosenLoc.spk} memperhatikan tekadmu yang tak gentar.`;
-    goldDelta = Math.max(goldDelta, 10);
-  } else if (lowerAction.includes('selidiki') || lowerAction.includes('manuskrip') || lowerAction.includes('simbol') || lowerAction.includes('amati') || actionTone === 'curious') {
-    consequence = `${dicePrefix}Dampak: Pengamatan cermat berhasil mengungkap rahasia tersembunyi.`;
-    outcomeDialogue = `Kamu memfokuskan perhatian untuk: "${actionText}". Matamu yang jeli mendapati petunjuk penting yang terselubung bayang-bayang di ${chosenLoc.loc}. ${chosenLoc.spk} tersenyum tipis mengakui ketajaman firasatmu.`;
-    goldDelta = Math.max(goldDelta, 15);
-  } else if (lowerAction.includes('waspada') || lowerAction.includes('sembunyi') || lowerAction.includes('senyap') || lowerAction.includes('mundur') || actionTone === 'cautious') {
-    consequence = `${dicePrefix}Dampak: Kewaspadaan tinggi berhasil melindungimu dari sergapan.`;
-    outcomeDialogue = `Kamu melangkah dengan sangat berhati-hati untuk: "${actionText}". Naluri bertahan hidupmu terbukti tepat, kamu berhasil membaca pergerakan lawan di ${chosenLoc.loc} tanpa terluka.`;
-  } else {
-    consequence = `${dicePrefix}Dampak: Keputusanmu langsung mengubah situasi di sekelilingmu.`;
-    outcomeDialogue = `Kamu segera mengambil keputusan untuk: "${actionText}". Tindakan tegas tersebut seketika memecah ketegangan di ${chosenLoc.loc}, membuat ${chosenLoc.spk} harus menyesuaikan sikapnya terhadap keberadaanmu.`;
-    goldDelta = Math.max(goldDelta, 5);
+  // E. Tindakan Waspada / Menyelinap / Sembunyi
+  else if (lowerAction.includes('waspada') || lowerAction.includes('sembunyi') || lowerAction.includes('senyap') || lowerAction.includes('endap') || lowerAction.includes('intai')) {
+    chapterTitle = `Babak ${turnCount + 1}: Langkah Dalam Bayang`;
+    consequenceNote = `Kewaspadaan tinggi melindungimu dari bahaya tersembunyi.`;
+    dialogue = cleanText(
+      `${charName} mengambil langkah cerdik untuk: "${actionText}". Melebur dengan bayang-bayang di ${prevLoc}, kamu bergerak tanpa menimbulkan derit suara sedikit pun. Dari tempat persembunyian yang aman, kamu berhasil mengamati pergerakan sekitar dan mendapati celah terbaik untuk melanjutkan langkah tanpa terdeteksi.`
+    );
+    choices = [
+      { id: `c_${turnCount}_1`, text: 'Manfaatkan celah pengawasan untuk menyelinap lebih jauh ke depan', tone: 'cautious' },
+      { id: `c_${turnCount}_2`, text: 'Amati dari balik bayang-bayang dan tunggu momen paling tepat', tone: 'shrewd' }
+    ];
+  }
+  // F. Aksi Bebas / Naratif Umum Lainnya
+  else {
+    chapterTitle = `Babak ${turnCount + 1}: Dinamika Langkah Baru`;
+    consequenceNote = `Keputusanmu "${actionText.slice(0, 30)}" membawa perubahan nyata pada alur peristiwa.`;
+    dialogue = cleanText(
+      `Menyadari situasi yang berkembang, ${charName} sang ${charClass} mantap mengambil tindakan: "${actionText}". Keputusan berani tersebut seketika mengurai keheningan di ${prevLoc}. Sosok ${prevSpk} tampak terkesiap menyadari kesungguhan niatmu, lalu merespon dengan anggukan penuh hormat seraya mengarahkan pandangannya ke arah pintu gerbang berikutnya. Situasi kini sepenuhnya berada di bawah kendalimu.`
+    );
+    choices = [
+      { id: `c_${turnCount}_1`, text: `Lanjutkan inisiatif dari langkah "${actionText.slice(0, 25)}" untuk menuntaskan tujuan`, tone: 'bold' },
+      { id: `c_${turnCount}_2`, text: `Ajak ${prevSpk} berdiskusi mengenai rencana strategis selanjutnya`, tone: 'curious' },
+      { id: `c_${turnCount}_3`, text: `Amankan posisi bertahan dan cermati setiap perubahan di sekitar`, tone: 'cautious' }
+    ];
   }
 
   return {
-    chapterTitle: `Babak ${turnCount + 1}: ${chosenLoc.title}`,
-    location: chosenLoc.loc,
-    backgroundId: chosenLoc.bg,
-    speaker: chosenLoc.spk,
-    characterId: chosenLoc.char,
-    mood: chosenLoc.mood,
-    dialogue: cleanText(
-      `${outcomeDialogue} Hawa misterius menyelimuti area sekitar. Di hadapanmu terbentang pilihan baru yang menuntut keputusan taktis berikutnya.`
-    ),
-    consequenceNote: consequence,
+    chapterTitle,
+    location: prevLoc,
+    backgroundId: previousNode?.backgroundId || 'bg_01_tavern',
+    speaker: prevSpk,
+    characterId: previousNode?.characterId || 'char_npc_01_barkeep',
+    mood: previousNode?.mood || 'mysterious',
+    dialogue,
+    consequenceNote,
     stateUpdates: {
       hpChange: hpDelta,
       manaChange: manaDelta,
       goldChange: goldDelta,
-      receivedItem: (turnCount === 2) ? {
-        id: 'item_04_silver_dagger',
-        name: 'Belati Perak Berukir Rune',
-        category: 'Senjata',
-        effect: '+2 Bonus Serangan Rahasia',
-        icon: 'item_04_silver_dagger'
-      } : null,
+      receivedItem,
       consumedItem: null,
-      addLedgerFact: `Melakukan '${actionText.slice(0, 35)}' dan tiba di ${chosenLoc.loc}.`
+      addLedgerFact: `Melakukan '${actionText.slice(0, 35)}' di ${prevLoc}.`
     },
-    choices: [
-      {
-        id: `c_${turnCount}_1`,
-        text: `Manfaatkan momentum dari "${actionText.slice(0, 30)}" untuk merangsek lebih jauh`,
-        tone: 'bold'
-      },
-      {
-        id: `c_${turnCount}_2`,
-        text: `Gali informasi lebih dalam dari ${chosenLoc.spk} mengenai situasi sekitar`,
-        tone: 'curious'
-      },
-      {
-        id: `c_${turnCount}_3`,
-        text: `Siapkan posisi bertahan dan amankan rute evakuasi di ${chosenLoc.loc}`,
-        tone: 'cautious'
-      }
-    ]
+    combatEncounter: null,
+    choices
   };
 }
 
@@ -529,6 +393,7 @@ class GeminiService {
     const apiKey = process.env.GEMINI_API_KEY;
     this.apiKey = apiKey && apiKey !== 'YOUR_GEMINI_API_KEY' ? apiKey : null;
     this.modelName = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
+
 
     if (this.apiKey) {
       try {
@@ -550,8 +415,9 @@ class GeminiService {
 
     const candidateModels = [
       this.modelName,
-      'gemini-3.6-flash',
-      'gemini-3.5-flash'
+      'gemini-flash-lite-latest',
+      'gemini-3.5-flash-lite',
+      'gemini-3.1-flash-lite'
     ].filter((m, i, arr) => Boolean(m) && arr.indexOf(m) === i);
 
     let lastError = null;
@@ -574,7 +440,7 @@ class GeminiService {
           });
 
           const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error(`Timeout: Model ${model} took longer than 7000ms`)), 7000)
+            setTimeout(() => reject(new Error(`Timeout: Model ${model} took longer than 25000ms`)), 25000)
           );
 
           const response = await Promise.race([generatePromise, timeoutPromise]);
@@ -602,14 +468,14 @@ class GeminiService {
     const charClass = character?.characterClass || 'Pengelana';
 
     const systemPrompt = `Kamu adalah Dungeon Master (DM) legendaris untuk game Visual Novel Virtual Tabletop (VTT).
-Tugasmu adalah merajut narasi interaktif D&D dengan Bahasa Indonesia sastrawi yang imersif dan atmosferik.
+Tugasmu adalah merajut narasi interaktif dengan Bahasa Indonesia sastrawi yang imersif dan atmosferik.
 
 ATURAN WAJIB DUNGEON MASTER:
-1. PERSONALISASI NAMA & ROLE/KELAS:
+1. PERSONALISASI NAMA & KELAS:
    Karakter pemain adalah "${charName}", bertindak sebagai seorang "${charClass}" (Ras: ${character.race || 'Human'}).
-   DM dan seluruh NPC WAJIB secara personal menyapa dan memanggil nama "${charName}", serta menyesuaikan sudut pandang dan suasana adegan dengan persona dan gaya kelas ${charClass}.
+   DM dan seluruh NPC WAJIB secara personal menyapa dan memanggil nama "${charName}", serta menyesuaikan sudut pandang dan suasana adegan dengan persona kelas ${charClass}.
 2. STRUKTUR 12 STAGE KAMPANYE:
-   Petualangan ini dirancang tepat dalam 12 babak/stage bertahap menuju klimaks epik. Adegan ini adalah BABAK I: Permulaan Takdir.
+   Petualangan ini dirancang tepat dalam 12 babak bertahap menuju klimaks epik. Adegan ini adalah BABAK I: Permulaan Takdir.
 3. Respon WAJIB berupa objek JSON murni tanpa pembungkus markdown seperti \`\`\`json.
 4. JANGAN PERNAH menggunakan karakter em dash (—). Gunakan koma, titik dua, tanda kurung, atau titik.
 5. backgroundId WAJIB dipilih dari daftar resmi berikut sesuai suasana dan lokasi:
@@ -617,7 +483,7 @@ ATURAN WAJIB DUNGEON MASTER:
    bg_10_ancient_ruins, bg_11_throne_room, bg_12_underdark_cavern, bg_13_lava_forge, bg_14_frost_peak, bg_15_haunted_graveyard, bg_16_swamp_huts, bg_17_desert_temple, bg_18_celestial_sanctum, bg_19_shadowfell_citadel,
    bg_20_pirate_ship_deck, bg_21_goblin_war_camp, bg_22_crystal_mines, bg_23_dungeon_torture_chamber, bg_24_feywild_glade, bg_25_abandoned_cathedral, bg_26_clockwork_vault, bg_27_dragon_hoard, bg_28_city_market_alley, bg_29_abyssal_rift.
 6. characterId WAJIB dipilih dari: char_hero_01 s.d 09 atau char_npc_01 s.d 09.
-7. Evaluasi aksi pemain murni berdasarkan logika dunia fantasi dan keahlian kelasnya.
+7. Tidak ada lemparan dadu dan tidak ada pertarungan layar terpisah (combatEncounter selalu null).
 
 SKEMA JSON RESMI:
 {
@@ -637,6 +503,7 @@ SKEMA JSON RESMI:
     "consumedItem": null,
     "addLedgerFact": "string"
   },
+  "combatEncounter": null,
   "choices": [
     {
       "id": "c1",
@@ -659,9 +526,9 @@ PENTING: Pada teks 'dialogue', sampaikan terlebih dahulu Latar Belakang Cerita (
     }
   }
 
-  async generateNextScene({ session, character, previousNode, actionTaken, checkResult, recentHistory }) {
+  async generateNextScene({ session, character, previousNode, actionTaken, recentHistory }) {
     if (!this.client) {
-      return getFallbackNextScene(previousNode, actionTaken, checkResult, character, session?.turnCount || 1);
+      return getFallbackNextScene(previousNode, actionTaken, character, session?.turnCount || 1);
     }
 
     const ledgerFacts = session?.worldLedger?.questFlags 
@@ -672,7 +539,7 @@ PENTING: Pada teks 'dialogue', sampaikan terlebih dahulu Latar Belakang Cerita (
     const prevSpeaker = previousNode?.speaker || 'Narator';
     const prevDialogue = previousNode?.dialogueText || '';
     const prevBgId = previousNode?.backgroundId || 'bg_01_tavern';
-    const actionText = actionTaken?.text || 'Melangkah maju dengan waspada';
+    const actionText = actionTaken?.text || actionTaken?.customText || 'Melangkah maju dengan waspada';
     const actionTone = actionTaken?.tone || 'cautious';
 
     // Rolling Context Window from recent story history (last 3-4 nodes)
@@ -685,33 +552,6 @@ PENTING: Pada teks 'dialogue', sampaikan terlebih dahulu Latar Belakang Cerita (
     } else {
       historyContext = `[Langkah Terakhir | Lokasi: ${prevLocation} | Pembicara: ${prevSpeaker}]: "${cleanText(prevDialogue)}"`;
     }
-
-    // Explicit D&D 5E Dice Audit Context
-    let diceAuditContext = '';
-    if (checkResult) {
-      const isNat20 = checkResult.isNat20;
-      const isNat1 = checkResult.isNat1;
-      const isSuccess = checkResult.isSuccess;
-      diceAuditContext = `
-[HASIL LEMPARAN DADU D&D 5E UNTUK AKSI INI]:
-- Jenis Cek Atribut: ${checkResult.statType || 'STR'}
-- Angka Dadu D20: ${checkResult.roll}${checkResult.modifier !== undefined ? ` + (Mod ${checkResult.modifier}) = Total ${checkResult.total}` : ''} vs DC ${checkResult.dc}
-- Status Hasil: ${isNat20 ? '⭐ NATURAL 20 - CRITICAL SUCCESS MUTLAK!' : isNat1 ? '💀 NATURAL 1 - CRITICAL FAILURE BLUNDER MUTLAK!' : isSuccess ? '✅ SUKSES' : '❌ GAGAL'}
-- WAJIB DIINTEGRASIKAN KE CERITA:
-  * ${isNat20 ? 'Pemain berhasil dengan cara spektakuler dan mengagumkan! Berikan dampak taktis maksimal dan hadiah tambahan.' : isNat1 ? 'Aksi pemain mengalami kecelakaan fatal, blunder konyol, atau terhambat bencana tak terduga. Berikan dampak negatif logis dan kurangi HP pemain di hpChange (-4 s.d -10).' : isSuccess ? 'Aksi pemain berhasil dengan baik dan mengatasi rintangan.' : 'Aksi pemain terhalang atau gagal menembus pertahanan/kondisi. Narasikan komplikasi situasi yang terjadi.'}
-`;
-    }
-
-    const activeCombat = previousNode?.combatEncounter;
-    const combatContext = activeCombat ? `
-[PERTEMPURAN AKTIF SEDANG BERLANGSUNG]:
-- Musuh: ${activeCombat.enemyName} (HP Musuh: ${activeCombat.enemyHp}/${activeCombat.maxEnemyHp})
-- ATURAN PERTEMPURAN:
-  * Jika pemain menyerang atau merapal sihir, hitung dampak damage ke musuh (10 s.d 25 damage).
-  * Jika musuh kalah (HP <= 0), narasikan kekalahan musuh, berikan reward koin gold/item pada stateUpdates, dan set 'combatEncounter': null.
-  * Jika musuh belum kalah, narasikan serangan balasan musuh (-HP pemain di 'hpChange') dan perbarui sisa HP musuh di 'combatEncounter'.
-  * Jika pemain kabur, narasikan pelarian dan set 'combatEncounter': null.
-` : '';
 
     const repEntries = Object.entries(session?.worldLedger?.reputation || {});
     const repSummary = repEntries.length > 0
@@ -742,7 +582,7 @@ PENTING: Pada teks 'dialogue', sampaikan terlebih dahulu Latar Belakang Cerita (
     } else {
       stagePacingContext = `
 [PROGRESI PETUALANGAN - BABAK ${turnCount + 1} DARI 12]:
-- Eksplorasi taktis, rintangan, dan penyelidikan dunia fantasi menuju misi utama.
+- Eksplorasi taktis, intrik, interogasi, percakapan bermakna, dan penyelidikan dunia fantasi menuju misi utama.
 `;
     }
 
@@ -755,8 +595,8 @@ PENTING: Pada teks 'dialogue', sampaikan terlebih dahulu Latar Belakang Cerita (
   * Secara elegan dan tegas, tarik kembali perhatian ${charName} ke ancaman nyata di depan mata!
 `;
 
-    const systemPrompt = `Kamu adalah Dungeon Master (DM) legendaris untuk game Visual Novel RPG Tabletop.
-TUGAS UTAMA: Menulis adegan narasi berikutnya yang SEPENUHNYA TANGGAP dan REAKTIF terhadap aksi pemain serta HASIL AUDIT DADU D&D 5E.
+    const systemPrompt = `Kamu adalah Dungeon Master (DM) legendaris untuk game Visual Novel RPG interaktif.
+TUGAS UTAMA: Menulis adegan narasi berikutnya yang SEPENUHNYA TANGGAP, SPESIFIK, MENDALAM, dan REAKTIF terhadap aksi pemain.
 
 KONTEKS DUNIA & RIWAYAT LANGKAH SEBELUMNYA:
 ${historyContext}
@@ -767,8 +607,6 @@ KONDISI PEMAIN SAAT INI:
 - Latar Aktif Saat Ini: "${prevBgId}"
 - Memori Dunia: ${ledgerFacts}
 - Reputasi Fraksi: ${repSummary}
-${combatContext}
-${diceAuditContext}
 ${stagePacingContext}
 ${offRailsInstruction}
 
@@ -776,118 +614,78 @@ TINDAKAN YANG DIAMBIL PEMAIN:
 Aksi: "${actionText}"
 Nada Tindakan: ${actionTone}
 
-ATURAN REAKTIVITAS KONSEKUENSI & KONSISTENSI (SANGAT KRUSIAL):
-1. PERSONALISASI NAMA & KELAS: Seluruh narasi dan dialog NPC WAJIB memanggil nama "${charName}", serta mencerminkan gaya bertarung dan respon indrawi kelas "${charClass}" (misal tebasan pedang zirah untuk Warrior, mantra arkanum untuk Mage, kelincahan bayangan untuk Rogue, doa suci untuk Cleric).
-2. RESPON PARAGRAF PERTAMA WAJIB LANGSUNG: Kalimat dan paragraf pertama 'dialogue' HARUS SECARA LANGSUNG menceritakan bagaimana ${charName} mengeksekusi aksi "${actionText}" dan apa dampak instan yang terjadi seketika di lokasi. DILARANG KERAS mengabaikan aksi ini!
-3. INTEGRASI HASIL DADU D&D 5E: Jika ada blok [HASIL LEMPARAN DADU D&D 5E], narasi keberhasilan atau kegagalan aksi pemain HARUS MENGIKUTI status hasil lemparan dadu tersebut secara jujur dan dramatis.
-4. KONSISTENSI SPASIAL LOKASI (SPATIAL ANCHORING): 'backgroundId' WAJIB TETAP MENGGUNAKAN "${prevBgId}" KECUALI aksi pemain secara eksplisit adalah berpindah ruangan, keluar gedung, menembus portal, atau melakukan perjalanan ke lokasi baru.
-5. KONSEKUENSI NYATA ('consequenceNote'): Tulis ringkasan padat 1 kalimat tentang dampak langsung aksi pemain tersebut.
-6. PENGURANGAN MANA SIHIR: Jika aksi pemain menggunakan mantra/sihir, kurangi Mana pemain secara proporsional (-4 s.d -12) di 'manaChange' dalam 'stateUpdates'.
-7. BAHAYA MAUT / TINDAKAN FATAL: Jika aksi pemain adalah tindakan ceroboh atau mematikan (seperti melompat ke kawah lahar, terjun ke jurang tanpa perlindungan), wajib berikan pengurangan HP fatal (-15 s.d -30) pada 'hpChange' dalam 'stateUpdates'.
-8. PILIHAN TINDAKAN BERIKUTNYA ('choices'): Sediakan 2 sampai 3 pilihan aksi taktis baru yang RINGKAS, PADAT (maksimal 1 kalimat lugas per opsi), dan logis sebagai opsi tindak lanjut (Kecuali jika turnCount >= 11, berikan opsi penutup finish_game).
-9. JANGAN PERNAH GUNAKAN EM DASH (—). Gunakan koma, titik dua, atau kurung.
-10. Respon WAJIB berupa objek JSON murni tanpa pembungkus \`\`\`json.
+ATURAN REAKTIVITAS NARATIF & DIALOG (SANGAT KRUSIAL):
+1. REAKTIFITAS LANGSUNG PADA PARAGRAF PERTAMA:
+   - Paragraf pertama teks 'dialogue' HARUS SECARA NYATA DAN SPESIFIK menceritakan eksekusi aksi "${actionText}".
+   - Jika aksi pemain adalah menginterogasi, berbicara, atau bertanya kepada NPC/pedagang: Tuliskan dialog ucapan NPC tersebut secara langsung menggunakan tanda petik "...", gambarkan reaksi emosionalnya (gemetar ketakutan, membual licik, atau terkesiap kagum), dan ungkapkan petunjuk/informasi rahasia yang terkuak!
+   - Jika aksi pemain adalah memeriksa, menggeledah, atau mencari: Ceritakan secara rinci apa yang ditemukan, mekanisme apa yang terbuka, atau benda apa yang terungkap.
+   - DILARANG KERAS menggunakan kalimat template generik atau jawaban klise hambar yang tidak berhubungan dengan aksi pemain!
+2. TANPA MEKANIK DADU & TANPA COMBAT TERPISAH:
+   - Seluruh alur berjalan mengalir murni secara visual novel naratif.
+   - Evaluasi keberhasilan aksi didasarkan pada logika fantasi, kecerdikan tindakan, dan keahlian kelas ${charClass}.
+   - 'combatEncounter' WAJIB selalu bernilai null.
+3. PERSONALISASI NAMA & KELAS:
+   - Panggil nama "${charName}" dan sesuaikan sudut pandang narasi dengan kelas "${charClass}".
+4. KONSISTENSI LOKASI & LATAR (SPATIAL ANCHORING):
+   - 'backgroundId' WAJIB TETAP MENGGUNAKAN "${prevBgId}" KECUALI aksi pemain secara eksplisit adalah berpindah ruangan, keluar gedung, menembus portal, atau melakukan perjalanan ke lokasi baru.
+5. KONSEKUENSI NYATA ('consequenceNote'):
+   - Tuliskan 1 kalimat ringkas mengenai dampak nyata dari aksi pemain tersebut.
+6. PERUBAHAN STATUS ('stateUpdates'):
+   - Jika merapal mantra/sihir: kurangi mana (-4 s.d -10).
+   - Jika menemukan harta/imbalan: tambahkan gold (+5 s.d +25).
+   - Jika terluka: kurangi hp (-2 s.d -8).
+   - Jika memperoleh barang/ramuan/kunci: isi pada 'receivedItem' (objek { id, name, category, effect, icon }).
+7. PILIHAN TINDAKAN BERIKUTNYA ('choices'):
+   - Sediakan 2 sampai 3 pilihan aksi taktis baru yang ALAMI, RINGKAS (maksimal 1 kalimat lugas), dan relevan dengan situasi terbaru (Kecuali jika turnCount >= 11, berikan opsi penutup finish_game).
+8. FORMAT TEKS:
+   - Gunakan Bahasa Indonesia sastrawi bermutu tinggi.
+   - JANGAN PERNAH gunakan em dash (—). Gunakan koma, titik dua, atau tanda kurung.
+   - Respon WAJIB berupa objek JSON murni tanpa pembungkus markdown \`\`\`json.
 
 SKEMA JSON RESMI:
 {
   "chapterTitle": "string",
   "location": "string",
-  "backgroundId": "string (pilih salah satu dari bg_01 s.d bg_29)",
+  "backgroundId": "string (pilih dari bg_01 s.d bg_29)",
   "speaker": "string (nama NPC atau Narator)",
   "characterId": "string (char_hero_01 s.d 09 atau char_npc_01 s.d 09)",
   "mood": "tense | mysterious | triumphant | ominous | peaceful",
-  "dialogue": "string narasi mendalam yang langsung menjawab dampak aksi pemain dan hasil dadu",
-  "consequenceNote": "string ringkas dampak aksi pemain",
+  "dialogue": "string narasi mendalam yang langsung menjawab dampak aksi pemain secara nyata",
+  "consequenceNote": "string ringkas dampak aksi",
   "stateUpdates": {
     "hpChange": 0,
     "manaChange": 0,
     "goldChange": 0,
     "receivedItem": null,
     "consumedItem": null,
-    "addLedgerFact": "string ringkas tindakan dan dampaknya untuk memori DM"
+    "addLedgerFact": "string ringkas fakta baru untuk memori DM"
   },
   "combatEncounter": null,
   "choices": [
     {
       "id": "c1",
-      "text": "string opsi aksi lanjutan (singkat dan padat)",
+      "text": "string opsi aksi lanjutan (singkat dan lugas)",
       "tone": "bold | cautious | curious | shrewd"
     },
     {
       "id": "c2",
-      "text": "string opsi aksi lanjutan (singkat dan padat)",
+      "text": "string opsi aksi lanjutan (singkat dan lugas)",
       "tone": "bold | cautious | curious | shrewd"
     }
   ]
 }`;
 
-    const prompt = `Lanjutkan petualangan untuk ${charName} sang ${charClass}! Aksi pemain yang baru saja dilakukan: "${actionText}". Ceritakan dampak langsungnya secara reaktif sesuai hasil dadu dan kondisi babak saat ini!`;
+    const prompt = `Lanjutkan petualangan untuk ${charName} sang ${charClass}! Aksi pemain yang baru saja diambil: "${actionText}". Ceritakan reaksi langsungnya secara mendalam, sertakan dialog NPC jika berinteraksi, dan kembangkan cerita babak ini!`;
 
     try {
       return parseSceneJson(await this.callWithFallback(prompt, systemPrompt));
     } catch (err) {
       console.warn('[GeminiService] Error calling Gemini API for next scene, using smart contextual fallback:', err.message);
-      return getFallbackNextScene(previousNode, actionTaken, checkResult, character, session?.turnCount || 1);
+      return getFallbackNextScene(previousNode, actionTaken, character, session?.turnCount || 1);
     }
-  }
-
-  // Cinematic Combat Narration Engine (Pilar 5)
-  async generateCombatNarration({ character, enemy, action, rollResult, damageDealt, isHit, isCrit, isFumble, isDefeated, isPlayerDefeated }) {
-    const charName = character?.name || 'Pahlawan';
-    const enemyName = enemy?.name || 'Musuh';
-
-    const defaultDescriptions = {
-      attack_crit: `Dengan presisi mematikan (Natural 20!), ${charName} menemukan celah pertahanan ${enemyName} dan menghunjamkan tebasan telak sedalam ${damageDealt} damage!`,
-      attack_hit: `${charName} mengayunkan senjata dengan sigap, menyayat pertahanan ${enemyName} dan menorehkan ${damageDealt} damage fisik.`,
-      attack_miss: `Ayunan senjata ${charName} meleset tipis ketika ${enemyName} melompat mundur menepis serangan.`,
-      attack_fumble: `Nahas! Ayunan ${charName} tersangkut di puing reruntuhan (Natural 1), membuka celah berbahaya bagi serangan balasan.`,
-      spell_crit: `Ledakan magis dahsyat (Critical!) membumbung tinggi, gelombang energi meremukkan pertahanan ${enemyName} sebesar ${damageDealt} damage!`,
-      spell_hit: `Kilatan energi arkanum melesat tepat sasaran, membakar pertahanan ${enemyName} sebesar ${damageDealt} damage sihir.`,
-      spell_miss: `Mantra sihir berpendar liar di udara namun ${enemyName} berhasil berguling menghindar ke balik pilar.`,
-      victory: `Tubuh ${enemyName} terhuyung hebat lalu ambruk ke lantai batu tanpa daya! Kemenangan mutlak bagi ${charName}!`,
-      defeat: `${charName} roboh tak berdaya menahan hantaman maut ${enemyName}. Kegelapan menyelimuti medan tempur...`
-    };
-
-    if (isPlayerDefeated) return defaultDescriptions.defeat;
-    if (isDefeated) return defaultDescriptions.victory;
-
-    if (!this.client) {
-      if (action === 'CAST_SPELL') {
-        return isCrit ? defaultDescriptions.spell_crit : isHit ? defaultDescriptions.spell_hit : defaultDescriptions.spell_miss;
-      }
-      return isCrit ? defaultDescriptions.attack_crit : isFumble ? defaultDescriptions.attack_fumble : isHit ? defaultDescriptions.attack_hit : defaultDescriptions.attack_miss;
-    }
-
-    try {
-      const prompt = `Tulis narasi sinematik 1 kalimat dalam Bahasa Indonesia untuk duel D&D:
-Pemain: ${charName} (${character?.characterClass || 'Petualang'})
-Musuh: ${enemyName}
-Aksi: ${action}
-Hasil: ${isCrit ? 'CRITICAL HIT (Nat 20)' : isFumble ? 'CRITICAL MISS (Nat 1)' : isHit ? `KENA (${damageDealt} dmg)` : 'MELESET'}
-Status: ${isDefeated ? 'Musuh tewas' : 'Masih bertarung'}
-Instruksi: Tulis HANYA 1 kalimat narasi deskriptif, atmosferik fantasi gelap, tanpa tanda kutip atau awalan.`;
-
-      const response = await Promise.race([
-        this.client.models.generateContent({
-          model: this.modelName,
-          contents: [{ role: 'user', parts: [{ text: prompt }] }]
-        }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout combat narration')), 3000))
-      ]);
-
-      if (response && response.text) {
-        return cleanText(response.text.trim());
-      }
-    } catch (e) {
-      // Graceful fallback
-    }
-
-    if (action === 'CAST_SPELL') {
-      return isCrit ? defaultDescriptions.spell_crit : isHit ? defaultDescriptions.spell_hit : defaultDescriptions.spell_miss;
-    }
-    return isCrit ? defaultDescriptions.attack_crit : isFumble ? defaultDescriptions.attack_fumble : isHit ? defaultDescriptions.attack_hit : defaultDescriptions.attack_miss;
   }
 }
 
 module.exports = new GeminiService();
+
 
