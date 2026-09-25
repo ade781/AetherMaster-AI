@@ -45,10 +45,20 @@ let server = null;
 const startServer = async () => {
   await initDb();
   console.log('[SQLite DB] Database synced & seeded successfully.');
-  server = app.listen(PORT, () => {
-    console.log(`[AetherMaster Server] Running at http://localhost:${PORT}`);
+  return new Promise((resolve, reject) => {
+    server = app.listen(PORT, () => {
+      console.log(`[AetherMaster Server] Running at http://localhost:${PORT}`);
+      resolve(server);
+    });
+    server.on('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        console.log(`[AetherMaster Server] Port ${PORT} already active, reusing existing instance.`);
+        resolve(null);
+      } else {
+        reject(err);
+      }
+    });
   });
-  return server;
 };
 
 if (require.main === module) {

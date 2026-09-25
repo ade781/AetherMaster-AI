@@ -90,7 +90,7 @@ DAFTAR ISI ROADMAP BACKEND:
 --------------------------------------------------------------------------------
 2. FASE 1: PEROMBAKAN TOTAL DATABASE (MODELS, MIGRATION & SEEDER 20 CERITA)
 --------------------------------------------------------------------------------
-[ ] 1.1. Perombakan Model `Campaign.js` (`backend/src/models/Campaign.js`)
+[x] 1.1. Perombakan Model `Campaign.js` (`backend/src/models/Campaign.js`)
     - Perbarui definisi skema Sequelize:
       * `id`: STRING (Primary Key)
       * `title`: STRING (Judul Kampanye)
@@ -106,54 +106,54 @@ DAFTAR ISI ROADMAP BACKEND:
       * `coverImage`: STRING (Path banner visual kampanye)
       * `factions`: JSON (Array faksi yang berkuasa di wilayah kampanye)
 
-[ ] 1.2. Perombakan Model `GameSession.js` (`backend/src/models/GameSession.js`)
+[x] 1.2. Perombakan Model `GameSession.js` (`backend/src/models/GameSession.js`)
     - Tambahkan kolom baru untuk mendukung pertempuran taktis:
       * `combatState`: JSON (Menyimpan status musuh aktif, turn round, dan combat log)
       * `worldLedger`: JSON (Diperluas dengan sub-objek `questFlags` dan `reputation`)
 
-[ ] 1.3. Perombakan Model `Character.js` (`backend/src/models/Character.js`)
+[x] 1.3. Perombakan Model `Character.js` (`backend/src/models/Character.js`)
     - Tambahkan kolom pendukung sistem perlengkapan D&D 5E:
       * `armorClass`: INTEGER (Default 10 + dexModifier, terpengaruh zirah/perisai)
       * `equippedItems`: JSON (Array item yang sedang aktif dipakai di tubuh)
 
-[ ] 1.4. Pembuatan Skrip Seeder Terpusat `backend/src/models/seeders/campaignSeeder.js`
+[x] 1.4. Pembuatan Skrip Seeder Terpusat `backend/src/models/seeders/campaignSeeder.js`
     - Memasukkan seluruh 20 Master Kampanye dari Bagian 8 dokumen ini secara presisi.
 
-[ ] 1.5. Pembuatan Skrip Eksekusi Perombakan: `backend/src/scripts/reset_and_seed_db.js`
+[x] 1.5. Pembuatan Skrip Eksekusi Perombakan: `backend/src/scripts/reset_and_seed_db.js`
     - Menghapus database ganda `backend/database.sqlite`.
     - Melakukan `sequelize.sync({ force: true })` untuk me-reset tabel dengan skema baru.
     - Menjalankan `campaignSeeder.js` untuk menyuntikkan 20 kampanye lengkap.
     - Cetak log konfirmasi: "Database successfully overhauled with 20 campaigns seeded".
 
-[ ] 1.6. Pembaruan Endpoint `GET /api/story/campaigns`
+[x] 1.6. Pembaruan Endpoint `GET /api/story/campaigns`
     - Memastikan endpoint mengembalikan seluruh kolom baru dari database untuk dikonsumsi frontend.
 
 
 --------------------------------------------------------------------------------
 3. FASE 2: IMPLEMENTASI MODUL D&D 5E DICE ENGINE & SINKRONISASI TEST
 --------------------------------------------------------------------------------
-[ ] 2.1. Pembuatan Modul `backend/src/utils/diceEngine.js`
+[x] 2.1. Pembuatan Modul `backend/src/utils/diceEngine.js`
     - Implementasikan 4 fungsi standar D&D 5E:
       * `rollDice(sides)`: Pengacakan [1..sides] (D20, D8, D6, D100).
       * `calculateModifier(score)`: Formula `Math.floor((score - 10) / 2)`.
       * `performCheck({ character, statType, dc, advantage, disadvantage })`.
       * `performCombatAttack({ attackerName, targetName, attackBonus, targetAC, damageDice, damageBonus })`.
 
-[ ] 2.2. Sinkronisasi Skema Assert di `test_gemini_and_fallback.js`
+[x] 2.2. Sinkronisasi Skema Assert di `test_gemini_and_fallback.js`
     - Perbarui unit test agar mendukung skema naratif bebas dadu (`tone`) maupun mode D&D hybrid (`statType`/`dc`).
 
-[ ] 2.3. Eksekusi Ulang Test Runner `testing_phase_1_backend/run_phase1.js`
+[x] 2.3. Eksekusi Ulang Test Runner `testing_phase_1_backend/run_phase1.js`
     - Pastikan seluruh 5 suite testing backend lulus 100% tanpa error.
 
 
 --------------------------------------------------------------------------------
 4. FASE 3: PERBAIKAN TIMEOUT GEMINI (15S) & DINAMISASI FALLBACK ENGINE
 --------------------------------------------------------------------------------
-[ ] 3.1. Penyesuaian Timeout Gateway di `geminiService.js`
+[x] 3.1. Penyesuaian Timeout Gateway di `geminiService.js`
     - Naikkan `timeoutPromise` dari 5000ms menjadi 15000ms.
     - Tambahkan 1x retry otomatis dengan jitter saat model menerima status 503 high demand.
 
-[ ] 3.2. Eliminasi Hardcode Fallback di `geminiService.js`
+[x] 3.2. Eliminasi Hardcode Fallback di `geminiService.js`
     - Ganti fungsi statis `getFallbackOpening()` agar membaca langsung atribut record database:
       `campaign.introDialogue`, `campaign.premise`, `campaign.defaultBackgroundId`, dan `campaign.defaultNpcId`.
 
@@ -161,7 +161,7 @@ DAFTAR ISI ROADMAP BACKEND:
 --------------------------------------------------------------------------------
 5. FASE 4: TACTICAL TURN-BASED COMBAT ENGINE (PILAR 3.3 MINI-VTT)
 --------------------------------------------------------------------------------
-[ ] 5.1. Endpoint Baru: `POST /api/story/combat/action`
+[x] 5.1. Endpoint Baru: `POST /api/story/combat/action`
     - Menerima perintah: `ATTACK`, `CAST_SPELL`, `USE_ITEM`, `FLEE`.
     - Server memproses lemparan dadu attack roll vs monster AC, menghitung damage,
       dan memperbarui `combatState` di database.
@@ -172,9 +172,9 @@ DAFTAR ISI ROADMAP BACKEND:
 --------------------------------------------------------------------------------
 6. FASE 5: PASSIVE ITEM MODIFIER & PERSISTENT FACTION REPUTATION (PILAR 3.4 & 3.6)
 --------------------------------------------------------------------------------
-[ ] 6.1. Sistem Kalkulasi Bonus Pasif Item Perlengkapan
+[x] 6.1. Sistem Kalkulasi Bonus Pasif Item Perlengkapan
     - Buat helper `getEffectiveStats(character)` di backend untuk menghitung bonus pasif item.
-[ ] 6.2. Persistent Faction Reputation Engine
+[x] 6.2. Persistent Faction Reputation Engine
     - Simpan reputasi fraksi di `GameSession.worldLedger.reputation`.
     - Skor reputasi otomatis disuntikkan ke prompt Gemini agar respon NPC di dialog berikutnya reaktif.
 
@@ -182,11 +182,11 @@ DAFTAR ISI ROADMAP BACKEND:
 --------------------------------------------------------------------------------
 7. FASE 6: HARDENING KEAMANAN, RATE LIMITING, SSE STREAMING & CI/CD LOKAL
 --------------------------------------------------------------------------------
-[ ] 7.1. Proteksi Kuota API LLM (Rate Limiter)
+[x] 7.1. Proteksi Kuota API LLM (Rate Limiter)
     - Pasang `express-rate-limit` (maksimal 30 request/menit per IP) pada endpoint AI cerita.
-[ ] 7.2. Security Headers & Kompresi Data
+[x] 7.2. Security Headers & Kompresi Data
     - Pasang middleware `helmet` dan `compression` di `backend/src/server.js`.
-[ ] 7.3. Endpoint Server-Sent Events (SSE): `/api/story/action-stream`
+[x] 7.3. Endpoint Server-Sent Events (SSE): `/api/story/action-stream`
     - Narasi Gemini di-stream kata-per-kata langsung ke frontend untuk latensi perceived zero-delay.
 
 

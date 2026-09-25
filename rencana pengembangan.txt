@@ -400,16 +400,16 @@ python slice_grid.py input_monsters.png ./frontend/public/assets/monsters monste
 ================================================================================
 
 FASE 1: BACKEND CORE & PERSISTENCE (`ai_dungeon_vtt.sqlite`)
-[ ] Inisialisasi Sequelize dengan dialek SQLite ke `./ai_dungeon_vtt.sqlite`.
-[ ] Buat model `Character`, `Campaign`, `GameSession`, `StoryNode`.
-[ ] Buat modul kalkulasi D&D Dice Engine di `backend/src/utils/diceEngine.js` 
+[x] Inisialisasi Sequelize dengan dialek SQLite ke `./ai_dungeon_vtt.sqlite`.
+[x] Buat model `Character`, `Campaign`, `GameSession`, `StoryNode`.
+[x] Buat modul kalkulasi D&D Dice Engine di `backend/src/utils/diceEngine.js` 
     (mendukung roll D20, Advantage/Disadvantage, modifier stat, dan penentuan DC).
-[ ] Buat controller `storyController.js` dengan integrasi Google Gemini `@google/genai`:
+[x] Buat controller `storyController.js` dengan integrasi Google Gemini `@google/genai`:
     * Handler `startCampaign`: Meracik pembuka cerita dan membaptis karakter baru.
     * Handler `submitAction`: Menerima aksi pemain, menghitung roll dadu di server, 
       memperbarui status HP/Gold/Inventory, dan meminta scene berikutnya dari Gemini.
     * Handler `rewindScene`: Melompat kembali ke node cerita sebelumnya.
-[ ] Uji coba endpoint API via cURL / fetch di localhost:5000.
+[x] Uji coba endpoint API via cURL / fetch di localhost:5000.
 
 FASE 2: FRONTEND CORE & THREE.JS 3D DICE ROLLER
 [ ] Setup `frontend/src/main.jsx` dan Tailwind CSS styling dengan tema Dark Fantasy.
