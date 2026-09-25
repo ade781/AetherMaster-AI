@@ -1,0 +1,162 @@
+================================================================================
+          RENCANA PENGEMBANGAN SISTEM FRONTEND - AETHERMASTER AI
+================================================================================
+Target Direktori : frontend/ & testing_phase_2_frontend/
+Tech Stack       : React 18, Vite 6, Tailwind CSS 3.4, Framer Motion, Three.js
+UI Components    : Lucide React, Custom Fantasy SVG Icon Pack, Web Audio API
+Target Port      : http://localhost:5173
+Referensi Aset   : katalog_kebutuhan_asset_dan_gambar.txt (Direktori: public/assets/)
+Referensi Cerita : rencana_pengembangan_backend.txt (Bagian 8: 20 Kampanye Dinamis dari DB)
+Tanggal Rilis    : 2026-09-25
+Status           : Terkonsolidasi Penuh (Sinkron dengan Master Blueprint & Anti-Tabrakan)
+================================================================================
+
+================================================================================
+PRINSIP ARSITEKTUR WAJIB: 100% DINAMIS BERBASIS DATA DARI DATABASE
+--------------------------------------------------------------------------------
+1. ELIMINASI OBJEK STATIS `CAMPAIGN_METADATA`:
+   - Hapus variabel raksasa `CAMPAIGN_METADATA` di `LandingPage.jsx`.
+   - Data 20 kampanye diambil secara dinamis dari API `GET /api/story/campaigns`.
+2. CLIENT-SIDE PRESENTATIONAL ONLY FOR COMBAT & DICE:
+   - Komponen Three.js D20 Roller dan Tactical Combat Stage di frontend murni bertindak
+     sebagai PRESENTASI VISUAL, SFX, dan USER INPUT GATEWAY.
+   - Hasil lemparan dadu, damage, dan HP monster selalu dihitung oleh Backend (Server-Authoritative).
+3. KEYBOARD ACCESSIBILITY & IMMERSIVE AUDIO:
+   - Global hotkey listener terpusat ('I' untuk tas inventaris, 'Space' untuk typewriter dialog).
+   - Audio synth otomatis bereaksi terhadap status HP pemain (efek detak jantung saat HP kritis < 20%).
+================================================================================
+
+================================================================================
+PROTOKOL BEBAS TABRAKAN (ANTI-COLLISION GUARANTEE):
+--------------------------------------------------------------------------------
+1. STRICT DIRECTORY BOUNDARY:
+   - Agen Frontend DILARANG mengedit file di folder `backend/` atau `testing_phase_1_backend/`.
+   - Agen Frontend hanya bekerja di `frontend/` dan `testing_phase_2_frontend/`.
+2. TOLERANT CONTRACT PARSING (DEFENSIVE UI):
+   - Komponen UI (`VisualNovelStage.jsx`, `CharacterHUD.jsx`) wajib menggunakan optional chaining:
+     * `node?.consequenceNote`
+     * `node?.choices || []`
+     * `choice?.tone || choice?.statType || 'Aksi'`
+3. ENVIRONMENT PORT FLEXIBILITY:
+   - Akses API backend membaca `import.meta.env.VITE_API_BASE || 'http://127.0.0.1:5000/api/story'`.
+4. ASSET PIPELINE ALIGNMENT:
+   - Menggunakan jalur penyimpanan standar `frontend/public/assets/` sesuai `katalog_kebutuhan_asset_dan_gambar.txt`.
+================================================================================
+
+DAFTAR ISI ROADMAP FRONTEND:
+--------------------------------------------------------------------------------
+1. STATUS ARSITEKTUR FRONTEND SAAT INI
+2. FASE 1: DINAMISASI 20 KAMPANYE DB & DEKOMPOSISI `LandingPage.jsx` (PRIORITAS TINGGI)
+3. FASE 2: STATE MANAGEMENT TERPUSAT (ZUSTAND/CONTEXT) & GLOBAL HOTKEYS
+4. FASE 3: THREE.JS 3D VIRTUAL D20 ROLLER (PILAR 3.2 MASTER BLUEPRINT)
+5. FASE 4: TACTICAL TURN-BASED COMBAT STAGE (PILAR 3.3 MINI-VTT ENCOUNTER)
+6. FASE 5: IMMERSIVE SFX, REACTIVE HEARTBEAT & ADVANCED VISUAL NOVEL STAGE
+7. FASE 6: RESPONSIVE MOBILE LAYOUT, ACCESSIBILITY & E2E TESTING
+================================================================================
+
+
+--------------------------------------------------------------------------------
+1. STATUS ARSITEKTUR FRONTEND SAAT INI
+--------------------------------------------------------------------------------
+- Entry Point: `frontend/src/main.jsx` -> `frontend/src/App.jsx`
+- Target API : `GET /api/story/campaigns` (Mengambil 20 cerita dinamis dari SQLite)
+- Kompilasi  : Vite 6 (Build production lolos, bundle JS ~321 kB, CSS ~46 kB)
+- Aset Visual: Terpetakan di `frontend/public/assets/`
+
+
+--------------------------------------------------------------------------------
+2. FASE 1: DINAMISASI 20 KAMPANYE DB & DEKOMPOSISI `LandingPage.jsx` (PRIORITAS TINGGI)
+--------------------------------------------------------------------------------
+[x] 1.1. Konfigurasi Endpoint API Dinamis via Environment Variable
+    - Ubah `const API_BASE = 'http://127.0.0.1:5000/api/story';` di `App.jsx` ke `import.meta.env.VITE_API_BASE`.
+    - Buat file `frontend/.env.example` dan `frontend/.env` dengan `VITE_API_BASE`.
+
+[x] 1.2. Pembersihan Objek Statis & Dekomposisi Modular `LandingPage.jsx`
+    - Hapus seluruh isi variabel `CAMPAIGN_METADATA` dari dalam kode komponen.
+    - Pecah `LandingPage.jsx` menjadi sub-komponen terisolasi di `frontend/src/components/landing/`:
+      1. `HeroBanner.jsx`: Judul beranimasi, slogan epik, tombol Mulai Petualangan.
+      2. `CampaignGrid.jsx`: Grid 20 kartu kampanye dinamis dengan filter genre & search bar.
+      3. `CampaignCard.jsx`: Kartu kampanye menampilkan `title`, `premise`, `threatLevel`, `coverImage`, badge genre.
+      4. `FeaturesShowcase.jsx`: Showcase pilar gameplay (Branching Tree, Inventory, Web Audio).
+      5. `PromptStudioModal.jsx`: Modal katalog master prompt & salin prompt D&D.
+
+[x] 1.3. UI Filter Genre & Pencarian 20 Kampanye
+    - Filter kategori: [Semua] | [Dark Fantasy] | [Gothic Horror] | [Eldritch] | [High Arcana] | [Survival].
+    - Kotak input pencarian cepat judul cerita.
+
+
+--------------------------------------------------------------------------------
+3. FASE 2: STATE MANAGEMENT TERPUSAT (ZUSTAND/CONTEXT) & GLOBAL HOTKEYS
+--------------------------------------------------------------------------------
+[x] 2.1. Implementasi Lightweight Store (Zustand / React Context)
+    - Buat `frontend/src/store/useGameStore.js` (atau `GameContext.jsx`).
+    - Simpan state terpusat: `session`, `character`, `currentNode`, `inventory`, `combatState`, `toast`.
+    - Hilangkan prop-drilling di `CharacterHUD`, `VisualNovelStage`, dan `StoryTreeModal`.
+
+[x] 2.2. Global Keyboard Shortcut Listener (Pilar 3.4 & 3.8 Master Blueprint)
+    - Tekan tombol `I` / `i`: Buka/tutup modal 6-slot inventory popup.
+    - Tekan tombol `Space` / `Enter`: Mempercepat/skip efek typewriter dialog.
+    - Tekan tombol `L`: Buka catatan backlog dialog.
+    - Tekan tombol `M`: Buka visualisasi branching story tree.
+
+
+--------------------------------------------------------------------------------
+4. FASE 3: THREE.JS 3D VIRTUAL D20 ROLLER (PILAR 3.2 MASTER BLUEPRINT)
+--------------------------------------------------------------------------------
+[x] 3.1. Komponen Three.js Canvas 3D D20 Dice Roller (`ThreeDiceRoller.jsx`)
+    - Buat modal/overlay interaktif `<ThreeDiceRoller diceValue={...} onComplete={...} />`.
+    - Geometri 3D: Mesh Icosahedron (20 sisi) dengan tekstur angka 1-20 dari Pack 8 (`frontend/public/assets/3d/`).
+    - Animasi lemparan fisika berputar inersia dengan pencahayaan specular dramatis.
+    - Suara denting dadu bergulir sinkron dengan Web Audio `audio.playDiceRoll()`.
+
+[x] 3.2. Feedback Visual Hasil Lemparan Dadu (Pilar 3.2)
+    - Tampilan banner kalkulasi transparan:
+      `[Hasil Dadu: 14] + [STR Mod: +3] = 17 vs DC 12 -> SUKSES!`
+    - Natural 20 (Critical Success): Memicu semburan partikel `canvas-confetti` dan SFX gemerincing emas.
+    - Natural 1 (Critical Failure): Memicu efek layar bergetar merah (Framer Motion screen shake) dan SFX petaka.
+
+
+--------------------------------------------------------------------------------
+5. FASE 4: TACTICAL TURN-BASED COMBAT STAGE (PILAR 3.3 MINI-VTT ENCOUNTER)
+--------------------------------------------------------------------------------
+[x] 4.1. Komponen Antarmuka Tempur Taktis (`CombatStage.jsx`)
+    - Panggung beralih otomatis saat `currentNode.combatEncounter` aktif atau masuk combat mode.
+    - Kartu Musuh di panggung:
+      * Menampilkan sprite monster transparan (`monster_01_skeleton.png` s.d `monster_09_drake.png`).
+      * Badge Armor Class (AC) dan Bar HP Merah beranimasi.
+    - Menu Perintah Pemain:
+      * Tombol [Serang / Attack]: Melempar D20 Attack Roll vs Target AC.
+      * Tombol [Mantra / Spell]: Melancarkan Fireball, Holy Heal, atau Shadow Step.
+      * Tombol [Gunakan Item]: Memakai potion dari tas secara instan.
+      * Tombol [Taktik / Flee]: Berusaha kabur dari encounter.
+
+[x] 4.2. Floating Combat Numbers & Interactive Combat Log (Pilar 3.3)
+    - Floating damage numbers animasi (angka melayang merah saat terkena serangan, hijau saat heal).
+    - Combat log interaktif mencatat ronde giliran secara runtut di panel samping.
+
+
+--------------------------------------------------------------------------------
+6. FASE 5: IMMERSIVE SFX, REACTIVE HEARTBEAT & ADVANCED VISUAL NOVEL STAGE
+--------------------------------------------------------------------------------
+[x] 5.1. Audio Synth Denyut Jantung Reaktif (Pilar 3.7 Master Blueprint)
+    - Synthesizer frekuensi rendah (*low-frequency thumping*) otomatis aktif saat HP karakter kritis (< 20%).
+    - Menghadirkan ketegangan psikologis yang mendalam saat pemain di ambang kematian.
+
+[x] 5.2. Layered Ambient Soundscapes
+    - Tambahkan generator deru angin badai salju untuk `bg_14_frost_peak`, suara gemersik hujan kedai untuk `bg_01_tavern`, dan deburan ombak gua laut untuk `bg_07_smuggler_cave`.
+
+[x] 5.3. Komponen Avatar & Item Icon Terpadu (`<FantasyAvatar />`, `<ItemSlot />`)
+    - Elegan menangani pemanggilan 18 item, 29 background, dan 18 portrait tanpa memicu failed network requests.
+    - Transisi pergantian scene halus menggunakan Framer Motion.
+
+
+--------------------------------------------------------------------------------
+7. FASE 6: RESPONSIVE MOBILE LAYOUT, ACCESSIBILITY & E2E TESTING
+--------------------------------------------------------------------------------
+[x] 6.1. Optimasi Antarmuka Mobile / Touch Screen
+    - Tombol pilihan aksi minimal 48px touch-target di layar smartphone.
+    - HUD karakter responsif: collapsible drawer untuk inventory di layar portrait.
+
+[x] 6.2. Script Verifikasi Kompilasi & Build Test
+    - Jalankan `node testing_phase_2_frontend/run_phase2.js` secara otomatis setiap ada penambahan aset atau komponen.
+================================================================================

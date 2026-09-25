@@ -1,0 +1,282 @@
+================================================================================
+          KATALOG KEBUTUHAN ASET, GAMBAR & DESKRIPSI - AETHERMASTER AI
+================================================================================
+Target Simpan    : frontend/public/assets/
+Format File      : PNG (Transparent RGBA untuk Karakter/Item/Icon) & JPG/WebP (Background)
+Rasio Resolusi   : 
+  - Portret Karakter & Monster : 1:1 (Minimal 512x512 px, Rekomendasi 1024x1024 px)
+  - Background Adegan VN       : 16:9 (Minimal 1920x1080 px)
+  - Icon Item & Skill Dadu     : 1:1 (Minimal 256x256 px, Transparan)
+Tanggal Penyusunan: 2026-09-25
+Status Dokumen   : Master Asset Registry & Production Blueprint (STATUS: 100% COMPLETE - 94/94 ASSETS PRODUCED & DEPLOYED)
+================================================================================
+
+DAFTAR ISI KATALOG:
+--------------------------------------------------------------------------------
+1. STANDAR STRUKTUR DIREKTORI PENYIMPANAN
+2. PACK 1: 9 HERO CLASS BUST PORTRAITS (PROTAGONIS)
+3. PACK 2: 9 KEY NPCS, SEKUTU & BOS ANTAGONIS
+4. PACK 3: 29 SCENIC ADVENTURE BACKGROUNDS (DUNIA AETHER)
+5. PACK 4: 18 INVENTORY ITEMS, WEAPONS & ANCIENT ARTIFACTS
+6. PACK 5: 12 SKILL, SPELL & D20 ACTION ICONS
+7. PACK 6: 9 MONSTER & COMBAT SPRITES (MINI-VTT ENCOUNTER)
+8. PACK 7: LANDING PAGE CAMPAIGN COVERS & UI CHROME ASSETS
+9. PACK 8: THREE.JS 3D D20 TEXTURE MAPS & AUDIO PRESETS
+10. PROTOKOL OTOMASI SLICING & PIPELINE DEPLOYMENT KE FRONTEND
+================================================================================
+
+
+--------------------------------------------------------------------------------
+1. STANDAR STRUKTUR DIREKTORI PENYIMPANAN
+--------------------------------------------------------------------------------
+Semua aset hasil ekstraksi wajib diletakkan di dalam folder `frontend/public/assets/`:
+├── frontend/public/assets/
+│   ├── portraits/        <- char_hero_01 s.d 09 & char_npc_01 s.d 09 (.png transparan)
+│   ├── backgrounds/      <- bg_01 s.d bg_29 (.jpg / .webp 1920x1080)
+│   ├── items/            <- item_01 s.d 18 (.png 512x512 transparan)
+│   ├── skills/           <- skill_01 s.d 12 (.png 256x256 bulat runic)
+│   ├── monsters/         <- monster_01 s.d 09 (.png combat cutouts)
+│   ├── covers/           <- cover_tavern.jpg, cover_crypt.jpg, cover_citadel.jpg
+│   └── 3d/               <- d20_diffuse.png, d20_normal.png, d20_roughness.png
+
+
+--------------------------------------------------------------------------------
+2. PACK 1: 9 HERO CLASS BUST PORTRAITS (PROTAGONIS)
+--------------------------------------------------------------------------------
+Format: PNG Transparan | Lokasi: `frontend/public/assets/portraits/`
+Digunakan oleh: `CharacterCreationModal.jsx`, `CharacterHUD.jsx`, `VisualNovelStage.jsx`
+
+[1] char_hero_01_paladin.png
+    - Nama Karakter: Sir Gareth sang Paladin
+    - Kelas / Ras   : Paladin (Warrior) / Human
+    - Deskripsi Visual: Ksatria pria bangsawan berbaju zirah baja emas mengkilap, mengenakan tabard biru tua kerajaan dengan emblem matahari perak, tatapan tenang dan agung, rambut pirang tertata rapi.
+
+[2] char_hero_02_ranger.png
+    - Nama Karakter: Lyra Windrunner
+    - Kelas / Ras   : Ranger / High-Elf
+    - Deskripsi Visual: Wanita peri berambut perak terurai dengan tudung jubah hijau daun zamrud, memanggul tas anak panah kayu berbulu elang di bahu, mata hijau zamrud tajam dengan ornamen daun emas di dahi.
+
+[3] char_hero_03_wizard.png
+    - Nama Karakter: Grand Magus Ignis
+    - Kelas / Ras   : Mage (Wizard) / Human
+    - Deskripsi Visual: Penyihir tua bijaksana dengan janggut putih panjang menyapu dada, mengenakan jubah beludru biru bintang berbordir emas, mata berpendar cahaya kosmik azure, memegang tongkat kristal.
+
+[4] char_hero_04_dwarf.png
+    - Nama Karakter: Brom Ironbreaker
+    - Kelas / Ras   : Barbarian / Mountain Dwarf
+    - Deskripsi Visual: Pendekar kurcaci kekar dengan janggut tembaga tebal dikepang tiga berhias cincin perunggu, pundak dilindungi kulit beruang bertaji besi, tato perang merah di dahi, tatapan garang membara.
+
+[5] char_hero_05_rogue.png
+    - Nama Karakter: Vesper Shadowcloak
+    - Kelas / Ras   : Rogue / Human
+    - Deskripsi Visual: Pembunuh bayangan wanita gesit mengenakan masker kulit hitam pekat, mata ungu violet menyala misterius, memegang sepasang belati tipis berlapis racun biru berpendar lembut.
+
+[6] char_hero_06_cleric.png
+    - Nama Karakter: Sister Althea
+    - Kelas / Ras   : Cleric (Battle Priest) / Human
+    - Deskripsi Visual: Pendeta perang wanita anggun dengan jubah putih suci bertepi keemasan, pelindung dada baja ringan bersinar hangat, menggenggam liontin matahari suci yang memancarkan aura restorasi.
+
+[7] char_hero_07_warlock.png
+    - Nama Karakter: Malakor the Bound
+    - Kelas / Ras   : Warlock / Tiefling
+    - Deskripsi Visual: Pria tiefling berkulit merah marun eksotis, sepasang tanduk obsidian melengkung gagah ke belakang kepala, kabut sihir ungu eldritch berputar-putar halus di ujung jari-jarinya.
+
+[8] char_hero_08_dragonborn.png
+    - Nama Karakter: Kaelen Vermithrax
+    - Kelas / Ras   : Fighter / Red Dragonborn
+    - Deskripsi Visual: Pendekar naga merah gagah dengan sisik merah delima keras anti-senjata, mata reptil oranye menyala seperti lahar cair, zirah plat hitam bertaji naga, asap tipis mengepul dari hidung.
+
+[9] char_hero_09_bard.png
+    - Nama Karakter: Dorian Melodias
+    - Kelas / Ras   : Bard / Half-Elf
+    - Deskripsi Visual: Musisi pengembara necis dengan baret beludru berhias bulu merak ungu, mantel sutra biru bersulam benang perak, senyum karismatik percaya diri sambil memangku mandolin berukir kayu mahoni.
+
+
+--------------------------------------------------------------------------------
+3. PACK 2: 9 KEY NPCS, SEKUTU & BOS ANTAGONIS
+--------------------------------------------------------------------------------
+Format: PNG Transparan | Lokasi: `frontend/public/assets/portraits/`
+Digunakan oleh: `VisualNovelStage.jsx` (Bust Sprite Tokoh Pembicara)
+
+[1] char_npc_01_barkeep.png
+    - Nama: Eldrin sang Pemilik Kedai
+    - Peran: Pemilik Whispering Tavern (Pemberi Quest Awal)
+    - Deskripsi Visual: Pria paruh baya bertubuh gempal kekar, kumis cokelat lebat melintang, celemek kulit cokelat tua dengan lengan kemeja tergulung, memegang mug kayu bir berbusa lezat.
+
+[2] char_npc_02_informant.png
+    - Nama: Informan Bayangan Tanpa Wajah
+    - Peran: Sekutu Misterius / Informan Guild Pencuri
+    - Deskripsi Visual: Sosok bertudung kain kelabu lusuh dalam gelap, wajah tersembunyi bayangan pekat kecuali sepasang mata bercahaya redup, jari berbalut sarung tangan kotor memamerkan koin perak kuno.
+
+[3] char_npc_03_vampire.png
+    - Nama: Lord Cassian van Bloodmere
+    - Peran: Bos Vampir Bangsawan Kuno
+    - Deskripsi Visual: Bangsawan vampir berwajah pucat bagai pualam, rambut hitam klimis tersisir rapi, jubah beludru merah darah berkerah tinggi ala gotik, senyum dingin memperlihatkan taring runcing aristokrat.
+
+[4] char_npc_04_necromancer.png
+    - Nama: Malakor si Pemanggil Mayat
+    - Peran: Bos Antagonis Makam Merah (Crypt of Crimson)
+    - Deskripsi Visual: Penyihir hitam kurus berkulit keriput abu-abu, jubah robek bersulam simbol tulang tengkorak, menggenggam api kutukan hijau zamrud menyala tanpa asap di telapak tangan kirinya.
+
+[5] char_npc_05_dryad.png
+    - Nama: Sylvanis Penjaga Rimba Purba
+    - Peran: Penjaga Hutan Terkutuk (Sekutu Supranatural)
+    - Deskripsi Visual: Peri pohon hutan magis dengan rambut dari jalinan dedaunan hijau lumut dan ranting bunga mekar, kulit bertekstur kulit kayu mulus, butiran serbuk sari emas melayang di sekeliling kepalanya.
+
+[6] char_npc_06_goblin.png
+    - Nama: Gazlowe si Pedagang Kikir
+    - Peran: Pedagang Pasar Gelap / Tukang Gadai Bawah Tanah
+    - Deskripsi Visual: Goblin hijau cerdik berkacamata bulat lensa tebal di ujung hidung mancung runcingnya, mengenakan rompi kulit berhias kantong koin bergemerincing, seringai lebar memamerkan gigi emas.
+
+[7] char_npc_07_guard.png
+    - Nama: Kapten Roderic sang Penjaga Gerbang
+    - Peran: Komandan Prajurit Kerajaan Oakhaven
+    - Deskripsi Visual: Prajurit veteran berwajah tegas dengan bekas luka tebasan pedang di pipi kiri, helm baja berpelindung hidung, jubah merah kusam, sorot mata disiplin waspada tak kenal kompromi.
+
+[8] char_npc_08_cultist.png
+    - Nama: Pendeta Abyssal Dagon
+    - Peran: Pemimpin Kultus Lautan Dalam (Sunken Citadel)
+    - Deskripsi Visual: Pria fanatik berbalut jubah basah bertabur rumput laut kering dan teritip kerang, jari-jari berselaput amfibi, tato bercahaya biru laut bioluminescent terukir di dahi dan lehernya.
+
+[9] char_npc_09_lich.png
+    - Nama: Kaisar Tengkorak Azgathoth
+    - Peran: Bos Terakhir / Penguasa Alam Kematian
+    - Deskripsi Visual: Sosok kerangka hitam kuno mengenakan mahkota emas retak bertahtakan permata delima darah, rongga mata menyala bola api ungu kosmik pekat, aura hawa dingin beku memancar dari jubahnya.
+
+
+--------------------------------------------------------------------------------
+4. PACK 3: 29 SCENIC ADVENTURE BACKGROUNDS (DUNIA AETHER)
+--------------------------------------------------------------------------------
+Format: JPG / WebP (1920x1080) | Lokasi: `frontend/public/assets/backgrounds/`
+Digunakan oleh: `geminiService.js` (backgroundId resmi) & `VisualNovelStage.jsx`
+
+[1]  bg_01_tavern.png              : Interior kedai kayu hangat berselimut api perapian batu bata dan lampu minyak gantung.
+[2]  bg_02_cursed_woods.png        : Hutan belantara gelap dengan pohon berkelok angker, kabut ungu merayap di tanah basah.
+[3]  bg_03_sunken_citadel.png      : Istana kuno tenggelam di bawah samudra biru tua bertabur pilar gurita raksasa bercahaya.
+[4]  bg_04_crimson_crypt.png       : Koridor makam bawah tanah berhias dinding tengkorak dan lilin ritual merah darah menyala.
+[5]  bg_05_vampire_castle.png      : Ruang tahta kastil gotik dengan jendela kaca patri raksasa diterangi sinar rembulan perak.
+[6]  bg_06_alchemy_lab.png         : Laboratorium alkemis tua penuh tabung kimia berasap hijau, rak botol kaca, dan pipa tembaga.
+[7]  bg_07_smuggler_cave.png       : Gua laut tempat penyelundup dengan dermaga papan kayu rapuh, perahu tua, dan tetesan stalaktit.
+[8]  bg_08_arcane_library.png      : Perpustakaan sihir megah bertingkat melingkar tinggi dengan buku-buku dan perkamen melayang.
+[9]  bg_09_dragon_crater.png       : Kawah puncak gunung berapi dikelilingi sungai lahar oranye membara di bawah badai petir.
+[10] bg_10_ancient_ruins.png       : Reruntuhan kuil marmer runtuh tertutup lumut hijau purba di bawah terik matahari terbenam.
+[11] bg_11_throne_room.png         : Aula tahta agung istana kerajaan dengan pilar marmer putih tinggi dan karpet merah bangsawan.
+[12] bg_12_underdark_cavern.png    : Gua raksasa bawah tanah terdalam bertabur jamur raksasa berpendar biru neon dan stalagmit kristal.
+[13] bg_13_lava_forge.png          : Bengkel pandai besi dwarven raksasa bertenaga aliran lava cair dan landasan palu tembaga raksasa.
+[14] bg_14_frost_peak.png          : Puncak gunung bersalju abadi yang dingin menusuk tulang dengan badai es berputar di jurang beku.
+[15] bg_15_haunted_graveyard.png   : Pemakaman kuno berkabut tebal dengan nisan miring berlumut dan bayangan arwah gentayangan.
+[16] bg_16_swamp_huts.png          : Rawa berlumpur hitam pekat dengan pondok panggung kayu lapuk tempat tinggal penyihir rawa.
+[17] bg_17_desert_temple.png       : Piramida kuil pasir gurun terik dengan patung dewa berkepala serigala terukir di dinding batu pasir.
+[18] bg_18_celestial_sanctum.png   : Tempat suci para malaikat di atas awan keemasan bertabur cahaya ilahi dan lingkaran aurora surga.
+[19] bg_19_shadowfell_citadel.png  : Benteng bayangan monokromatik abu-abu kelam di mana semua warna sirna dan langit selalu mendung hitam.
+[20] bg_20_pirate_ship_deck.png    : Geladak kapal perompak kayu terombang-ambing di tengah ombak samudra lepas saat badai topan mengamuk.
+[21] bg_21_goblin_war_camp.png     : Perkemahan perang suku goblin berkawat duri dengan tenda kulit binatang, api unggun kotor, dan tiang tengkorak.
+[22] bg_22_crystal_mines.png       : Tambang kristal bawah tanah dengan urat kristal kuarsa ungu dan biru safir memantulkan bias cahaya obor.
+[23] bg_23_dungeon_torture_chamber.png: Penjara bawah tanah berbau karat dengan kurungan besi berkarat, rantai gantung, dan alat siksa abad pertengahan.
+[24] bg_24_feywild_glade.png       : Padang rumput negeri peri ajaib berhias bunga mekar bercahaya pelangi dan kupu-kupu bersayap kristal.
+[25] bg_25_abandoned_cathedral.png : Katedral raksasa terbengkalai dengan atap ambruk, sinar matahari menembus debu sunyi di antara bangku jemaat patah.
+[26] bg_26_clockwork_vault.png     : Brankas rahasia mekanik kuno penuh roda gigi perunggu berputar, piston uap, dan pendulum jam raksasa.
+[27] bg_27_dragon_hoard.png        : Gua sarang naga dipenuhi gunungan koin emas setinggi bukit, peti permata tumpah ruah, dan mahkota kaisar purba.
+[28] bg_28_city_market_alley.png   : Gang sempit pasar kota abad pertengahan berlantai batu bulat basah, kanopi kain pedagang warna-warni, dan lentera malam.
+[29] bg_29_abyssal_rift.png        : Retakan kosmik jurang kehampaan antardimensi dengan sulur kegelapan dan pusaran bintang hancur.
+
+
+--------------------------------------------------------------------------------
+5. PACK 4: 18 INVENTORY ITEMS, WEAPONS & ANCIENT ARTIFACTS
+--------------------------------------------------------------------------------
+Format: PNG Transparan (512x512) | Lokasi: `frontend/public/assets/items/`
+Digunakan oleh: 6-Slot Grid di `CharacterHUD.jsx`, Drop Loot di `storyController.js`
+
+[1]  item_01_potion_heal.png       : Botol kaca bulat berisi ramuan merah berkilauan pulihkan 25 HP disumbat kayu gabus.
+[2]  item_02_potion_mana.png       : Tabung kristal heksagonal berisi ramuan biru langit bercahaya bintang pulihkan 20 Mana.
+[3]  item_03_grimoire.png          : Buku mantera kulit tua bersudut kuningan tebal dengan lambang mata arkanum di sampulnya (+15 Max Mana).
+[4]  item_04_silver_dagger.png     : Belati pembunuh dari perak murni tempaan elf dengan mata pisau berpendar runic biru (Bonus Serangan Cepat).
+[5]  item_05_cursed_amulet.png     : Liontin delima darah diikat cakar gargoyle besi hitam mengeluarkan asap merah tipis (Penangkal Kutukan).
+[6]  item_06_skeleton_key.png      : Kunci kerangka besi tempa kuno berukir tengkorak di pegangannya (Pembuka Pintu Rahasia Bawah Tanah).
+[7]  item_07_golden_compass.png    : Kompas navigasi emas berukir simbol rasi bintang dengan jarum pirus mengambang (+2 WIS Eksplorasi).
+[8]  item_08_dragon_shield.png     : Perisai ksatria kokoh dilapisi sisik naga merah tahan api dengan bingkai baja hitam (+2 AC Pertahanan).
+[9]  item_09_gold_pouch.png        : Kantong kulit suede cokelat diikat tali emas penuh koin logam berkilau emas murni.
+[10] item_10_elixir_vitality.png   : Ramuan herbal emas kental dalam botol daun zamrud (Pulihkan Seluruh Status Negatif).
+[11] item_11_flame_sword.png       : Pedang panjang berbilah api abadi menyala tanpa membakar sarungnya (+5 Serangan Api).
+[12] item_12_teleport_scroll.png   : Gulungan perkamen sihir dengan segel lilin ungu retak memancarkan pusaran ruang (Escape Item).
+[13] item_13_shadow_ring.png       : Cincin perak bertatahkan batu onyx hitam pekat yang membuat pemakainya samar dalam gelap (+3 Stealth).
+[14] item_14_holy_water.png        : Labu perak suci berisi air mata air suci gereja matahari (Membakar Makhluk Undead 30 Damage).
+[15] item_15_lockpick_set.png      : Gulungan dompet kain berisi kait dan kawat perunggu pemetik gembok presisi tinggi.
+[16] item_16_crown_kings.png       : Mahkota emas raja kuno bertahtakan safir laut dalam pelindung pikiran dari sihir hipnotis.
+[17] item_17_dragon_horn.png       : Terompet perang dari tanduk naga hitam untuk memanggil arwah sekutu dalam pertempuran.
+[18] item_18_meat_ration.png       : Paket ransum daging asap kering berbungkus daun pisang untuk memulihkan stamina saat berkemah (+10 HP).
+
+
+--------------------------------------------------------------------------------
+6. PACK 5: 12 SKILL, SPELL & D20 ACTION ICONS
+--------------------------------------------------------------------------------
+Format: PNG Transparan Medallion Lingkaran (256x256) | Lokasi: `frontend/public/assets/skills/`
+Digunakan oleh: Tombol Dice Roll & Card Choice di `VisualNovelStage.jsx`
+
+[1]  skill_01_fireball.png         : Ledakan bola api oranye membara menyemburkan lidah api dan percikan arang panas.
+[2]  skill_02_heal.png             : Sepasang telapak tangan bercahaya putih keemasan mengalirkan energi restorasi suci hangat.
+[3]  skill_03_stealth.png          : Siluet sosok bertudung hitam memudar menjadi asap ungu gelap di kegelapan malam.
+[4]  skill_04_shield.png           : Perisai baja ksatria menangkis benturan pedang dengan percikan kembang api keemasan.
+[5]  skill_05_perception.png       : Mata mistis pirus bercahaya membuka tabir rahasia dengan lingkaran gelombang arkanum.
+[6]  skill_06_strike.png           : Tebasan silang sepasang pedang baja membelah udara dengan kilatan petir kritikal tajam.
+[7]  skill_07_portal.png           : Gerbang portal ruang berputar memancarkan pusaran galaksi ungu antarbintang.
+[8]  skill_08_lockpick.png         : Kawat peniti kuningan sedang mengutak-atik lubang kunci mekanik kuno berbongkah gerigi.
+[9]  skill_09_intimidate.png       : Kepala singa emas mengaum gagah memancarkan gelombang kejut wibawa yang melumpuhkan lawan.
+[10] skill_10_lightning.png        : Sambaran kilat petir biru azure meliuk bercabang menghantam bumi dari langit mendung.
+[11] skill_11_charm.png            : Kupu-kupu merah muda berdebu sihir asmara membujuk pikiran lawan menjadi ramah.
+[12] skill_12_inspect.png          : Kaca pembesar kuningan berbingkai ukiran runik mengungkap jejak kaki tersembunyi di tanah.
+
+
+--------------------------------------------------------------------------------
+7. PACK 6: 9 MONSTER & COMBAT SPRITES (MINI-VTT ENCOUNTER)
+--------------------------------------------------------------------------------
+Format: PNG Transparan Penuh Badan (512x512) | Lokasi: `frontend/public/assets/monsters/`
+Digunakan oleh: Tactical Encounter di `VisualNovelStage.jsx` & Mini-VTT Arena
+
+[1] monster_01_skeleton.png        : Prajurit kerangka undead berbaju zirah rantai berkarat mengacungkan scimitar gompal dan tameng retak.
+[2] monster_02_spider.png          : Laba-laba raksasa gua berkaki delapan berbulu hitam dengan taring berlumur racun hijau asam berbuih.
+[3] monster_03_shadow_wolf.png     : Serigala bayangan buas berbulu kabut hitam berasap dengan sepasang mata biru cyan menyala liar.
+[4] monster_04_mimic.png           : Peti harta karun kayu yang membuka mulutnya menampakkan deretan gigi runcing taring dan lidah ungu menjulur.
+[5] monster_05_gargoyle.png        : Patung iblis batu granit bersayap kelelawar bertengger mencengkeram tebing siap menerkam mangsa.
+[6] monster_06_eldritch.png        : Monster gurita darat bertubuh ungu kenyal dengan tentakel menggelinjang di wajah memegang tongkat obsidian.
+[7] monster_07_hydra.png           : Monster rawa berkepala tiga berbisa dengan sisik reptil hijau lumut mendesis menyemburkan uap asam.
+[8] monster_08_hellhound.png       : Anjing neraka berkulit hitam arang yang diselimuti kobaran api lahar vulkanik merah membara.
+[9] monster_09_drake.png           : Naga kecil liar bersisik zamrud dengan cakar tajam dan sayap lebar bersiap menyemburkan nafas racun.
+
+
+--------------------------------------------------------------------------------
+8. PACK 7: LANDING PAGE CAMPAIGN COVERS & UI CHROME ASSETS
+--------------------------------------------------------------------------------
+Format: JPG (Covers 1200x675) & PNG (UI Badges) | Lokasi: `frontend/public/assets/covers/`
+Digunakan oleh: `LandingPage.jsx`, `CharacterCreationModal.jsx`
+
+[1] cover_tavern.jpg              : Banner lanskap dramatis gerbang kedai kayu berhias lentera hangat di tengah badai malam.
+[2] cover_crypt.jpg               : Banner lanskap makam merah darah berhias patung malaikat maut dan lilin merah menyala.
+[3] cover_citadel.jpg             : Banner lanskap reruntuhan kota bawah samudra berhias reruntuhan kuil marmer bercahaya cyan.
+[4] frame_character_gold.png      : Bingkai potret ornamen emas bergaya fantasi gothic untuk avatar karakter aktif di HUD.
+[5] parchment_paper_bg.jpg        : Tekstur kertas perkamen tua kecokelatan untuk dialog log dan backstory pop-up.
+
+
+--------------------------------------------------------------------------------
+9. PACK 8: THREE.JS 3D D20 TEXTURE MAPS & AUDIO PRESETS
+--------------------------------------------------------------------------------
+Format: PNG Textures | Lokasi: `frontend/public/assets/3d/`
+Digunakan oleh: 3D Dice Roller Engine (Three.js)
+
+[1] d20_diffuse.png               : Peta warna dasar polihedral 20 sisi (merah marun pekat dengan angka 1-20 warna emas timbul).
+[2] d20_normal.png                : Peta normal bump map untuk efek kedalaman ukiran angka dan tepi sudut faset dadu.
+[3] d20_roughness.png             : Peta pantulan kilap marmer resin dadu kasino RPG premium.
+
+
+--------------------------------------------------------------------------------
+10. PROTOKOL OTOMASI SLICING & PIPELINE DEPLOYMENT KE FRONTEND
+--------------------------------------------------------------------------------
+1. Generate Image 3x3 Grid Sheet (misal: `pack_1_heroes.png`) dengan Midjourney/DALL-E/Gemini Imagen.
+2. Letakkan file hasil generate di root direktori proyek.
+3. Jalankan script slicer python otomatis:
+   ```bash
+   python slice_grid.py pack_1_heroes.png frontend/public/assets/portraits/
+   ```
+4. Verifikasi bahwa file telah terpotong rapi dengan format nama standar (`char_hero_01_paladin.png`, dst).
+5. Frontend React akan secara otomatis menampilkan gambar tanpa perlu konfigurasi ulang kode atau restart server!
+================================================================================
