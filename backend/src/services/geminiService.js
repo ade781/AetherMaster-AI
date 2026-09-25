@@ -310,14 +310,46 @@ function getFallbackNextScene(previousNode, actionTaken, checkResult, character,
     { title: 'Pusaran Dimensi Abyssal', loc: 'Retakan Kosmis Jurang', bg: 'bg_29_abyssal_rift', spk: 'Penjaga Portal Void', char: 'char_hero_03_wizard', mood: 'ominous' }
   ];
 
-  const locIdx = Math.min(locations.length - 1, Math.max(0, turnCount % locations.length));
-  const chosenLoc = locations[locIdx];
+  // Spatial Anchoring: Preserve current location & background unless player explicitly travels
+  const travelKeywords = ['pindah', 'keluar', 'masuk', 'portal', 'gerbang', 'lorong', 'jalan', 'menuju', 'tinggalkan', 'pergi', 'telusuri', 'menjelajah'];
+  const isTravel = travelKeywords.some(k => lowerAction.includes(k));
+
+  let chosenLoc = {
+    title: previousNode?.chapterTitle ? `${previousNode.chapterTitle} (Lanjutan)` : 'Eksplorasi Ruangan',
+    loc: prevLoc,
+    bg: previousNode?.backgroundId || 'bg_01_tavern',
+    spk: prevSpk,
+    char: previousNode?.characterId || 'char_npc_01_barkeep',
+    mood: previousNode?.mood || 'mysterious'
+  };
+
+  if (isTravel) {
+    const locIdx = Math.min(locations.length - 1, Math.max(0, turnCount % locations.length));
+    chosenLoc = locations[locIdx];
+  }
 
   let consequence = '';
   let outcomeDialogue = '';
   let hpDelta = 0;
   let manaDelta = 0;
   let goldDelta = 0;
+
+  // D&D 5E Dice Check Integration
+  let dicePrefix = '';
+  if (checkResult) {
+    if (checkResult.isNat20) {
+      dicePrefix = '[D20: NATURAL 20 CRITICAL SUCCESS!] ';
+      goldDelta += 15;
+    } else if (checkResult.isNat1) {
+      dicePrefix = '[D20: NATURAL 1 CRITICAL FAILURE!] ';
+      hpDelta -= 5;
+    } else if (checkResult.isSuccess) {
+      dicePrefix = `[D20: SUKSES (${checkResult.total} vs DC ${checkResult.dc})] `;
+    } else {
+      dicePrefix = `[D20: GAGAL (${checkResult.total} vs DC ${checkResult.dc})] `;
+      hpDelta -= 2;
+    }
+  }
 
   if (lowerAction.includes('sihir') || lowerAction.includes('mantra') || lowerAction.includes('spell') || lowerAction.includes('fireball') || lowerAction.includes('arkana')) {
     manaDelta = -6;
@@ -328,23 +360,23 @@ function getFallbackNextScene(previousNode, actionTaken, checkResult, character,
 
   if (isLethal) {
     hpDelta = -25;
-    consequence = `Dampak fatal: Aksi ceroboh menerjang bahaya maut mengakibatkan luka parah dan kehancuran fisik!`;
+    consequence = `${dicePrefix}Dampak fatal: Aksi ceroboh menerjang bahaya maut mengakibatkan luka parah dan kehancuran fisik!`;
     outcomeDialogue = `Kamu nekat memutuskan untuk: "${actionText}". Tanpa perlindungan memadai, kobaran bahaya mematikan seketika melalap tubuhmu, membakar daging dan meremukkan daya tahan ragamu hingga ke batas maut!`;
   } else if (lowerAction.includes('serang') || lowerAction.includes('tebas') || lowerAction.includes('kekuatan') || lowerAction.includes('hantam') || actionTone === 'bold') {
-    consequence = `Dampak: Aksi fisik berhasil menembus hambatan.`;
+    consequence = `${dicePrefix}Dampak: Aksi fisik berhasil menembus hambatan.`;
     outcomeDialogue = `Kamu memutuskan untuk: "${actionText}". Dengan pengerahan tenaga penuh, langkah agresifmu membuahkan hasil nyata, meremukkan rintangan dan membuka celah di ${chosenLoc.loc}. ${chosenLoc.spk} memperhatikan tekadmu yang tak gentar.`;
-    goldDelta = 10;
+    goldDelta = Math.max(goldDelta, 10);
   } else if (lowerAction.includes('selidiki') || lowerAction.includes('manuskrip') || lowerAction.includes('simbol') || lowerAction.includes('amati') || actionTone === 'curious') {
-    consequence = `Dampak: Pengamatan cermat berhasil mengungkap rahasia tersembunyi.`;
+    consequence = `${dicePrefix}Dampak: Pengamatan cermat berhasil mengungkap rahasia tersembunyi.`;
     outcomeDialogue = `Kamu memfokuskan perhatian untuk: "${actionText}". Matamu yang jeli mendapati petunjuk penting yang terselubung bayang-bayang di ${chosenLoc.loc}. ${chosenLoc.spk} tersenyum tipis mengakui ketajaman firasatmu.`;
-    goldDelta = 15;
+    goldDelta = Math.max(goldDelta, 15);
   } else if (lowerAction.includes('waspada') || lowerAction.includes('sembunyi') || lowerAction.includes('senyap') || lowerAction.includes('mundur') || actionTone === 'cautious') {
-    consequence = `Dampak: Kewaspadaan tinggi berhasil melindungimu dari sergapan.`;
+    consequence = `${dicePrefix}Dampak: Kewaspadaan tinggi berhasil melindungimu dari sergapan.`;
     outcomeDialogue = `Kamu melangkah dengan sangat berhati-hati untuk: "${actionText}". Naluri bertahan hidupmu terbukti tepat, kamu berhasil membaca pergerakan lawan di ${chosenLoc.loc} tanpa terluka.`;
   } else {
-    consequence = `Dampak: Keputusanmu langsung mengubah situasi di sekelilingmu.`;
+    consequence = `${dicePrefix}Dampak: Keputusanmu langsung mengubah situasi di sekelilingmu.`;
     outcomeDialogue = `Kamu segera mengambil keputusan untuk: "${actionText}". Tindakan tegas tersebut seketika memecah ketegangan di ${chosenLoc.loc}, membuat ${chosenLoc.spk} harus menyesuaikan sikapnya terhadap keberadaanmu.`;
-    goldDelta = 5;
+    goldDelta = Math.max(goldDelta, 5);
   }
 
   return {
@@ -375,17 +407,17 @@ function getFallbackNextScene(previousNode, actionTaken, checkResult, character,
     choices: [
       {
         id: `c_${turnCount}_1`,
-        text: `Manfaatkan momentum dari "${actionText.slice(0, 30)}" untuk merangsek lebih jauh ke dalam`,
+        text: `Manfaatkan momentum dari "${actionText.slice(0, 30)}" untuk merangsek lebih jauh`,
         tone: 'bold'
       },
       {
         id: `c_${turnCount}_2`,
-        text: `Gali informasi lebih dalam dari ${chosenLoc.spk} mengenai ancaman yang mengintai`,
+        text: `Gali informasi lebih dalam dari ${chosenLoc.spk} mengenai situasi sekitar`,
         tone: 'curious'
       },
       {
         id: `c_${turnCount}_3`,
-        text: `Siapkan posisi bertahan dan amankan rute evakuasi di sekitar ${chosenLoc.loc}`,
+        text: `Siapkan posisi bertahan dan amankan rute evakuasi di ${chosenLoc.loc}`,
         tone: 'cautious'
       }
     ]
@@ -523,7 +555,7 @@ PENTING: Pada teks 'dialogue', sampaikan terlebih dahulu Latar Belakang Cerita (
     }
   }
 
-  async generateNextScene({ session, character, previousNode, actionTaken, checkResult }) {
+  async generateNextScene({ session, character, previousNode, actionTaken, checkResult, recentHistory }) {
     if (!this.client) {
       return getFallbackNextScene(previousNode, actionTaken, checkResult, character, session?.turnCount || 1);
     }
@@ -535,8 +567,36 @@ PENTING: Pada teks 'dialogue', sampaikan terlebih dahulu Latar Belakang Cerita (
     const prevLocation = previousNode?.location || 'Ruang Petualangan';
     const prevSpeaker = previousNode?.speaker || 'Narator';
     const prevDialogue = previousNode?.dialogueText || '';
+    const prevBgId = previousNode?.backgroundId || 'bg_01_tavern';
     const actionText = actionTaken?.text || 'Melangkah maju dengan waspada';
     const actionTone = actionTaken?.tone || 'cautious';
+
+    // Rolling Context Window from recent story history (last 3-4 nodes)
+    let historyContext = '';
+    if (recentHistory && Array.isArray(recentHistory) && recentHistory.length > 0) {
+      historyContext = recentHistory.map((h, idx) => {
+        const turnLabel = h.turnCount ? `Turn ${h.turnCount}` : `Langkah ${idx + 1}`;
+        return `[${turnLabel} | Lokasi: ${h.location || prevLocation} | Pembicara: ${h.speaker || 'DM'}]: "${cleanText(h.dialogueText || '')}"`;
+      }).join('\n');
+    } else {
+      historyContext = `[Langkah Terakhir | Lokasi: ${prevLocation} | Pembicara: ${prevSpeaker}]: "${cleanText(prevDialogue)}"`;
+    }
+
+    // Explicit D&D 5E Dice Audit Context
+    let diceAuditContext = '';
+    if (checkResult) {
+      const isNat20 = checkResult.isNat20;
+      const isNat1 = checkResult.isNat1;
+      const isSuccess = checkResult.isSuccess;
+      diceAuditContext = `
+[HASIL LEMPARAN DADU D&D 5E UNTUK AKSI INI]:
+- Jenis Cek Atribut: ${checkResult.statType || 'STR'}
+- Angka Dadu D20: ${checkResult.roll}${checkResult.modifier !== undefined ? ` + (Mod ${checkResult.modifier}) = Total ${checkResult.total}` : ''} vs DC ${checkResult.dc}
+- Status Hasil: ${isNat20 ? '⭐ NATURAL 20 - CRITICAL SUCCESS MUTLAK!' : isNat1 ? '💀 NATURAL 1 - CRITICAL FAILURE BLUNDER MUTLAK!' : isSuccess ? '✅ SUKSES' : '❌ GAGAL'}
+- WAJIB DIINTEGRASIKAN KE CERITA:
+  * ${isNat20 ? 'Pemain berhasil dengan cara spektakuler dan mengagumkan! Berikan dampak taktis maksimal dan hadiah tambahan.' : isNat1 ? 'Aksi pemain mengalami kecelakaan fatal, blunder konyol, atau terhambat bencana tak terduga. Berikan dampak negatif logis dan kurangi HP pemain di hpChange (-4 s.d -10).' : isSuccess ? 'Aksi pemain berhasil dengan baik dan mengatasi rintangan.' : 'Aksi pemain terhalang atau gagal menembus pertahanan/kondisi. Narasikan komplikasi situasi yang terjadi.'}
+`;
+    }
 
     const activeCombat = previousNode?.combatEncounter;
     const combatContext = activeCombat ? `
@@ -555,30 +615,34 @@ PENTING: Pada teks 'dialogue', sampaikan terlebih dahulu Latar Belakang Cerita (
       : 'Netral (0)';
 
     const systemPrompt = `Kamu adalah Dungeon Master (DM) legendaris untuk game Visual Novel RPG Tabletop.
-TUGAS UTAMA: Menulis adegan narasi berikutnya yang SEPENUHNYA TANGGAP dan REAKTIF terhadap aksi pemain.
+TUGAS UTAMA: Menulis adegan narasi berikutnya yang SEPENUHNYA TANGGAP dan REAKTIF terhadap aksi pemain serta HASIL AUDIT DADU D&D 5E.
 
-KONTEKS DUNIA SAAT INI:
+KONTEKS DUNIA & RIWAYAT LANGKAH SEBELUMNYA:
+${historyContext}
+
+KONDISI PEMAIN SAAT INI:
+- Karakter: ${character.name} (Kelas: ${character.characterClass}, HP: ${character.hp}/${character.maxHp}, Mana: ${character.mana}/${character.maxMana}, Gold: ${character.gold})
 - Lokasi Terakhir: ${prevLocation}
-- Pembicara / Karakter Terakhir: ${prevSpeaker}
-- Narasi Situasi Sebelumnya: "${prevDialogue}"
-- Karakter Pemain: ${character.name} (Kelas: ${character.characterClass}, HP: ${character.hp}/${character.maxHp}, Mana: ${character.mana}/${character.maxMana})
-- Catatan Petualangan Sebelumnya: ${ledgerFacts}
-- Reputasi Fraksi Pemain: ${repSummary} (NPC setempat bereaksi sesuai skor reputasi ini)
+- Latar Aktif Saat Ini: "${prevBgId}"
+- Memori Dunia: ${ledgerFacts}
+- Reputasi Fraksi: ${repSummary}
 ${combatContext}
+${diceAuditContext}
 
-TINDAKAN YANG DIPILIH PEMAIN:
+TINDAKAN YANG DIAMBIL PEMAIN:
 Aksi: "${actionText}"
 Nada Tindakan: ${actionTone}
 
-ATURAN REAKTIVITAS KONSEKUENSI (SANGAT KRUSIAL):
+ATURAN REAKTIVITAS KONSEKUENSI & KONSISTENSI (SANGAT KRUSIAL):
 1. RESPON PARAGRAF PERTAMA WAJIB LANGSUNG: Kalimat dan paragraf pertama 'dialogue' HARUS SECARA LANGSUNG menceritakan bagaimana karakter mengeksekusi aksi "${actionText}" dan apa dampak instan yang terjadi seketika di lokasi. DILARANG KERAS mengabaikan aksi ini atau melompat ke peristiwa lain tanpa menceritakan hasilnya terlebih dahulu!
-2. KONSEKUENSI NYATA ('consequenceNote'): Tulis ringkasan padat dampak langsung aksi pemain tersebut. (Contoh: "Pintu rahasia berhasil dibuka", "Musuh terkejut oleh serangan tiba-tiba", "Relik tersembunyi berhasil ditemukan"). JANGAN gunakan teks generik seperti "Langkah baru diambil."!
-3. PENGURANGAN MANA SIHIR: Jika aksi pemain menggunakan mantra/sihir (misal Fireball, teleport, hembusan energi), kurangi Mana pemain secara proporsional (-4 s.d -12) di 'manaChange' dalam 'stateUpdates'.
-4. JANGAN PERNAH GUNAKAN EM DASH (—). Gunakan koma, titik dua, atau kurung.
-5. TANPA SISTEM DADU: Evaluasi aksi secara logis. Jika aksinya kreatif dan masuk akal, buat berhasil dan berikan hadiah gold/item bila layak. Jika aksinya berbahaya, berikan pengurangan HP masuk akal (misal: hpChange: -4).
-6. BAHAYA MAUT / TINDAKAN FATAL: Jika aksi pemain adalah tindakan ceroboh atau mematikan (seperti melompat ke kawah lahar, terjun ke jurang tanpa perlindungan, menenggak racun maut, menusuk diri sendiri), wajib berikan pengurangan HP fatal (-15 s.d -30) pada 'hpChange' dalam 'stateUpdates', dan narasikan luka bakar dahsyat atau kepedihan fisik yang dialami karakter.
-7. PILIHAN TINDAKAN BERIKUTNYA ('choices'): Sediakan 3 pilihan aksi baru yang secara runtut dan logis merupakan kelanjutan situasi setelah aksi "${actionText}" tersebut selesai terjadi.
-8. Respon WAJIB berupa objek JSON murni tanpa pembungkus \`\`\`json.
+2. INTEGRASI HASIL DADU D&D 5E: Jika ada blok [HASIL LEMPARAN DADU D&D 5E], narasi keberhasilan atau kegagalan aksi pemain HARUS MENGIKUTI status hasil lemparan dadu tersebut secara jujur dan dramatis.
+3. KONSISTENSI SPASIAL LOKASI (SPATIAL ANCHORING): 'backgroundId' WAJIB TETAP MENGGUNAKAN "${prevBgId}" KECUALI aksi pemain secara eksplisit adalah berpindah ruangan, keluar gedung, menembus portal, atau melakukan perjalanan ke lokasi baru. DILARANG KERAS mengganti latar secara acak jika pemain masih berada di tempat yang sama!
+4. KONSEKUENSI NYATA ('consequenceNote'): Tulis ringkasan padat 1 kalimat tentang dampak langsung aksi pemain tersebut.
+5. PENGURANGAN MANA SIHIR: Jika aksi pemain menggunakan mantra/sihir (misal Fireball, teleport, hembusan energi), kurangi Mana pemain secara proporsional (-4 s.d -12) di 'manaChange' dalam 'stateUpdates'.
+6. BAHAYA MAUT / TINDAKAN FATAL: Jika aksi pemain adalah tindakan ceroboh atau mematikan (seperti melompat ke kawah lahar, terjun ke jurang tanpa perlindungan, menenggak racun maut), wajib berikan pengurangan HP fatal (-15 s.d -30) pada 'hpChange' dalam 'stateUpdates'.
+7. PILIHAN TINDAKAN BERIKUTNYA ('choices'): Sediakan 2 sampai 3 pilihan aksi taktis baru yang RINGKAS, PADAT (maksimal 1 kalimat lugas per opsi), dan logis sebagai opsi tindak lanjut.
+8. JANGAN PERNAH GUNAKAN EM DASH (—). Gunakan koma, titik dua, atau kurung.
+9. Respon WAJIB berupa objek JSON murni tanpa pembungkus \`\`\`json.
 
 SKEMA JSON RESMI:
 {
@@ -588,7 +652,7 @@ SKEMA JSON RESMI:
   "speaker": "string (nama NPC atau Narator)",
   "characterId": "string (char_hero_01 s.d 09 atau char_npc_01 s.d 09)",
   "mood": "tense | mysterious | triumphant | ominous | peaceful",
-  "dialogue": "string narasi mendalam yang langsung menjawab dampak aksi pemain",
+  "dialogue": "string narasi mendalam yang langsung menjawab dampak aksi pemain dan hasil dadu",
   "consequenceNote": "string ringkas dampak aksi pemain",
   "stateUpdates": {
     "hpChange": 0,
@@ -602,23 +666,18 @@ SKEMA JSON RESMI:
   "choices": [
     {
       "id": "c1",
-      "text": "string opsi aksi lanjutan",
+      "text": "string opsi aksi lanjutan (singkat dan padat)",
       "tone": "bold | cautious | curious | shrewd"
     },
     {
       "id": "c2",
-      "text": "string opsi aksi lanjutan",
-      "tone": "bold | cautious | curious | shrewd"
-    },
-    {
-      "id": "c3",
-      "text": "string opsi aksi lanjutan",
+      "text": "string opsi aksi lanjutan (singkat dan padat)",
       "tone": "bold | cautious | curious | shrewd"
     }
   ]
 }`;
 
-    const prompt = `Lanjutkan petualangan sekarang! Aksi pemain yang baru saja dilakukan: "${actionText}". Ceritakan dampak langsungnya pada situasi!`;
+    const prompt = `Lanjutkan petualangan sekarang! Aksi pemain yang baru saja dilakukan: "${actionText}". Ceritakan dampak langsungnya secara reaktif sesuai hasil dadu!`;
 
     try {
       return parseSceneJson(await this.callWithFallback(prompt, systemPrompt));
@@ -626,6 +685,63 @@ SKEMA JSON RESMI:
       console.warn('[GeminiService] Error calling Gemini API for next scene, using smart contextual fallback:', err.message);
       return getFallbackNextScene(previousNode, actionTaken, checkResult, character, session?.turnCount || 1);
     }
+  }
+
+  // Cinematic Combat Narration Engine (Pilar 5)
+  async generateCombatNarration({ character, enemy, action, rollResult, damageDealt, isHit, isCrit, isFumble, isDefeated, isPlayerDefeated }) {
+    const charName = character?.name || 'Pahlawan';
+    const enemyName = enemy?.name || 'Musuh';
+
+    const defaultDescriptions = {
+      attack_crit: `Dengan presisi mematikan (Natural 20!), ${charName} menemukan celah pertahanan ${enemyName} dan menghunjamkan tebasan telak sedalam ${damageDealt} damage!`,
+      attack_hit: `${charName} mengayunkan senjata dengan sigap, menyayat pertahanan ${enemyName} dan menorehkan ${damageDealt} damage fisik.`,
+      attack_miss: `Ayunan senjata ${charName} meleset tipis ketika ${enemyName} melompat mundur menepis serangan.`,
+      attack_fumble: `Nahas! Ayunan ${charName} tersangkut di puing reruntuhan (Natural 1), membuka celah berbahaya bagi serangan balasan.`,
+      spell_crit: `Ledakan magis dahsyat (Critical!) membumbung tinggi, gelombang energi meremukkan pertahanan ${enemyName} sebesar ${damageDealt} damage!`,
+      spell_hit: `Kilatan energi arkanum melesat tepat sasaran, membakar pertahanan ${enemyName} sebesar ${damageDealt} damage sihir.`,
+      spell_miss: `Mantra sihir berpendar liar di udara namun ${enemyName} berhasil berguling menghindar ke balik pilar.`,
+      victory: `Tubuh ${enemyName} terhuyung hebat lalu ambruk ke lantai batu tanpa daya! Kemenangan mutlak bagi ${charName}!`,
+      defeat: `${charName} roboh tak berdaya menahan hantaman maut ${enemyName}. Kegelapan menyelimuti medan tempur...`
+    };
+
+    if (isPlayerDefeated) return defaultDescriptions.defeat;
+    if (isDefeated) return defaultDescriptions.victory;
+
+    if (!this.client) {
+      if (action === 'CAST_SPELL') {
+        return isCrit ? defaultDescriptions.spell_crit : isHit ? defaultDescriptions.spell_hit : defaultDescriptions.spell_miss;
+      }
+      return isCrit ? defaultDescriptions.attack_crit : isFumble ? defaultDescriptions.attack_fumble : isHit ? defaultDescriptions.attack_hit : defaultDescriptions.attack_miss;
+    }
+
+    try {
+      const prompt = `Tulis narasi sinematik 1 kalimat dalam Bahasa Indonesia untuk duel D&D:
+Pemain: ${charName} (${character?.characterClass || 'Petualang'})
+Musuh: ${enemyName}
+Aksi: ${action}
+Hasil: ${isCrit ? 'CRITICAL HIT (Nat 20)' : isFumble ? 'CRITICAL MISS (Nat 1)' : isHit ? `KENA (${damageDealt} dmg)` : 'MELESET'}
+Status: ${isDefeated ? 'Musuh tewas' : 'Masih bertarung'}
+Instruksi: Tulis HANYA 1 kalimat narasi deskriptif, atmosferik fantasi gelap, tanpa tanda kutip atau awalan.`;
+
+      const response = await Promise.race([
+        this.client.models.generateContent({
+          model: this.modelName,
+          contents: [{ role: 'user', parts: [{ text: prompt }] }]
+        }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout combat narration')), 3000))
+      ]);
+
+      if (response && response.text) {
+        return cleanText(response.text.trim());
+      }
+    } catch (e) {
+      // Graceful fallback
+    }
+
+    if (action === 'CAST_SPELL') {
+      return isCrit ? defaultDescriptions.spell_crit : isHit ? defaultDescriptions.spell_hit : defaultDescriptions.spell_miss;
+    }
+    return isCrit ? defaultDescriptions.attack_crit : isFumble ? defaultDescriptions.attack_fumble : isHit ? defaultDescriptions.attack_hit : defaultDescriptions.attack_miss;
   }
 }
 

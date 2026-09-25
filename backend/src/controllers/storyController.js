@@ -5,13 +5,40 @@ const { getEffectiveStats } = require('../utils/statEngine');
 
 function resolveChoice(currentNode, choiceId, customText, statType, dc, tone) {
   const choiceList = currentNode?.choices || [];
-  return choiceList.find(c => c.id === choiceId) || {
+  const matched = choiceList.find(c => c.id === choiceId);
+  if (matched) return matched;
+
+  const text = customText || 'Melangkah maju dengan waspada';
+  const detected = diceEngine.detectActionStatAndDC(text);
+
+  return {
     id: choiceId || 'custom',
-    text: customText || 'Melangkah maju dengan waspada',
-    statType: statType || 'STR',
-    dc: typeof dc === 'number' ? dc : 12,
+    text,
+    statType: statType || detected.statType,
+    dc: typeof dc === 'number' ? dc : detected.dc,
     tone: tone || 'kreatif'
   };
+}
+
+async function getRecentStoryHistory(sessionId, currentSceneId, limit = 4) {
+  try {
+    const nodes = await StoryNode.findAll({
+      where: { sessionId },
+      attributes: ['id', 'parentNodeId', 'chapterTitle', 'location', 'speaker', 'characterId', 'mood', 'dialogueText', 'createdAt'],
+      order: [['createdAt', 'ASC']]
+    });
+    const nodeMap = new Map(nodes.map(n => [n.id, n]));
+    const chain = [];
+    let curr = nodeMap.get(currentSceneId);
+    while (curr && chain.length < limit) {
+      chain.unshift(curr);
+      curr = curr.parentNodeId ? nodeMap.get(curr.parentNodeId) : null;
+    }
+    return chain;
+  } catch (err) {
+    console.warn('[getRecentStoryHistory] Error building history chain:', err.message);
+    return [];
+  }
 }
 
 async function advanceStoryState({ session, character, currentNode, chosenChoice, nextScene }) {
@@ -336,13 +363,17 @@ exports.submitAction = async (req, res) => {
       disadvantage: Boolean(disadvantage)
     });
 
-    // Generate next scene with check result passed in
+    // Fetch recent story history for rolling context window (last 4 steps)
+    const recentHistory = await getRecentStoryHistory(session.id, currentNode.id, 4);
+
+    // Generate next scene with check result and rolling context passed in
     const nextScene = await geminiService.generateNextScene({
       session,
       character,
       previousNode: currentNode,
       actionTaken: chosenChoice,
-      checkResult
+      checkResult,
+      recentHistory
     });
 
     const newNode = await advanceStoryState({
@@ -513,8 +544,20 @@ exports.combatAction = async (req, res) => {
       if (attackRes.isHit) {
         combatState.enemy.hp = Math.max(0, combatState.enemy.hp - attackRes.damageDealt);
       }
-      combatState.combatLog.push(attackRes.log);
-      actionLog = attackRes.log;
+      const narration = await geminiService.generateCombatNarration({
+        character,
+        enemy: combatState.enemy,
+        action: 'ATTACK',
+        rollResult: attackRes.attackRoll,
+        damageDealt: attackRes.damageDealt,
+        isHit: attackRes.isHit,
+        isCrit: attackRes.isCrit,
+        isFumble: attackRes.isFumble,
+        isDefeated: combatState.enemy.hp <= 0,
+        isPlayerDefeated: false
+      });
+      actionLog = `${narration} [${attackRes.log}]`;
+      combatState.combatLog.push(actionLog);
 
     } else if (upperAction === 'CAST_SPELL') {
       if (character.mana < 5) {
@@ -534,8 +577,20 @@ exports.combatAction = async (req, res) => {
       if (spellRes.isHit) {
         combatState.enemy.hp = Math.max(0, combatState.enemy.hp - spellRes.damageDealt);
       }
-      combatState.combatLog.push(spellRes.log);
-      actionLog = spellRes.log;
+      const narration = await geminiService.generateCombatNarration({
+        character,
+        enemy: combatState.enemy,
+        action: 'CAST_SPELL',
+        rollResult: spellRes.attackRoll,
+        damageDealt: spellRes.damageDealt,
+        isHit: spellRes.isHit,
+        isCrit: spellRes.isCrit,
+        isFumble: spellRes.isFumble,
+        isDefeated: combatState.enemy.hp <= 0,
+        isPlayerDefeated: false
+      });
+      actionLog = `${narration} [${spellRes.log}]`;
+      combatState.combatLog.push(actionLog);
 
     } else if (upperAction === 'USE_ITEM') {
       const inv = [...(character.inventory || [])];
@@ -672,12 +727,15 @@ exports.actionStream = async (req, res) => {
 
     res.write(`data: ${JSON.stringify({ type: 'check', checkResult })}\n\n`);
 
+    const recentHistory = await getRecentStoryHistory(session.id, currentNode.id, 4);
+
     const nextScene = await geminiService.generateNextScene({
       session,
       character,
       previousNode: currentNode,
       actionTaken: chosenChoice,
-      checkResult
+      checkResult,
+      recentHistory
     });
 
     // Stream the dialogue text words with small pacing

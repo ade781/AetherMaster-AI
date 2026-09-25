@@ -97,9 +97,59 @@ function performCombatAttack({
   };
 }
 
+function detectActionStatAndDC(actionText = '') {
+  const text = (actionText || '').toLowerCase();
+
+  const patterns = [
+    {
+      stat: 'DEX',
+      keywords: ['senyap', 'menyelinap', 'lari', 'lompat', 'hindar', 'panah', 'cungkil', 'refleks', 'copet', 'tangkas', 'sembunyi', 'merunduk', 'panjat', 'licin', 'kunci'],
+      baseDc: 12
+    },
+    {
+      stat: 'INT',
+      keywords: ['selidiki', 'manuskrip', 'telaah', 'mantra', 'rumus', 'analisa', 'ingat', 'simbol', 'logika', 'sejarah', 'periksa', 'buku', 'baca', 'bahasa', 'arsip', 'paham'],
+      baseDc: 12
+    },
+    {
+      stat: 'WIS',
+      keywords: ['amati', 'firasat', 'waspada', 'dengar', 'intip', 'cium', 'curiga', 'perhatikan', 'lacak', 'tenang', 'hewan', 'naluri', 'jejak', 'merasakan', 'sadari'],
+      baseDc: 11
+    },
+    {
+      stat: 'CHA',
+      keywords: ['bujuk', 'rayu', 'bohong', 'tipu', 'ancam', 'negosiasi', 'intimidasi', 'bicara', 'sapa', 'menyamar', 'diplomasi', 'debat', 'suap', 'pimpin', 'pesona', 'meyakinkan'],
+      baseDc: 12
+    },
+    {
+      stat: 'CON',
+      keywords: ['tahan', 'racun', 'bertahan', 'napas', 'tegar', 'menahan', 'stamina', 'beku', 'panas', 'daya tahan'],
+      baseDc: 13
+    },
+    {
+      stat: 'STR',
+      keywords: ['serang', 'tebas', 'pukul', 'dobrak', 'angkat', 'dorong', 'hancurkan', 'hantam', 'paksa', 'tusuk', 'tendang', 'hancur', 'pedang', 'kapak', 'remuk'],
+      baseDc: 12
+    }
+  ];
+
+  for (const p of patterns) {
+    if (p.keywords.some(k => text.includes(k))) {
+      let dc = p.baseDc;
+      if (text.includes('rahasia') || text.includes('mustahil') || text.includes('kuno') || text.includes('terlarang')) {
+        dc += 2;
+      }
+      return { statType: p.stat, dc };
+    }
+  }
+
+  return { statType: 'STR', dc: 11 };
+}
+
 module.exports = {
   rollDice,
   calculateModifier,
   performCheck,
-  performCombatAttack
+  performCombatAttack,
+  detectActionStatAndDC
 };
