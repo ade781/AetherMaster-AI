@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { GameProvider, useGameStore } from './store/GameContext';
 import CharacterHUD from './components/CharacterHUD';
 import VisualNovelStage from './components/VisualNovelStage';
 import CharacterCreationModal from './components/CharacterCreationModal';
@@ -7,198 +8,59 @@ import BacklogModal from './components/BacklogModal';
 import SaveLoadModal from './components/SaveLoadModal';
 import GameOverModal from './components/GameOverModal';
 import LandingPage from './components/LandingPage';
-import audio from './services/audioService';
-import { Shield, Sparkles, BookOpen, Skull, Play, RefreshCw, Compass } from 'lucide-react';
+import ThreeDiceRoller from './components/ThreeDiceRoller';
 
-const API_BASE = 'http://127.0.0.1:5000/api/story';
+function MainGame() {
+  const {
+    campaigns,
+    selectedCampaign,
+    session,
+    setSession,
+    character,
+    setCharacter,
+    currentNode,
+    setCurrentNode,
+    combatState,
+    isCharCreationOpen,
+    setIsCharCreationOpen,
+    isStoryTreeOpen,
+    setIsStoryTreeOpen,
+    isBacklogOpen,
+    setIsBacklogOpen,
+    isSaveLoadOpen,
+    setIsSaveLoadOpen,
+    isInventoryOpen,
+    setIsInventoryOpen,
+    diceModal,
+    isLoading,
+    initLoading,
+    toast,
+    showToast,
+    handleSelectCampaign,
+    handleStartGame,
+    handleChooseAction,
+    handleUseItem,
+    handleRewind,
+    handleLoadSession
+  } = useGameStore();
 
-export default function App() {
-  const [campaigns, setCampaigns] = useState([]);
-  const [selectedCampaign, setSelectedCampaign] = useState(null);
-  const [session, setSession] = useState(null);
-  const [character, setCharacter] = useState(null);
-  const [currentNode, setCurrentNode] = useState(null);
-
-  // Modals & Overlays
-  const [isCharCreationOpen, setIsCharCreationOpen] = useState(false);
-  const [isStoryTreeOpen, setIsStoryTreeOpen] = useState(false);
-  const [isBacklogOpen, setIsBacklogOpen] = useState(false);
-  const [isSaveLoadOpen, setIsSaveLoadOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [initLoading, setInitLoading] = useState(true);
-  const [toast, setToast] = useState(null);
-
-  const showToast = (message, type = 'error') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3500);
-  };
-
-  // Fetch campaigns on mount
-  useEffect(() => {
-    fetch(`${API_BASE}/campaigns`)
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          setCampaigns(data.data || []);
-        }
-      })
-      .catch(err => console.error('Gagal mengambil kampanye:', err))
-      .finally(() => setInitLoading(false));
-  }, []);
-
-  // Handler: Start campaign & character creation
-  const handleSelectCampaign = (camp) => {
-    audio.playSelect();
-    setSelectedCampaign(camp);
-    setIsCharCreationOpen(true);
-  };
-
-  const handleStartGame = async (characterData) => {
-    setIsLoading(true);
-    try {
-      const res = await fetch(`${API_BASE}/start`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          campaignId: selectedCampaign.id,
-          characterData
-        })
-      });
-      const data = await res.json();
-      if (data.success) {
-        setSession(data.data.session);
-        setCharacter(data.data.character);
-        setCurrentNode(data.data.currentNode);
-        setIsCharCreationOpen(false);
-      } else {
-        showToast(data.error || 'Gagal memulai petualangan.', 'error');
-      }
-    } catch (err) {
-      showToast('Koneksi ke backend gagal.', 'error');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Handler: Choice action chosen in Visual Novel Stage
-  const handleChooseAction = async (choice) => {
-    if (!session || isLoading) return;
-    setIsLoading(true);
-
-    try {
-      const res = await fetch(`${API_BASE}/action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId: session.id,
-          choiceId: choice.id,
-          statType: choice.statType,
-          dc: choice.dc,
-          customText: choice.customText
-        })
-      });
-
-      const data = await res.json();
-      if (data.success) {
-        const nextNode = data.data.currentNode;
-        const nextChar = data.data.character;
-        const nextSess = data.data.session;
-
-        setSession(nextSess);
-        setCharacter(nextChar);
-        setCurrentNode(nextNode);
-      } else {
-        showToast(data.error || 'Gagal mengambil tindakan.', 'error');
-      }
-    } catch (err) {
-      showToast('Terjadi kesalahan komunikasi dengan server.', 'error');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Handler: Inventory use item with persistent backend synchronization
-  const handleUseItem = async (item) => {
-    if (!character || !session) return;
-    
-    // Smart Item Check
-    if (item.category !== 'Obat' && item.category !== 'Potion' && !item.id.includes('potion')) {
-      showToast(`${item.name} tidak bisa dikonsumsi langsung. Gunakan melalui dialog/pilihan!`, 'error');
-      audio.playClick();
-      return;
-    }
-
-    audio.playSelect();
-    try {
-      const res = await fetch(`${API_BASE}/use-item`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId: session.id,
-          itemId: item.id
-        })
-      });
-
-      const data = await res.json();
-      if (data.success && data.data?.character) {
-        setCharacter(data.data.character);
-        showToast(data.message || `Memulihkan status dengan ${item.name}!`, 'success');
-      } else {
-        showToast(data.error || 'Gagal menggunakan item.', 'error');
-      }
-    } catch (err) {
-      showToast('Koneksi ke backend gagal saat menggunakan item.', 'error');
-    }
-  };
-
-  // Handler: Rewind to node
-  const handleRewind = async (targetNodeId) => {
-    if (!session) return;
-    setIsLoading(true);
-    try {
-      const res = await fetch(`${API_BASE}/rewind`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId: session.id,
-          targetNodeId
-        })
-      });
-      const data = await res.json();
-      if (data.success) {
-        setSession(data.data.session);
-        setCharacter(data.data.character);
-        setCurrentNode(data.data.currentNode);
-      }
-    } catch (err) {
-      console.error('Rewind error:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Handler: Load from slot or import
-  const handleLoadSession = (loadedData) => {
-    setSession(loadedData.session);
-    setCharacter(loadedData.character);
-    setCurrentNode(loadedData.currentNode);
-  };
-
-  // Render Toast
+  // Toast Notification
   const ToastNotification = () => {
     if (!toast) return null;
     return (
       <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] animate-slideDown">
-        <div className={`px-4 py-2 rounded-xl shadow-2xl border flex items-center gap-2 ${
-          toast.type === 'error' ? 'bg-rose-950/90 border-rose-500/50 text-rose-200' : 'bg-emerald-950/90 border-emerald-500/50 text-emerald-200'
+        <div className={`px-4 py-2.5 rounded-xl shadow-2xl border flex items-center gap-2 ${
+          toast.type === 'error' 
+            ? 'bg-rose-950/90 border-rose-500/50 text-rose-200' 
+            : 'bg-emerald-950/90 border-emerald-500/50 text-emerald-200'
         }`}>
-          <span className="text-sm font-medium">{toast.message}</span>
+          <span className="text-xs md:text-sm font-medium">{toast.message}</span>
         </div>
       </div>
     );
   };
 
-  // Home Screen: Epic Landing Page
+  // Home Screen: Modular Landing Page
   if (!session || !currentNode) {
     return (
       <>
@@ -231,13 +93,30 @@ export default function App() {
     );
   }
 
-  // In-Game Active Stage View
+  // Active Adventure Stage View
   return (
-    <div className="h-screen w-full bg-slate-950 text-slate-100 flex overflow-hidden selection:bg-fantasy-gold selection:text-slate-950">
+    <div className="h-screen w-full bg-slate-950 text-slate-100 flex overflow-hidden selection:bg-amber-400 selection:text-slate-950">
       <ToastNotification />
+
+      {/* 3D Dice Roller Modal Overlay */}
+      {diceModal && (
+        <ThreeDiceRoller
+          diceValue={diceModal.diceValue}
+          statType={diceModal.statType}
+          mod={diceModal.mod}
+          dc={diceModal.dc}
+          isSuccess={diceModal.isSuccess}
+          isCritSuccess={diceModal.isCritSuccess}
+          isCritFail={diceModal.isCritFail}
+          onComplete={diceModal.onComplete}
+        />
+      )}
+
+      {/* Main Visual Novel / Tactical Combat Stage */}
       <VisualNovelStage
         node={currentNode}
         character={character}
+        combatState={combatState}
         onChooseAction={handleChooseAction}
         onOpenStoryTree={() => setIsStoryTreeOpen(true)}
         onOpenBacklog={() => setIsBacklogOpen(true)}
@@ -247,6 +126,8 @@ export default function App() {
           <CharacterHUD
             character={character}
             onUseItem={handleUseItem}
+            isInventoryOpen={isInventoryOpen}
+            onToggleInventory={setIsInventoryOpen}
           />
         }
       />
@@ -288,5 +169,13 @@ export default function App() {
         }}
       />
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <GameProvider>
+      <MainGame />
+    </GameProvider>
   );
 }
