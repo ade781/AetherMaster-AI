@@ -117,5 +117,5 @@ npm run dev
 
 ## 👥 Pengembang & Hak Cipta
 
-* **Penulis**: ADE7 (Ade Kurniawan)
+* **Penulis**: ADE7 ASLI
 * **Lisensi**: Proyek Tugas Akhir / Penelitian Terbuka — Bebas dikembangkan untuk keperluan akademik dan portofolio.
