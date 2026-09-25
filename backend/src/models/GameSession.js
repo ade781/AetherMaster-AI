@@ -23,6 +23,11 @@ const GameSession = sequelize.define('GameSession', {
     type: DataTypes.INTEGER,
     defaultValue: 1
   },
+  combatState: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    defaultValue: null
+  },
   worldLedger: {
     type: DataTypes.JSON,
     defaultValue: {

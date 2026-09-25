@@ -43,6 +43,10 @@ const Character = sequelize.define('Character', {
     type: DataTypes.INTEGER,
     defaultValue: 50
   },
+  armorClass: {
+    type: DataTypes.INTEGER,
+    defaultValue: 10
+  },
   str: {
     type: DataTypes.INTEGER,
     defaultValue: 14
@@ -72,6 +76,10 @@ const Character = sequelize.define('Character', {
     defaultValue: 'char_hero_01_paladin'
   },
   inventory: {
+    type: DataTypes.JSON,
+    defaultValue: []
+  },
+  equippedItems: {
     type: DataTypes.JSON,
     defaultValue: []
   },
