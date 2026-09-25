@@ -17,7 +17,7 @@ async function resetAndSeed() {
   }
 
   // 2. Force sync sequelize to rebuild schema
-  console.log('Rebuilding SQLite tables...');
+  console.log(`Rebuilding tables (${sequelize.getDialect()})...`);
   await sequelize.sync({ force: true });
   console.log('✓ Tables synced with force: true');
 

@@ -155,13 +155,113 @@ function getFallbackOpening(campaign, character) {
   };
 }
 
-// Helper to dynamically extract action context and generate reactive text
 function getFallbackNextScene(previousNode, actionTaken, checkResult, character, turnCount = 1) {
   const actionText = actionTaken?.text || 'Melangkah maju dengan waspada';
   const actionTone = actionTaken?.tone || 'cautious';
   const prevLoc = previousNode?.location || 'Ruang Petualangan';
   const prevSpk = previousNode?.speaker || 'Narator';
   const lowerAction = actionText.toLowerCase();
+  const charName = character?.name || 'Petualang';
+  const charClass = character?.characterClass || 'Pengelana';
+
+  // 1. Off-rails / Nonsensical Action Detection
+  const modernNonsenseWords = [
+    'hp', 'handphone', 'smartphone', 'mobil', 'motor', 'pesawat', 'senjata api',
+    'pistol', 'nuklir', 'bom atom', 'wifi', 'internet', 'komputer', 'laptop',
+    'presiden', 'polisi', 'kantor', 'sekolah', 'chatgpt', 'roket', 'asdf', 'test', 'halo'
+  ];
+  const isOffRails = modernNonsenseWords.some(w => lowerAction === w || lowerAction.includes(` ${w} `) || lowerAction.startsWith(`${w} `) || lowerAction.endsWith(` ${w}`));
+
+  if (isOffRails) {
+    return {
+      chapterTitle: `Babak ${Math.min(12, turnCount + 1)}: Suara Ganjil di Keheningan`,
+      location: prevLoc,
+      backgroundId: previousNode?.backgroundId || 'bg_01_tavern',
+      speaker: prevSpk,
+      characterId: previousNode?.characterId || 'char_npc_01_barkeep',
+      mood: 'mysterious',
+      dialogue: cleanText(
+        `"${actionText}?" Suaramu bergaung aneh di ruangan ini. ${prevSpk} mengerutkan kening dan menatap ${charName} sang ${charClass} dengan keheranan mutlak. Kata-kata atau tindakanmu terdengar seperti igauan dari alam mimpi yang tak dipahami oleh siapa pun di dunia ini. Suasana sesaat menjadi canggung, sebelum desau angin tajam menyadarkanmu bahwa bahaya nyata masih mengintai dan menuntut fokus sang ${charClass}!`
+      ),
+      consequenceNote: `Tindakan aneh di luar nalar hanya mengundang kebingungan. Takdir memaksamu kembali fokus ke kenyataan.`,
+      stateUpdates: {
+        hpChange: -2,
+        manaChange: 0,
+        goldChange: 0,
+        receivedItem: null,
+        consumedItem: null,
+        addLedgerFact: `${charName} sempat kehilangan fokus sebelum kembali ke alur petualangan.`
+      },
+      combatEncounter: null,
+      choices: [
+        { id: `c_${turnCount}_1`, text: `Kumpulkan kembali fokus pikiran ${charName} dan selidiki situasi sekitar secara waspada`, tone: 'cautious' },
+        { id: `c_${turnCount}_2`, text: `Abaikan kecanggungan barusan dan kerahkan keahlian tempur sang ${charClass}`, tone: 'bold' }
+      ]
+    };
+  }
+
+  // 2. Stage 12: Grand Finale & Epilog (Batas Maksimal 12 Stage)
+  if (turnCount >= 11) {
+    return {
+      chapterTitle: 'Babak XII: Grand Finale & Fajar Legenda',
+      location: prevLoc,
+      backgroundId: previousNode?.backgroundId || 'bg_18_celestial_sanctum',
+      speaker: 'Dungeon Master',
+      characterId: 'char_hero_01_paladin',
+      mood: 'triumphant',
+      dialogue: cleanText(
+        `Dentang takdir menggema megah di seluruh penjuru! Dengan keberanian tak tergoyahkan, ${charName} sang ${charClass} akhirnya melancarkan aksinya: "${actionText}". Teror kelam yang selama ini menghantui berhasil dienyahkan selamanya. Cahaya fajar keemasan menerobos reruntuhan, menyinari sosokmu yang berdiri tegak sebagai pemenang sejati. Perjalanan 12 babak yang penuh intrik, darah, dan keajaiban ini telah mencapai puncaknya! Namamu kini terpatri abadi dalam catatan legenda benua Aether!`
+      ),
+      consequenceNote: `Babak 12 tercapai! Kemenangan mutlak menutup lembaran petualangan ${charName} sang ${charClass}.`,
+      stateUpdates: {
+        hpChange: 15,
+        manaChange: 10,
+        goldChange: 50,
+        receivedItem: {
+          id: 'item_trophy_aether',
+          name: 'Medali Legenda Aether',
+          category: 'Pusaka',
+          effect: 'Tanda kehormatan tertinggi atas penaklukan 12 Babak Petualangan',
+          icon: 'item_04_silver_dagger'
+        },
+        consumedItem: null,
+        addLedgerFact: `${charName} menuntaskan petualangan di Babak 12 dengan kemenangan mutlak!`
+      },
+      combatEncounter: null,
+      choices: [
+        { id: 'finish_game', text: 'Tutup Lembaran Takdir & Rayakan Kemenangan Legenda', tone: 'bold' }
+      ]
+    };
+  }
+
+  // 3. Stage 10-11: Climax Buildup (Mendekati Babak 12 seolah-olah mau ending)
+  if (turnCount >= 9) {
+    return {
+      chapterTitle: `Babak ${turnCount + 1}: Ambang Penentuan Akhir`,
+      location: prevLoc,
+      backgroundId: previousNode?.backgroundId || 'bg_11_throne_room',
+      speaker: prevSpk,
+      characterId: previousNode?.characterId || 'char_npc_09_lich',
+      mood: 'tense',
+      dialogue: cleanText(
+        `Hawa mencekam berhembus kencang seolah semesta tahu babak penutup telah mendekat! ${charName} sang ${charClass} bergerak mantap untuk "${actionText}". Setiap detak jantung terasa begitu berat di atmosfer klimaks ini. Gerbang menuju konfrontasi pamungkas kini terbuka lebar di hadapanmu. Tinggal selangkah lagi menuju Babak 12, tempat di mana takdir akhir akan ditentukan untuk selamanya!`
+      ),
+      consequenceNote: `Mendekati babak akhir! Tensi cerita memuncak menuju klimaks Babak 12.`,
+      stateUpdates: {
+        hpChange: -3,
+        manaChange: -2,
+        goldChange: 20,
+        receivedItem: null,
+        consumedItem: null,
+        addLedgerFact: `${charName} telah tiba di ambang pertempuran pamungkas menuju Babak 12.`
+      },
+      combatEncounter: null,
+      choices: [
+        { id: `c_${turnCount}_1`, text: `Kobarkan seluruh tekad ${charClass} dan songsong konfrontasi penutup di Babak 12`, tone: 'bold' },
+        { id: `c_${turnCount}_2`, text: `Lafalkan sumpah terakhir dan amankan posisi sebelum gerbang takdir terbuka`, tone: 'cautious' }
+      ]
+    };
+  }
 
   // Active combat resolution if previous node had combat encounter
   if (previousNode?.combatEncounter) {
@@ -474,7 +574,7 @@ class GeminiService {
           });
 
           const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error(`Timeout: Model ${model} took longer than 15000ms`)), 15000)
+            setTimeout(() => reject(new Error(`Timeout: Model ${model} took longer than 7000ms`)), 7000)
           );
 
           const response = await Promise.race([generatePromise, timeoutPromise]);
@@ -484,12 +584,7 @@ class GeminiService {
           }
         } catch (err) {
           lastError = err;
-          const is503 = err.message && (err.message.includes('503') || err.message.includes('high demand') || err.message.includes('UNAVAILABLE') || err.message.includes('Overloaded'));
-          if (attempt === 0 && is503) {
-            console.warn(`[GeminiService] Model '${model}' returned 503 high demand. Retrying once with jitter...`);
-            continue;
-          }
-          console.warn(`[GeminiService] Model '${model}' call failed (${err.message}). Cascading to next candidate...`);
+          console.warn(`[GeminiService] Model '${model}' call failed (${err.message}). Cascading...`);
           break;
         }
       }
@@ -503,21 +598,30 @@ class GeminiService {
       return getFallbackOpening(campaign, character);
     }
 
+    const charName = character?.name || 'Petualang';
+    const charClass = character?.characterClass || 'Pengelana';
+
     const systemPrompt = `Kamu adalah Dungeon Master (DM) legendaris untuk game Visual Novel Virtual Tabletop (VTT).
 Tugasmu adalah merajut narasi interaktif D&D dengan Bahasa Indonesia sastrawi yang imersif dan atmosferik.
-ATURAN WAJIB:
-1. Respon WAJIB berupa objek JSON murni tanpa pembungkus markdown seperti \`\`\`json.
-2. JANGAN PERNAH menggunakan karakter em dash (—). Gunakan koma, titik dua, tanda kurung, atau titik.
-3. backgroundId WAJIB dipilih dari daftar resmi berikut sesuai suasana dan lokasi:
+
+ATURAN WAJIB DUNGEON MASTER:
+1. PERSONALISASI NAMA & ROLE/KELAS:
+   Karakter pemain adalah "${charName}", bertindak sebagai seorang "${charClass}" (Ras: ${character.race || 'Human'}).
+   DM dan seluruh NPC WAJIB secara personal menyapa dan memanggil nama "${charName}", serta menyesuaikan sudut pandang dan suasana adegan dengan persona dan gaya kelas ${charClass}.
+2. STRUKTUR 12 STAGE KAMPANYE:
+   Petualangan ini dirancang tepat dalam 12 babak/stage bertahap menuju klimaks epik. Adegan ini adalah BABAK I: Permulaan Takdir.
+3. Respon WAJIB berupa objek JSON murni tanpa pembungkus markdown seperti \`\`\`json.
+4. JANGAN PERNAH menggunakan karakter em dash (—). Gunakan koma, titik dua, tanda kurung, atau titik.
+5. backgroundId WAJIB dipilih dari daftar resmi berikut sesuai suasana dan lokasi:
    bg_01_tavern, bg_02_cursed_woods, bg_03_sunken_citadel, bg_04_crimson_crypt, bg_05_vampire_castle, bg_06_alchemy_lab, bg_07_smuggler_cave, bg_08_arcane_library, bg_09_dragon_crater,
    bg_10_ancient_ruins, bg_11_throne_room, bg_12_underdark_cavern, bg_13_lava_forge, bg_14_frost_peak, bg_15_haunted_graveyard, bg_16_swamp_huts, bg_17_desert_temple, bg_18_celestial_sanctum, bg_19_shadowfell_citadel,
    bg_20_pirate_ship_deck, bg_21_goblin_war_camp, bg_22_crystal_mines, bg_23_dungeon_torture_chamber, bg_24_feywild_glade, bg_25_abandoned_cathedral, bg_26_clockwork_vault, bg_27_dragon_hoard, bg_28_city_market_alley, bg_29_abyssal_rift.
-4. characterId WAJIB dipilih dari: char_hero_01 s.d 09 atau char_npc_01 s.d 09.
-5. TANPA SISTEM DADU. Evaluasi aksi pemain murni berdasarkan logika dunia. Jika aksi pemain kreatif dan masuk akal, buat berhasil. Jika mustahil atau tidak masuk akal, buat gagal dengan alasan logis di dalam narasi.
+6. characterId WAJIB dipilih dari: char_hero_01 s.d 09 atau char_npc_01 s.d 09.
+7. Evaluasi aksi pemain murni berdasarkan logika dunia fantasi dan keahlian kelasnya.
 
 SKEMA JSON RESMI:
 {
-  "chapterTitle": "string",
+  "chapterTitle": "Babak I: [Judul Babak]",
   "location": "string",
   "backgroundId": "string",
   "speaker": "string",
@@ -543,8 +647,8 @@ SKEMA JSON RESMI:
 }`;
 
     const prompt = `Kampanye: "${campaign.title}" (${campaign.premise}).
-Karakter Pemain: ${character.name}, Ras: ${character.race}, Kelas: ${character.characterClass}, STR: ${character.str}, DEX: ${character.dex}, INT: ${character.int}, WIS: ${character.wis}, CHA: ${character.cha}, CON: ${character.con}.
-Buatlah adegan pembuka Babak I yang sangat memukau dan menggugah imajinasi pemain.
+Karakter Pemain: ${charName}, Ras: ${character.race}, Kelas: ${charClass}, STR: ${character.str}, DEX: ${character.dex}, INT: ${character.int}, WIS: ${character.wis}, CHA: ${character.cha}, CON: ${character.con}.
+Buatlah adegan pembuka Babak I dari 12 Babak Petualangan yang sangat memukau, menyebut nama ${charName}, dan mencerminkan keahlian ${charClass}.
 PENTING: Pada teks 'dialogue', sampaikan terlebih dahulu Latar Belakang Cerita (Premise) dari kampanye ini secara naratif dan epik. Setelah latar belakang cerita diceritakan dengan jelas, barulah pada paragraf berikutnya berikan naratif situasi karakter saat ini yang mendorong pemain untuk mengambil tindakan atau pilihan pertama.`;
 
     try {
@@ -614,6 +718,43 @@ PENTING: Pada teks 'dialogue', sampaikan terlebih dahulu Latar Belakang Cerita (
       ? repEntries.map(([f, score]) => `${f}: ${score >= 0 ? '+' + score : score}`).join(', ')
       : 'Netral (0)';
 
+    const turnCount = session?.turnCount || 1;
+    const charName = character?.name || 'Petualang';
+    const charClass = character?.characterClass || 'Pengelana';
+
+    // Stage Pacing & Climax Structure (Batas 12 Stage)
+    let stagePacingContext = '';
+    if (turnCount >= 11) {
+      stagePacingContext = `
+[BATAS 12 STAGE - BABAK XII: GRAND FINALE & EPILOG KEMENANGAN]:
+- Ini adalah BABAK 12 (BABAK TERAKHIR / ENDING PETUALANGAN)!
+- Selesaikan seluruh konflik kampanye, tuntaskan ancaman musuh utama, dan narasikan epilog kemenangan yang sangat membanggakan bagi ${charName} sang ${charClass}!
+- 'chapterTitle' WAJIB: "Babak XII: Grand Finale & Fajar Kemenangan".
+- 'choices' WAJIB HANYA 1 opsi penutup: [{"id": "finish_game", "text": "Tutup Lembaran Takdir & Rayakan Kemenangan Legenda", "tone": "bold"}].
+`;
+    } else if (turnCount >= 9) {
+      stagePacingContext = `
+[MENDEKATI AKHIR - BABAK ${turnCount + 1} DARI 12 (CLIMAX / PENENTUAN MAU ENDING)]:
+- Petualangan sudah sangat mendekati Babak 12 akhir!
+- Suasana narasi HARUS DIBIKIN SEOLAH-OLAH MAU ENDING: Tensi klimaks memuncak tinggi, pintu gerbang ruang bos/sarang musuh utama terbuka, atau misteri inti terpampang di depan mata!
+- Siapkan ${charName} sang ${charClass} untuk pertarungan terakhir yang menentukan takdir semesta di Babak 12!
+`;
+    } else {
+      stagePacingContext = `
+[PROGRESI PETUALANGAN - BABAK ${turnCount + 1} DARI 12]:
+- Eksplorasi taktis, rintangan, dan penyelidikan dunia fantasi menuju misi utama.
+`;
+    }
+
+    const offRailsInstruction = `
+[PENANGANAN TINDAKAN MELENCENG / NYELENEH / OUT-OF-CONTEXT]:
+- Jika tindakan pemain "${actionText}" absurd, aneh, menggunakan konsep modern di luar dunia fantasi (seperti handphone, mobil, senjata api, internet, komputer, hal konyol), JANGAN tolak dengan pesan error teknis!
+- Tanggapi sebagai Dungeon Master yang cerdas dan logis di dalam dunia fantasi:
+  * Narasikan kebingungan orang-orang sekitar atau NPC yang menatap heran ${charName} sang ${charClass} seolah meracau dalam igauan mimpi.
+  * Berikan konsekuensi logis: tindakan tersebut gagal dan membuat pemain kehilangan momentum, atau terkena luka ringan (-2 s.d -5 HP di 'hpChange') akibat kelengahan.
+  * Secara elegan dan tegas, tarik kembali perhatian ${charName} ke ancaman nyata di depan mata!
+`;
+
     const systemPrompt = `Kamu adalah Dungeon Master (DM) legendaris untuk game Visual Novel RPG Tabletop.
 TUGAS UTAMA: Menulis adegan narasi berikutnya yang SEPENUHNYA TANGGAP dan REAKTIF terhadap aksi pemain serta HASIL AUDIT DADU D&D 5E.
 
@@ -621,28 +762,31 @@ KONTEKS DUNIA & RIWAYAT LANGKAH SEBELUMNYA:
 ${historyContext}
 
 KONDISI PEMAIN SAAT INI:
-- Karakter: ${character.name} (Kelas: ${character.characterClass}, HP: ${character.hp}/${character.maxHp}, Mana: ${character.mana}/${character.maxMana}, Gold: ${character.gold})
+- Karakter: ${charName} (Kelas / Role: ${charClass}, Ras: ${character.race || 'Human'}, HP: ${character.hp}/${character.maxHp}, Mana: ${character.mana}/${character.maxMana}, Gold: ${character.gold})
 - Lokasi Terakhir: ${prevLocation}
 - Latar Aktif Saat Ini: "${prevBgId}"
 - Memori Dunia: ${ledgerFacts}
 - Reputasi Fraksi: ${repSummary}
 ${combatContext}
 ${diceAuditContext}
+${stagePacingContext}
+${offRailsInstruction}
 
 TINDAKAN YANG DIAMBIL PEMAIN:
 Aksi: "${actionText}"
 Nada Tindakan: ${actionTone}
 
 ATURAN REAKTIVITAS KONSEKUENSI & KONSISTENSI (SANGAT KRUSIAL):
-1. RESPON PARAGRAF PERTAMA WAJIB LANGSUNG: Kalimat dan paragraf pertama 'dialogue' HARUS SECARA LANGSUNG menceritakan bagaimana karakter mengeksekusi aksi "${actionText}" dan apa dampak instan yang terjadi seketika di lokasi. DILARANG KERAS mengabaikan aksi ini atau melompat ke peristiwa lain tanpa menceritakan hasilnya terlebih dahulu!
-2. INTEGRASI HASIL DADU D&D 5E: Jika ada blok [HASIL LEMPARAN DADU D&D 5E], narasi keberhasilan atau kegagalan aksi pemain HARUS MENGIKUTI status hasil lemparan dadu tersebut secara jujur dan dramatis.
-3. KONSISTENSI SPASIAL LOKASI (SPATIAL ANCHORING): 'backgroundId' WAJIB TETAP MENGGUNAKAN "${prevBgId}" KECUALI aksi pemain secara eksplisit adalah berpindah ruangan, keluar gedung, menembus portal, atau melakukan perjalanan ke lokasi baru. DILARANG KERAS mengganti latar secara acak jika pemain masih berada di tempat yang sama!
-4. KONSEKUENSI NYATA ('consequenceNote'): Tulis ringkasan padat 1 kalimat tentang dampak langsung aksi pemain tersebut.
-5. PENGURANGAN MANA SIHIR: Jika aksi pemain menggunakan mantra/sihir (misal Fireball, teleport, hembusan energi), kurangi Mana pemain secara proporsional (-4 s.d -12) di 'manaChange' dalam 'stateUpdates'.
-6. BAHAYA MAUT / TINDAKAN FATAL: Jika aksi pemain adalah tindakan ceroboh atau mematikan (seperti melompat ke kawah lahar, terjun ke jurang tanpa perlindungan, menenggak racun maut), wajib berikan pengurangan HP fatal (-15 s.d -30) pada 'hpChange' dalam 'stateUpdates'.
-7. PILIHAN TINDAKAN BERIKUTNYA ('choices'): Sediakan 2 sampai 3 pilihan aksi taktis baru yang RINGKAS, PADAT (maksimal 1 kalimat lugas per opsi), dan logis sebagai opsi tindak lanjut.
-8. JANGAN PERNAH GUNAKAN EM DASH (—). Gunakan koma, titik dua, atau kurung.
-9. Respon WAJIB berupa objek JSON murni tanpa pembungkus \`\`\`json.
+1. PERSONALISASI NAMA & KELAS: Seluruh narasi dan dialog NPC WAJIB memanggil nama "${charName}", serta mencerminkan gaya bertarung dan respon indrawi kelas "${charClass}" (misal tebasan pedang zirah untuk Warrior, mantra arkanum untuk Mage, kelincahan bayangan untuk Rogue, doa suci untuk Cleric).
+2. RESPON PARAGRAF PERTAMA WAJIB LANGSUNG: Kalimat dan paragraf pertama 'dialogue' HARUS SECARA LANGSUNG menceritakan bagaimana ${charName} mengeksekusi aksi "${actionText}" dan apa dampak instan yang terjadi seketika di lokasi. DILARANG KERAS mengabaikan aksi ini!
+3. INTEGRASI HASIL DADU D&D 5E: Jika ada blok [HASIL LEMPARAN DADU D&D 5E], narasi keberhasilan atau kegagalan aksi pemain HARUS MENGIKUTI status hasil lemparan dadu tersebut secara jujur dan dramatis.
+4. KONSISTENSI SPASIAL LOKASI (SPATIAL ANCHORING): 'backgroundId' WAJIB TETAP MENGGUNAKAN "${prevBgId}" KECUALI aksi pemain secara eksplisit adalah berpindah ruangan, keluar gedung, menembus portal, atau melakukan perjalanan ke lokasi baru.
+5. KONSEKUENSI NYATA ('consequenceNote'): Tulis ringkasan padat 1 kalimat tentang dampak langsung aksi pemain tersebut.
+6. PENGURANGAN MANA SIHIR: Jika aksi pemain menggunakan mantra/sihir, kurangi Mana pemain secara proporsional (-4 s.d -12) di 'manaChange' dalam 'stateUpdates'.
+7. BAHAYA MAUT / TINDAKAN FATAL: Jika aksi pemain adalah tindakan ceroboh atau mematikan (seperti melompat ke kawah lahar, terjun ke jurang tanpa perlindungan), wajib berikan pengurangan HP fatal (-15 s.d -30) pada 'hpChange' dalam 'stateUpdates'.
+8. PILIHAN TINDAKAN BERIKUTNYA ('choices'): Sediakan 2 sampai 3 pilihan aksi taktis baru yang RINGKAS, PADAT (maksimal 1 kalimat lugas per opsi), dan logis sebagai opsi tindak lanjut (Kecuali jika turnCount >= 11, berikan opsi penutup finish_game).
+9. JANGAN PERNAH GUNAKAN EM DASH (—). Gunakan koma, titik dua, atau kurung.
+10. Respon WAJIB berupa objek JSON murni tanpa pembungkus \`\`\`json.
 
 SKEMA JSON RESMI:
 {
@@ -677,7 +821,7 @@ SKEMA JSON RESMI:
   ]
 }`;
 
-    const prompt = `Lanjutkan petualangan sekarang! Aksi pemain yang baru saja dilakukan: "${actionText}". Ceritakan dampak langsungnya secara reaktif sesuai hasil dadu!`;
+    const prompt = `Lanjutkan petualangan untuk ${charName} sang ${charClass}! Aksi pemain yang baru saja dilakukan: "${actionText}". Ceritakan dampak langsungnya secara reaktif sesuai hasil dadu dan kondisi babak saat ini!`;
 
     try {
       return parseSceneJson(await this.callWithFallback(prompt, systemPrompt));

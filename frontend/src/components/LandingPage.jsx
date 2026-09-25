@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { 
-  BookOpen, 
-  Menu, 
-  X, 
-  Scroll, 
-  Compass, 
+import {
+  BookOpen,
+  Menu,
+  X,
+  Scroll,
+  Compass,
   ChevronDown
 } from 'lucide-react';
 import { IconSwords } from './icons/FantasyIcons';
@@ -33,12 +33,12 @@ export default function LandingPage({
 
   return (
     <div className="relative min-h-screen bg-slate-950 text-slate-100 flex flex-col font-outfit selection:bg-amber-400 selection:text-slate-950 overflow-x-hidden">
-      
+
       {/* Top Navigation Bar */}
       <header className="fixed top-0 left-0 right-0 z-40 w-full px-6 py-4 md:px-12 flex items-center justify-between bg-slate-950/70 backdrop-blur-md border-b border-white/5">
         <div className="flex items-center gap-3">
-          <a 
-            href="/" 
+          <a
+            href="/"
             className="group flex items-center gap-2.5 text-slate-100 hover:text-amber-400 transition-colors"
           >
             <div className="w-9 h-9 rounded-lg bg-slate-900 border border-amber-500/40 flex items-center justify-center p-1 shadow-sm group-hover:border-amber-400 transition-colors">
@@ -52,7 +52,7 @@ export default function LandingPage({
 
         {/* Desktop Nav Links */}
         <nav className="hidden md:flex items-center gap-6 text-xs font-medium text-slate-300">
-          <button 
+          <button
             onClick={() => scrollToSection('campaigns')}
             className="flex items-center gap-1.5 hover:text-white transition-colors"
           >
@@ -60,14 +60,14 @@ export default function LandingPage({
             <ChevronDown className="w-3.5 h-3.5 opacity-70" />
           </button>
 
-          <button 
+          <button
             onClick={() => setActiveModal('rules')}
             className="flex items-center gap-1.5 hover:text-white transition-colors"
           >
             Sistem 5E
           </button>
 
-          <button 
+          <button
             onClick={() => setActiveModal('guide')}
             className="hover:text-white transition-colors"
           >
@@ -101,19 +101,19 @@ export default function LandingPage({
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
         <div className="md:hidden fixed top-16 left-0 right-0 z-40 bg-slate-950/95 border-b border-slate-800 backdrop-blur-xl px-6 py-5 flex flex-col gap-4 text-sm animate-fadeIn">
-          <button 
+          <button
             onClick={() => scrollToSection('campaigns')}
             className="text-left py-2 font-medium text-slate-200 hover:text-amber-400 min-h-[44px]"
           >
             Pilih Kampanye ({campaigns.length})
           </button>
-          <button 
+          <button
             onClick={() => { setMobileMenuOpen(false); setActiveModal('rules'); }}
             className="text-left py-2 font-medium text-slate-200 hover:text-amber-400 min-h-[44px]"
           >
             Sistem Aturan D&amp;D 5E
           </button>
-          <button 
+          <button
             onClick={() => { setMobileMenuOpen(false); setActiveModal('guide'); }}
             className="text-left py-2 font-medium text-slate-200 hover:text-amber-400 min-h-[44px]"
           >
@@ -169,11 +169,11 @@ export default function LandingPage({
 
       {/* 5. Standard Modal Overlays */}
       {activeModal && (
-        <div 
+        <div
           className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 animate-fadeIn"
           onClick={() => setActiveModal(null)}
         >
-          <div 
+          <div
             className="bg-slate-900 border border-slate-700/80 rounded-2xl max-w-2xl w-full p-6 md:p-8 shadow-2xl relative max-h-[85vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >

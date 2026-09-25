@@ -44,7 +44,7 @@ app.use((err, req, res, next) => {
 let server = null;
 const startServer = async () => {
   await initDb();
-  console.log('[SQLite DB] Database synced & seeded successfully.');
+  console.log(`[Database: ${(process.env.DB_DIALECT || 'mysql').toUpperCase()}] Synced & seeded successfully.`);
   return new Promise((resolve, reject) => {
     server = app.listen(PORT, () => {
       console.log(`[AetherMaster Server] Running at http://localhost:${PORT}`);

@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Swords, 
-  Sparkles, 
-  Footprints, 
-  Shield, 
-  Heart, 
-  Flame, 
+import {
+  Swords,
+  Sparkles,
+  Footprints,
+  Shield,
+  Heart,
+  Flame,
   ScrollText
 } from 'lucide-react';
 import audio from '../services/audioService';
@@ -203,7 +203,7 @@ export default function CombatStage({
       {/* LEFT: Combat Arena */}
       <div className="relative flex-[3] xl:flex-[4] h-[55vh] lg:h-full flex flex-col justify-between p-6 overflow-hidden">
         {/* Arena Background */}
-        <div 
+        <div
           className="absolute inset-0 bg-cover bg-center filter brightness-[0.4] contrast-125 z-0"
           style={{ backgroundImage: "url('/assets/backgrounds/bg_04_crimson_crypt.png')" }}
         >
@@ -275,9 +275,8 @@ export default function CombatStage({
                   animate={{ y: -60, opacity: 0, scale: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.9 }}
-                  className={`absolute font-cinzel text-2xl md:text-3xl font-black drop-shadow-[0_4px_8px_rgba(0,0,0,1)] ${
-                    f.type === 'damage' ? 'text-rose-500' : 'text-slate-300'
-                  }`}
+                  className={`absolute font-cinzel text-2xl md:text-3xl font-black drop-shadow-[0_4px_8px_rgba(0,0,0,1)] ${f.type === 'damage' ? 'text-rose-500' : 'text-slate-300'
+                    }`}
                 >
                   {f.text}
                 </motion.div>
@@ -309,9 +308,8 @@ export default function CombatStage({
                 animate={{ y: -40, opacity: 0, scale: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.9 }}
-                className={`absolute top-0 right-4 font-cinzel text-xl font-black drop-shadow ${
-                  f.type === 'heal' ? 'text-emerald-400' : 'text-rose-500'
-                }`}
+                className={`absolute top-0 right-4 font-cinzel text-xl font-black drop-shadow ${f.type === 'heal' ? 'text-emerald-400' : 'text-rose-500'
+                  }`}
               >
                 {f.text}
               </motion.div>
@@ -322,7 +320,7 @@ export default function CombatStage({
 
       {/* RIGHT: Combat Commands & Combat Log */}
       <div className="relative flex-[2] xl:flex-[2] h-[45vh] lg:h-full flex flex-col justify-between bg-slate-900/95 border-l border-white/10 p-5 md:p-6 shadow-2xl z-20">
-        
+
         {/* Combat Log Panel */}
         <div className="flex-1 overflow-hidden flex flex-col space-y-2 pb-4">
           <div className="flex items-center gap-2 pb-2 border-b border-slate-800 text-xs font-mono text-slate-400">
@@ -334,11 +332,10 @@ export default function CombatStage({
             {combatLog.map((log, i) => (
               <div
                 key={i}
-                className={`p-2.5 rounded-xl border ${
-                  i === 0 
-                    ? 'bg-slate-950/80 border-amber-400/40 text-amber-200' 
+                className={`p-2.5 rounded-xl border ${i === 0
+                    ? 'bg-slate-950/80 border-amber-400/40 text-amber-200'
                     : 'bg-slate-950/40 border-slate-800/80 text-slate-400'
-                }`}
+                  }`}
               >
                 {log}
               </div>

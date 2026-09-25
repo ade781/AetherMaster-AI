@@ -91,23 +91,31 @@ async function advanceStoryState({ session, character, currentNode, chosenChoice
   }
   session.worldLedger = ledger;
   session.turnCount += 1;
-  if (character.hp <= 0) {
+  if (character.hp <= 0 || session.turnCount > 12 || chosenChoice?.id === 'finish_game') {
     session.isGameOver = true;
+  }
+
+  // Stage 12 Cap: force resolution choice for final stage
+  let stageChoices = nextScene.choices;
+  if (session.turnCount >= 12) {
+    stageChoices = [
+      { id: 'finish_game', text: 'Tutup Lembaran Takdir & Rayakan Kemenangan Legenda', tone: 'bold' }
+    ];
   }
 
   // Create next node with character state snapshot for precise rewind
   const newNode = await StoryNode.create({
     sessionId: session.id,
     parentNodeId: currentNode.id,
-    chapterTitle: nextScene.chapterTitle,
+    chapterTitle: session.turnCount >= 12 ? 'Babak XII: Grand Finale & Fajar Kemenangan' : nextScene.chapterTitle,
     location: nextScene.location,
     backgroundId: nextScene.backgroundId,
     speaker: nextScene.speaker,
     characterId: nextScene.characterId,
-    mood: nextScene.mood,
+    mood: session.turnCount >= 12 ? 'triumphant' : nextScene.mood,
     dialogueText: nextScene.dialogue,
     consequenceNote: nextScene.consequenceNote,
-    choices: nextScene.choices,
+    choices: stageChoices,
     combatEncounter: nextScene.combatEncounter || null,
     characterSnapshot: {
       hp: character.hp,
@@ -138,7 +146,8 @@ exports.getCampaigns = async (req, res) => {
 
 exports.startCampaign = async (req, res) => {
   try {
-    const { campaignId, characterData } = req.body;
+    const characterData = req.body.characterData || req.body.character || {};
+    const campaignId = req.body.campaignId;
     const campaign = await Campaign.findByPk(campaignId || 'whispering_tavern');
     if (!campaign) {
       return res.status(404).json({ success: false, error: 'Kampanye tidak ditemukan.' });
@@ -767,3 +776,55 @@ exports.actionStream = async (req, res) => {
     res.end();
   }
 };
+
+// Summary & Chronicle of the 12-stage adventure
+exports.getGameSummary = async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const session = await GameSession.findByPk(sessionId, {
+      include: [Character, Campaign]
+    });
+    if (!session) {
+      return res.status(404).json({ success: false, error: 'Sesi tidak ditemukan.' });
+    }
+
+    const nodes = await StoryNode.findAll({
+      where: { sessionId },
+      order: [['createdAt', 'ASC']],
+      attributes: ['id', 'chapterTitle', 'location', 'speaker', 'mood', 'consequenceNote', 'createdAt']
+    });
+
+    const character = session.Character;
+    const campaign = session.Campaign;
+    const ledgerFacts = Object.entries(session.worldLedger?.questFlags || {}).map(([turn, fact]) => ({
+      turn,
+      fact
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        campaignTitle: campaign?.title || 'Petualangan Aether',
+        characterName: character?.name || 'Pahlawan',
+        characterClass: character?.characterClass || 'Petualang',
+        totalStages: Math.min(12, session.turnCount),
+        isVictory: character ? character.hp > 0 : false,
+        finalHp: character?.hp || 0,
+        maxHp: character?.maxHp || 30,
+        finalGold: character?.gold || 0,
+        inventoryCount: character?.inventory?.length || 0,
+        timeline: nodes.map((n, idx) => ({
+          stage: idx + 1,
+          title: n.chapterTitle,
+          location: n.location,
+          speaker: n.speaker,
+          consequence: n.consequenceNote || 'Perjalanan berlanjut ke wilayah berikutnya.'
+        })),
+        milestones: ledgerFacts
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+

@@ -6,7 +6,7 @@ export default function HeroBanner({ onStartAdventure, onOpenRules, showToast })
   return (
     <section className="relative min-h-[90vh] md:min-h-screen w-full flex flex-col justify-between overflow-hidden">
       {/* Background Image with Cinematic Scrim and Vignette */}
-      <div 
+      <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat z-0 transform scale-100 transition-transform duration-1000"
         style={{ backgroundImage: "url('/assets/hero_bg.jpg')" }}
       >

@@ -41,11 +41,10 @@ export default function CampaignCard({
         audio.playClick();
         onSelect(campaign);
       }}
-      className={`group relative rounded-2xl overflow-hidden cursor-pointer border transition-all duration-300 flex flex-col justify-between ${
-        isSelected
+      className={`group relative rounded-2xl overflow-hidden cursor-pointer border transition-all duration-300 flex flex-col justify-between ${isSelected
           ? 'bg-slate-900 border-amber-400 shadow-xl shadow-amber-500/10 scale-[1.02]'
           : 'bg-slate-950/80 border-slate-800 hover:border-slate-600 hover:bg-slate-900/60'
-      }`}
+        }`}
     >
       {/* Top Image Banner */}
       <div className="relative h-44 w-full overflow-hidden bg-slate-950">
