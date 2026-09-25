@@ -39,6 +39,7 @@ function MainGame() {
     handleSelectCampaign,
     handleStartGame,
     handleChooseAction,
+    handleResolveCombat,
     handleUseItem,
     handleRewind,
     handleLoadSession
@@ -118,6 +119,7 @@ function MainGame() {
         character={character}
         combatState={combatState}
         onChooseAction={handleChooseAction}
+        onResolveCombat={handleResolveCombat}
         onOpenStoryTree={() => setIsStoryTreeOpen(true)}
         onOpenBacklog={() => setIsBacklogOpen(true)}
         onOpenSaveLoad={() => setIsSaveLoadOpen(true)}

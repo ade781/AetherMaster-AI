@@ -57,6 +57,33 @@ const CLASSES = [
     stats: { hp: 26, mana: 30, str: 9, dex: 14, con: 12, int: 14, wis: 11, cha: 17 },
     avatar: 'char_hero_07_warlock',
     starterItem: { id: 'item_02_potion_mana', name: 'Celestial Mana Elixir', category: 'Obat', effect: 'Pulihkan 20 Mana', icon: 'item_02_potion_mana' }
+  },
+  {
+    id: 'barbarian',
+    name: 'Mountain Dwarf Barbarian',
+    icon: Swords,
+    desc: 'Amukan perang tanpa ampun, ketahanan fisik batu karang, dan tebasan kapak maut.',
+    stats: { hp: 38, mana: 10, str: 17, dex: 13, con: 16, int: 8, wis: 11, cha: 9 },
+    avatar: 'char_hero_04_dwarf',
+    starterItem: { id: 'item_11_flame_sword', name: 'Flame Sword', category: 'Senjata', effect: '+5 Serangan Api', icon: 'item_11_flame_sword' }
+  },
+  {
+    id: 'dragonborn',
+    name: 'Red Dragonborn Fighter',
+    icon: Flame,
+    desc: 'Pendekar naga merah gagah berpelindung sisik keras anti-senjata dengan nafas lahar.',
+    stats: { hp: 36, mana: 12, str: 17, dex: 11, con: 15, int: 10, wis: 10, cha: 13 },
+    avatar: 'char_hero_08_dragonborn',
+    starterItem: { id: 'item_08_dragon_shield', name: 'Dragon Shield', category: 'Perisai', effect: '+2 AC Pertahanan', icon: 'item_08_dragon_shield' }
+  },
+  {
+    id: 'bard',
+    name: 'Half-Elf Bard',
+    icon: Music,
+    desc: 'Musisi pengembara karismatik, ahli mantra persuasi gaib, dan penyemangat tempur.',
+    stats: { hp: 26, mana: 24, str: 10, dex: 14, con: 12, int: 12, wis: 12, cha: 17 },
+    avatar: 'char_hero_09_bard',
+    starterItem: { id: 'item_17_dragon_horn', name: 'Dragon War Horn', category: 'Instrumen', effect: 'Panggil arwah sekutu tempur', icon: 'item_17_dragon_horn' }
   }
 ];
 

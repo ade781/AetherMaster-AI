@@ -54,11 +54,20 @@ export default function ThreeDiceRoller({
     // D20 Geometry (Icosahedron)
     const geometry = new THREE.IcosahedronGeometry(1.6, 0);
 
-    // Materials - Obsidian gold metallic
+    // Load PBR Textures from /assets/3d/
+    const textureLoader = new THREE.TextureLoader();
+    const diffuseMap = textureLoader.load('/assets/3d/d20_diffuse.png');
+    const normalMap = textureLoader.load('/assets/3d/d20_normal.png');
+    const roughnessMap = textureLoader.load('/assets/3d/d20_roughness.png');
+
+    // Materials - Obsidian gold metallic with PBR textures
     const material = new THREE.MeshStandardMaterial({
-      color: 0x1e1b4b,
-      metalness: 0.85,
-      roughness: 0.25,
+      map: diffuseMap,
+      normalMap: normalMap,
+      roughnessMap: roughnessMap,
+      color: 0xffffff,
+      metalness: 0.6,
+      roughness: 0.35,
       flatShading: true
     });
 
@@ -145,9 +154,12 @@ export default function ThreeDiceRoller({
     return () => {
       cancelAnimationFrame(frameId);
       window.removeEventListener('resize', handleResize);
-      if (mount && renderer.domElement) {
+      if (mount && renderer.domElement && mount.contains(renderer.domElement)) {
         mount.removeChild(renderer.domElement);
       }
+      diffuseMap.dispose();
+      normalMap.dispose();
+      roughnessMap.dispose();
       geometry.dispose();
       material.dispose();
       renderer.dispose();

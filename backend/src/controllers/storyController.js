@@ -25,7 +25,10 @@ exports.startCampaign = async (req, res) => {
       mage: { hp: 24, maxHp: 24, mana: 35, maxMana: 35, str: 8, dex: 13, con: 11, int: 17, wis: 14, cha: 10, avatar: 'char_hero_03_wizard' },
       cleric: { hp: 30, maxHp: 30, mana: 25, maxMana: 25, str: 13, dex: 10, con: 14, int: 10, wis: 16, cha: 13, avatar: 'char_hero_06_cleric' },
       ranger: { hp: 28, maxHp: 28, mana: 20, maxMana: 20, str: 11, dex: 17, con: 13, int: 12, wis: 15, cha: 10, avatar: 'char_hero_02_ranger' },
-      warlock: { hp: 26, maxHp: 26, mana: 30, maxMana: 30, str: 9, dex: 14, con: 12, int: 14, wis: 11, cha: 17, avatar: 'char_hero_07_warlock' }
+      warlock: { hp: 26, maxHp: 26, mana: 30, maxMana: 30, str: 9, dex: 14, con: 12, int: 14, wis: 11, cha: 17, avatar: 'char_hero_07_warlock' },
+      barbarian: { hp: 38, maxHp: 38, mana: 10, maxMana: 10, str: 17, dex: 13, con: 16, int: 8, wis: 11, cha: 9, avatar: 'char_hero_04_dwarf' },
+      dragonborn: { hp: 36, maxHp: 36, mana: 12, maxMana: 12, str: 17, dex: 11, con: 15, int: 10, wis: 10, cha: 13, avatar: 'char_hero_08_dragonborn' },
+      bard: { hp: 26, maxHp: 26, mana: 24, maxMana: 24, str: 10, dex: 14, con: 12, int: 12, wis: 12, cha: 17, avatar: 'char_hero_09_bard' }
     };
 
     const chosenClass = (characterData?.characterClass || 'warrior').toLowerCase();
@@ -156,11 +159,22 @@ exports.useItem = async (req, res) => {
     const item = inv[itemIdx];
     let msg = '';
 
-    if (item.category === 'Obat' || item.category === 'Potion' || item.id.includes('potion')) {
+    const isConsumable = item.category === 'Obat' || item.category === 'Potion' || item.category === 'Makanan' ||
+      item.id.includes('potion') || item.id.includes('elixir') || item.id.includes('ration');
+
+    if (isConsumable) {
       const lowerName = item.name.toLowerCase();
       const lowerEff = (item.effect || '').toLowerCase();
 
-      if (lowerName.includes('mana') || lowerEff.includes('mana')) {
+      if (lowerName.includes('elixir') || item.id.includes('elixir')) {
+        character.hp = Math.min(character.maxHp, character.hp + 50);
+        character.mana = Math.min(character.maxMana, character.mana + 30);
+        msg = `Memulihkan seluruh vitalitas (50 HP & 30 Mana) dari ${item.name}!`;
+      } else if (lowerName.includes('ration') || item.id.includes('ration')) {
+        const healAmt = 10;
+        character.hp = Math.min(character.maxHp, character.hp + healAmt);
+        msg = `Memulihkan ${healAmt} HP dari ${item.name}!`;
+      } else if (lowerName.includes('mana') || lowerEff.includes('mana')) {
         const healAmt = 25;
         character.mana = Math.min(character.maxMana, character.mana + healAmt);
         msg = `Memulihkan ${healAmt} Mana dari ${item.name}!`;

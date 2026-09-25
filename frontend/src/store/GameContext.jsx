@@ -103,21 +103,26 @@ export function GameProvider({ children }) {
         const nextChar = data.data.character;
         const nextSess = data.data.session;
 
-        // If choice had a stat check or dice roll, show 3D dice overlay
+        // If choice had a stat check or dice roll, show 3D dice overlay with server-authoritative result
         if (choice.statType && choice.dc) {
-          const mod = Math.floor(((nextChar?.[choice.statType.toLowerCase()] || 10) - 10) / 2);
-          const rawDice = Math.floor(Math.random() * 20) + 1; // Visual presentation roll
-          const total = rawDice + mod;
-          const isSuccess = total >= choice.dc;
-          const isCritSuccess = rawDice === 20;
-          const isCritFail = rawDice === 1;
+          const check = data.data?.checkResult;
+          const mod = typeof check?.modifier === 'number'
+            ? check.modifier
+            : Math.floor(((nextChar?.[choice.statType.toLowerCase()] || 10) - 10) / 2);
+          const rawDice = typeof check?.roll === 'number'
+            ? check.roll
+            : Math.floor(Math.random() * 20) + 1;
+          const total = typeof check?.total === 'number' ? check.total : rawDice + mod;
+          const isSuccess = typeof check?.isSuccess === 'boolean' ? check.isSuccess : total >= choice.dc;
+          const isCritSuccess = typeof check?.isNat20 === 'boolean' ? check.isNat20 : rawDice === 20;
+          const isCritFail = typeof check?.isNat1 === 'boolean' ? check.isNat1 : rawDice === 1;
 
           setDiceModal({
             diceValue: rawDice,
-            statType: choice.statType.toUpperCase(),
+            statType: (check?.statType || choice.statType).toUpperCase(),
             mod,
             total,
-            dc: choice.dc,
+            dc: check?.dc || choice.dc,
             isSuccess,
             isCritSuccess,
             isCritFail,
@@ -216,6 +221,18 @@ export function GameProvider({ children }) {
     setIsSaveLoadOpen(false);
   }, []);
 
+  // Resolve tactical combat outcome
+  const handleResolveCombat = useCallback((result) => {
+    if (result?.playerHp !== undefined && character) {
+      setCharacter(prev => prev ? ({ ...prev, hp: result.playerHp }) : prev);
+    }
+    handleChooseAction({
+      id: 'combat_victory',
+      text: `Menumbangkan musuh dalam pertempuran taktis! (Sisa HP: ${result?.playerHp ?? character?.hp})`,
+      tone: 'heroik'
+    });
+  }, [character, handleChooseAction]);
+
   // Global Keyboard Shortcuts (I, L, M)
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -289,6 +306,7 @@ export function GameProvider({ children }) {
     handleSelectCampaign,
     handleStartGame,
     handleChooseAction,
+    handleResolveCombat,
     handleUseItem,
     handleRewind,
     handleLoadSession
