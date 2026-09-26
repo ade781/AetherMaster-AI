@@ -35,6 +35,11 @@ const GameSession = sequelize.define('GameSession', {
       reputation: {}
     }
   },
+  missionLog: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    defaultValue: null
+  },
   isGameOver: {
     type: DataTypes.BOOLEAN,
     defaultValue: false

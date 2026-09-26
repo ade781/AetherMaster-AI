@@ -19,7 +19,7 @@ StoryNode.hasMany(StoryNode, { as: 'children', foreignKey: 'parentNodeId' });
 StoryNode.belongsTo(StoryNode, { as: 'parent', foreignKey: 'parentNodeId' });
 
 const initDb = async (options = {}) => {
-  await sequelize.sync(options);
+  await sequelize.sync({ alter: true, ...options });
   await seedCampaigns();
 };
 
