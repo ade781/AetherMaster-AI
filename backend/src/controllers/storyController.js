@@ -42,8 +42,10 @@ async function advanceStoryState({ session, character, currentNode, chosenChoice
 
   // Hazard enforcement: if player deliberately dove into fatal hazards and LLM was too lenient
   const lethalWords = ['lahar', 'magma', 'kawah', 'racun maut', 'jurang', 'bunuh diri', 'tanpa perlindungan'];
+  const defensiveWords = ['hindar', 'menghindar', 'jauh', 'menjauh', 'waspada', 'hati-hati', 'lindung', 'melindungi', 'bertahan', 'tangkal', 'menangkal'];
   const actTextLower = (chosenChoice?.text || '').toLowerCase();
-  if (lethalWords.some(w => actTextLower.includes(w)) && (!stateUpdates.hpChange || stateUpdates.hpChange >= 0)) {
+  const isDefensive = defensiveWords.some(dw => actTextLower.includes(dw));
+  if (!isDefensive && lethalWords.some(w => actTextLower.includes(w)) && (!stateUpdates.hpChange || stateUpdates.hpChange >= 0)) {
     stateUpdates.hpChange = -25;
   }
 
@@ -67,8 +69,13 @@ async function advanceStoryState({ session, character, currentNode, chosenChoice
     }
   }
 
-  if (stateUpdates.receivedItem && currentInv.length < 6) {
-    currentInv.push(stateUpdates.receivedItem);
+  if (stateUpdates.receivedItem) {
+    if (currentInv.length < 6) {
+      currentInv.push(stateUpdates.receivedItem);
+    } else {
+      const dropNote = `Tas inventaris penuh (maks 6). ${stateUpdates.receivedItem.name || 'Barang baru'} tidak dapat disimpan!`;
+      nextScene.consequenceNote = nextScene.consequenceNote ? `${nextScene.consequenceNote} (${dropNote})` : dropNote;
+    }
   }
   character.inventory = currentInv;
   await character.save();
@@ -302,8 +309,14 @@ exports.useItem = async (req, res) => {
     if (isConsumable) {
       const lowerName = item.name.toLowerCase();
       const lowerEff = (item.effect || '').toLowerCase();
+      const isPoison = lowerName.includes('racun') || lowerName.includes('poison') || lowerName.includes('toxin') ||
+        item.id.includes('racun') || item.id.includes('poison') || item.id.includes('toxin');
 
-      if (lowerName.includes('elixir') || item.id.includes('elixir')) {
+      if (isPoison) {
+        const poisonDmg = 15;
+        character.hp = Math.max(1, character.hp - poisonDmg);
+        msg = `Peringatan! Kamu menenggak ${item.name} dan menderita keracunan (-${poisonDmg} HP)!`;
+      } else if (lowerName.includes('elixir') || item.id.includes('elixir')) {
         character.hp = Math.min(character.maxHp, character.hp + 50);
         character.mana = Math.min(character.maxMana, character.mana + 30);
         msg = `Memulihkan seluruh vitalitas (50 HP & 30 Mana) dari ${item.name}!`;
@@ -312,11 +325,13 @@ exports.useItem = async (req, res) => {
         character.hp = Math.min(character.maxHp, character.hp + healAmt);
         msg = `Memulihkan ${healAmt} HP dari ${item.name}!`;
       } else if (lowerName.includes('mana') || lowerEff.includes('mana')) {
-        const healAmt = 25;
+        const manaMatch = lowerEff.match(/(\d+)\s*mana/);
+        const healAmt = manaMatch ? parseInt(manaMatch[1], 10) : 25;
         character.mana = Math.min(character.maxMana, character.mana + healAmt);
         msg = `Memulihkan ${healAmt} Mana dari ${item.name}!`;
       } else {
-        const healAmt = 25;
+        const healMatch = lowerEff.match(/(\d+)\s*hp/);
+        const healAmt = healMatch ? parseInt(healMatch[1], 10) : 25;
         character.hp = Math.min(character.maxHp, character.hp + healAmt);
         msg = `Memulihkan ${healAmt} HP dari ${item.name}!`;
       }

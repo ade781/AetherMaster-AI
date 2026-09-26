@@ -4,7 +4,7 @@ exports.getSaveSlots = async (req, res) => {
   try {
     const sessions = await GameSession.findAll({
       where: {
-        slotNumber: [0, 1, 2, 3]
+        slotNumber: [0, 1, 2, 3, 4, 5]
       },
       include: [Character, Campaign],
       order: [['slotNumber', 'ASC']]
@@ -14,7 +14,9 @@ exports.getSaveSlots = async (req, res) => {
       0: null, // Auto Save
       1: null, // Manual Slot 1
       2: null, // Manual Slot 2
-      3: null  // Manual Slot 3
+      3: null, // Manual Slot 3
+      4: null, // Manual Slot 4
+      5: null  // Manual Slot 5
     };
 
     const sceneIds = sessions.map(s => s.currentSceneId).filter(Boolean);
@@ -57,8 +59,8 @@ exports.saveToSlot = async (req, res) => {
     }
 
     const slotNum = parseInt(slotNumber, 10);
-    if (isNaN(slotNum) || slotNum < 0 || slotNum > 3) {
-      return res.status(400).json({ success: false, error: 'Nomor slot tidak valid (0-3).' });
+    if (isNaN(slotNum) || slotNum < 0 || slotNum > 5) {
+      return res.status(400).json({ success: false, error: 'Nomor slot tidak valid (0-5).' });
     }
 
     // Clean previous session stored in this slot (delete child nodes first to satisfy foreign keys)
@@ -287,15 +289,32 @@ exports.importSessionJson = async (req, res) => {
     sessData.characterId = character.id;
     const newSession = await GameSession.create(sessData);
 
-    // Recreate nodes mapping old IDs to new UUIDs
+    // Recreate nodes mapping old IDs to new UUIDs with two-pass parent resolution
     const idMap = {};
-    for (const nodeData of sessionData.nodes) {
-      const oldId = nodeData.id;
+    const createdNodes = [];
+
+    // Pass 1: Create all nodes with parentNodeId: null to avoid ordering dependencies
+    for (const rawNodeData of sessionData.nodes) {
+      const oldId = rawNodeData.id;
+      const oldParentId = rawNodeData.parentNodeId;
+      const nodeData = { ...rawNodeData };
       delete nodeData.id;
+      delete nodeData.createdAt;
+      delete nodeData.updatedAt;
       nodeData.sessionId = newSession.id;
-      nodeData.parentNodeId = nodeData.parentNodeId ? idMap[nodeData.parentNodeId] || null : null;
+      nodeData.parentNodeId = null;
+
       const newNode = await StoryNode.create(nodeData);
       idMap[oldId] = newNode.id;
+      createdNodes.push({ newNode, oldParentId });
+    }
+
+    // Pass 2: Connect parent-child links accurately now that all target IDs exist
+    for (const { newNode, oldParentId } of createdNodes) {
+      if (oldParentId && idMap[oldParentId]) {
+        newNode.parentNodeId = idMap[oldParentId];
+        await newNode.save();
+      }
     }
 
     const currentSceneOldId = sessionData.session?.currentSceneId;
