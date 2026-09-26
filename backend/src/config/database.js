@@ -16,6 +16,7 @@ let sequelize;
 if (process.env.DATABASE_URL) {
   sequelize = new Sequelize(process.env.DATABASE_URL, {
     dialect: 'postgres',
+    dialectModule: require('pg'),
     dialectOptions: {
       ssl: process.env.DB_SSL === 'false' ? false : {
         require: true,
@@ -39,6 +40,7 @@ if (process.env.DATABASE_URL) {
       host: process.env.DB_HOST || 'localhost',
       port: Number(process.env.DB_PORT) || 5432,
       dialect: 'postgres',
+      dialectModule: require('pg'),
       dialectOptions: {
         ssl: process.env.DB_SSL === 'false' ? false : {
           require: true,
@@ -64,6 +66,7 @@ if (process.env.DATABASE_URL) {
       host: process.env.DB_HOST || 'localhost',
       port: Number(process.env.DB_PORT) || 3306,
       dialect: 'mysql',
+      dialectModule: require('mysql2'),
       pool: {
         max: 10,
         min: 0,
