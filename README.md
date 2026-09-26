@@ -1,31 +1,26 @@
 # ⚔️ AetherMaster VTT Platform
 
-> **D&D 5E Virtual Tabletop Engine & Non-Linear Interactive Visual Novel RPG**  
-> Menggabungkan ketegasan mekanik *tabletop* D&D 5th Edition klasik dengan kedalaman narasi adaptif, simulasi dadu D20 3D Three.js, sintesis audio prosedural, dan pohon percabangan berbasis *Directed Acyclic Graph* (DAG).
+> **Interactive Visual Novel RPG & Adaptive Narrative Engine**  
+> Menggabungkan kekayaan dunia petualangan fantasi dengan kedalaman narasi adaptif bertenaga AI, sintesis audio prosedural, dan pohon percabangan berbasis *Directed Acyclic Graph* (DAG).
 
 ---
 
 ## 🌟 Pilar Fitur Utama
 
-### 1. 🎲 Mesin Audit D&D 5E Server-Authoritative
-* **Validasi Aksi**: Seluruh kalkulasi lemparan dadu (*attack rolls*, *ability checks*, *saving throws*) divalidasi di sisi server (Node.js/Express) untuk mencegah manipulasi klien.
-* **Mekanik Klasik D&D**:
-  * 6 Skor Atribut dasar (`STR`, `DEX`, `CON`, `INT`, `WIS`, `CHA`) beserta formula modifier standar $\lfloor(\text{Score}-10)/2\rfloor$.
-  * Skala *Difficulty Class* (DC 10–25).
-  * Sistem *Armor Class* (AC), HP, Mana, dan *Inventory Item Bonus*.
-  * Deteksi *Critical Success* (Natural 20) dan *Critical Failure* (Natural 1).
+### 1. 📖 Kecerdasan Narasi Interaktif DM
+* **Dungeon Master Adaptif**: Alur cerita dan konsekuensi aksi dievaluasi secara cerdas oleh AI berdasarkan kecerdikan pemain, atribut karakter, dan konteks situasi skenario.
+* **Format Naratif Sastrawi**: Dialog mendalam yang merespons langsung aksi pemain, interaksi NPC kaya emosi, serta 12 babak petualangan terstruktur.
 
-### 2. 🧊 Lemparan Dadu 3D Fisika (Three.js)
-* Visualisasi lemparan dadu *icosahedron* 20 sisi interaktif dengan tekstur kustom (*diffuse map*, *normal bump map*, dan *specular roughness map*).
-* Menampilkan trayektori acak realistis dengan animasi putaran sudut sebelum mendarat tepat pada angka hasil audit backend.
-
-### 3. 🌿 Pohon Narasi Bercabang & Mekanisme Kilas Balik (*Rewind DAG*)
+### 2. 🌿 Pohon Narasi Bercabang & Mekanisme Kilas Balik (*Rewind DAG*)
 * Setiap keputusan pemain mencabangkan alur cerita baru (*StoryNode*) yang tersimpan dalam relasi *Directed Acyclic Graph* (DAG).
 * **Modal Story Tree**: Pemain dapat membuka diagram jejak adegan kapan saja untuk meninjau riwayat dan melakukan *Rewind* ke titik persimpangan sebelumnya lengkap dengan pemulihan *snapshot* status karakter (HP, Mana, Emas, dan Inventaris).
 
+### 3. 🎒 Inventaris & Status Karakter
+* Sistem inventaris terintegrasi dengan pemulihan status instan untuk ramuan, senjata berkekuatan magis, dan item pembuka kunci jalur pilihan tersembunyi.
+* Atribut karakter (STR, DEX, CON, INT, WIS, CHA) dan modifikator aktif mempengaruhi dinamika narasi dan dialog.
+
 ### 4. 🔊 Sintesis Audio Prosedural 100% Lokal (Web Audio API)
 * **Zero External MP3**: Seluruh efek suara (*sound effect*) dibangkitkan secara prosedural (*real-time wave synthesis*) di browser menggunakan Web Audio API:
-  * Suara denting gulingan dadu kayu (*dice roll*).
   * Efek benturan senjata (*sword clash*).
   * Detak jantung darurat (*critical HP heartbeat*).
   * Tiga variasi *soundscape ambient background* (Kedai Oakhaven, Puncak Badai Salju, Palung Laut Kuno).
@@ -48,7 +43,7 @@ AetherMaster AI/
 │   │   ├── models/           # Skema Campaign, Character, GameSession, StoryNode
 │   │   ├── routes/           # Endpoint API RESTful
 │   │   ├── services/         # Integrasi LLM & Fallback Engine
-│   │   └── utils/            # Kalkulator mekanik D&D 5E & audit dadu
+│   │   └── utils/            # Kalkulator atribut RPG & stat engine
 ├── frontend/                 # Web Client SPA (React 18 + Vite)
 │   ├── src/
 │   │   ├── components/       # Komponen VN Stage, Combat, HUD, Modals

@@ -176,7 +176,7 @@ export default function VisualNovelStage({
             <button
               onClick={() => { audio.playClick(); onOpenBacklog(); }}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-slate-200 hover:text-white hover:bg-white/10 transition-all min-h-[40px]"
-              title="Buka Catatan Riwayat Dialog (Hotkey: L)"
+              title="Buka Jurnal Misi & Prolog Petualang (Hotkey: L)"
             >
               <BookOpen className="w-3.5 h-3.5 text-amber-400" />
               <span className="hidden sm:inline">Log</span>
@@ -366,13 +366,8 @@ export default function VisualNovelStage({
                         <div className="flex-1 min-w-0 flex flex-col gap-0.5">
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="text-[9px] px-2 py-0.5 rounded-full bg-white/10 text-slate-300 uppercase tracking-wider font-bold">
-                              {choice.tone || choice.statType || 'Aksi'}
+                              {choice.tone || 'Aksi'}
                             </span>
-                            {choice.dc && (
-                              <span className="text-[9px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-mono font-bold">
-                                DC {choice.dc} ({choice.statType || 'Check'})
-                              </span>
-                            )}
                             {choice.requiredItem && !hasReqItem && (
                               <span className="text-[9px] px-2 py-0.5 rounded-full bg-red-900/40 text-red-300 border border-red-800/50 uppercase font-bold">
                                 Butuh {choice.requiredItem}

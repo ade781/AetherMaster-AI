@@ -31,7 +31,6 @@ function MainGame() {
     setIsSaveLoadOpen,
     isInventoryOpen,
     setIsInventoryOpen,
-    diceModal,
     isLoading,
     initLoading,
     toast,
@@ -128,11 +127,12 @@ function MainGame() {
         onRewind={handleRewind}
       />
 
-      {/* Backlog Transcript Modal */}
+      {/* Personalized Mission & Prologue Log Modal */}
       <BacklogModal
         isOpen={isBacklogOpen}
         onClose={() => setIsBacklogOpen(false)}
-        sessionId={session?.id}
+        session={session}
+        character={character}
       />
 
       {/* Multi-Slot Save/Load Modal */}
