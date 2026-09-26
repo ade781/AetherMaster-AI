@@ -75,11 +75,7 @@ app.use(async (req, res, next) => {
   }
 });
 
-// Routes (supporting both /api/story and /story for flexible reverse proxies)
-app.use('/api/story', storyRoutes);
-app.use('/story', storyRoutes);
-
-app.get(['/api/health', '/health'], (req, res) => {
+app.get(['/api/health', '/health', '/api'], (req, res) => {
   res.json({
     status: 'online',
     system: 'AetherMaster AI Server',
@@ -89,6 +85,11 @@ app.get(['/api/health', '/health'], (req, res) => {
     timestamp: new Date()
   });
 });
+
+// Routes (supporting /api/story, /story, and / for flexible reverse proxies)
+app.use('/api/story', storyRoutes);
+app.use('/story', storyRoutes);
+app.use('/', storyRoutes);
 
 // Global error handler
 app.use((err, req, res, next) => {
