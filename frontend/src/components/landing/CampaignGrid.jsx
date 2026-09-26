@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Search, Compass, RefreshCw, Play } from 'lucide-react';
 import CampaignCard from './CampaignCard';
 import audio from '../../services/audioService';
+import { IconSwords } from '../icons/FantasyIcons';
 
 export default function CampaignGrid({
   campaigns = [],
@@ -123,7 +124,11 @@ export default function CampaignGrid({
             <div className="lg:col-span-7 p-6 md:p-8 flex flex-col justify-between gap-6">
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-xl">{activeCampaign.icon || '⚔️'}</span>
+                  {(!activeCampaign.icon || activeCampaign.icon === '⚔️' || activeCampaign.icon === '⚔') ? (
+                    <IconSwords className="w-5 h-5 text-amber-400" />
+                  ) : (
+                    <span className="text-xl">{activeCampaign.icon}</span>
+                  )}
                   <span className="text-xs font-mono text-amber-400">Modul Terpilih</span>
                 </div>
                 <h3 className="font-cinzel text-2xl md:text-3xl font-bold text-white tracking-tight">

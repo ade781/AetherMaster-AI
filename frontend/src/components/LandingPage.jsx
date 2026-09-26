@@ -160,7 +160,7 @@ export default function LandingPage({
       {/* 4. Footer */}
       <footer className="relative z-20 w-full border-t border-slate-800/80 bg-slate-950 py-8 px-6 md:px-12 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-500 font-mono">
         <div className="flex items-center gap-2 flex-wrap">
-          <span>⚔️ AetherMaster VTT Platform</span>
+          <span className="flex items-center gap-1.5"><IconSwords className="w-4 h-4 text-amber-400 inline-block" /> AetherMaster VTT Platform</span>
           <span>•</span>
           <span>D&amp;D 5E Virtual Tabletop Engine</span>
           <span>•</span>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Play, Scroll } from 'lucide-react';
 import audio from '../../services/audioService';
+import { IconSwords } from '../icons/FantasyIcons';
 
 export default function HeroBanner({ onStartAdventure, onOpenRules, showToast }) {
   return (
@@ -18,7 +19,7 @@ export default function HeroBanner({ onStartAdventure, onOpenRules, showToast })
       <div className="relative z-10 max-w-4xl mx-auto px-6 text-center my-auto pt-24 md:pt-28 pb-12 flex flex-col items-center">
         {/* Feature Badge */}
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/80 border border-amber-500/40 text-amber-400 text-xs font-mono font-semibold tracking-wider shadow-lg mb-4 backdrop-blur-md">
-          <span>⚔️</span>
+          <IconSwords className="w-4 h-4 text-amber-400" />
           <span>D&amp;D 5E Virtual Tabletop Engine</span>
         </div>
 

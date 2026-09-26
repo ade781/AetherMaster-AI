@@ -1,4 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%" fill="none">
+import math
+
+def generate_crossed_swords_svg():
+    svg = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%" fill="none">
   <defs>
     <!-- Steel Blade Left Bevel -->
     <linearGradient id="blade_light" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -110,4 +113,13 @@
     <circle cx="50" cy="50" r="2.5" fill="#ffffff" opacity="0.95" />
     <polygon points="50,42 51.8,48.2 58,50 51.8,51.8 50,58 48.2,51.8 42,50 48.2,48.2" fill="url(#gold_trim)" opacity="0.9" />
   </g>
-</svg>
+</svg>'''
+    return svg
+
+if __name__ == '__main__':
+    content = generate_crossed_swords_svg()
+    with open('frontend/public/favicon.svg', 'w', encoding='utf-8') as f:
+        f.write(content)
+    with open('frontend/public/assets/icons/svg/swords.svg', 'w', encoding='utf-8') as f:
+        f.write(content)
+    print("Created favicon.svg and updated swords.svg successfully!")

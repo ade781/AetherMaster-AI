@@ -4,14 +4,9 @@
   "description": "Virtual Tabletop Visual Novel RPG modern dengan narasi adaptif, pertarungan taktis, dan petualangan imersif.",
   "icons": [
     {
-      "src": "https://api.dicebear.com/7.x/adventurer/svg?seed=AetherMaster",
+      "src": "/favicon.svg",
       "type": "image/svg+xml",
-      "sizes": "192x192"
-    },
-    {
-      "src": "https://api.dicebear.com/7.x/adventurer/svg?seed=AetherMaster",
-      "type": "image/svg+xml",
-      "sizes": "512x512"
+      "sizes": "any"
     }
   ],
   "start_url": "/",
