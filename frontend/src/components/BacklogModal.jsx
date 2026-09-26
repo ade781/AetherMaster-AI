@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BookOpen, X, MapPin } from 'lucide-react';
 import audio from '../services/audioService';
-
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:5000/api/story';
+import { API_BASE } from '../store/GameContext';
 
 export default function BacklogModal({ isOpen, onClose, sessionId }) {
   const [backlog, setBacklog] = useState([]);

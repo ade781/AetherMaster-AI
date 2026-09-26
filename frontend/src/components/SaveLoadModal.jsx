@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Save, Download, Upload, X, Clock, MapPin, Heart, Shield, RefreshCw, Check } from 'lucide-react';
 import audio from '../services/audioService';
-
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:5000/api/story';
+import { API_BASE } from '../store/GameContext';
 
 export default function SaveLoadModal({
   isOpen,
@@ -136,7 +135,7 @@ export default function SaveLoadModal({
                 Penyimpanan Lokal Multi-Slot & JSON Porter
               </h2>
               <p className="text-xs text-slate-400">
-                Simpan progres petualanganmu ke SQLite lokal atau unduh berkas JSON.
+                Simpan progres petualanganmu ke database atau unduh berkas JSON.
               </p>
             </div>
           </div>

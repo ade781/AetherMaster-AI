@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { GitFork, RotateCcw, X, MapPin, AlertCircle } from 'lucide-react';
 import audio from '../services/audioService';
-
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:5000/api/story';
+import { API_BASE } from '../store/GameContext';
 
 export default function StoryTreeModal({
   isOpen,
