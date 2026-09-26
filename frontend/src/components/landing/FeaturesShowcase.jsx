@@ -1,5 +1,5 @@
 import React from 'react';
-import { GitFork, Backpack, Volume2, Sparkles, Dices } from 'lucide-react';
+import { GitFork, Backpack, Volume2, Sparkles, BookOpen } from 'lucide-react';
 
 export default function FeaturesShowcase() {
   const features = [
@@ -10,10 +10,10 @@ export default function FeaturesShowcase() {
       badge: 'Branching DAG'
     },
     {
-      icon: <Dices className="w-6 h-6 text-amber-400" />,
-      title: 'Lemparan Dadu D20 3D Fisika',
-      desc: 'Visualisasi lemparan dadu icosahedron 3D Three.js dengan audit D&D 5E server-authoritative lengkap: Ability Check, DC, Modifier, dan Critical Success/Failure.',
-      badge: 'Three.js & 5E'
+      icon: <BookOpen className="w-6 h-6 text-amber-400" />,
+      title: 'Kecerdasan Narasi Interaktif DM',
+      desc: 'Narasi mendalam dan dinamis bertenaga AI yang merespons setiap aksi dan keputusan pemain secara kontekstual dan mengalir alami.',
+      badge: 'Visual Novel AI'
     },
     {
       icon: <Backpack className="w-6 h-6 text-emerald-400" />,
@@ -24,7 +24,7 @@ export default function FeaturesShowcase() {
     {
       icon: <Volume2 className="w-6 h-6 text-purple-400" />,
       title: 'Sintesis Audio & Heartbeat Reaktif',
-      desc: '100% audio lokal tanpa aset berat menggunakan Web Audio API: denting lemparan dadu, benturan pedang, detak jantung saat HP kritis, dan soundscape suasana.',
+      desc: '100% audio lokal tanpa aset berat menggunakan Web Audio API: efek benturan pedang, kilatan sihir, detak jantung saat HP kritis, dan soundscape suasana.',
       badge: 'Web Audio API'
     }
   ];
@@ -41,7 +41,7 @@ export default function FeaturesShowcase() {
             Arsitektur Virtual Tabletop Modern
           </h2>
           <p className="text-xs md:text-sm text-slate-400 font-light leading-relaxed">
-            Kombinasi aturan D&amp;D 5E klasik dengan kenyamanan visual novel interaktif dan feedback audiovisual imersif.
+            Kenyamanan visual novel RPG interaktif dengan kebebasan bermain peran dan feedback audiovisual imersif.
           </p>
         </div>
 

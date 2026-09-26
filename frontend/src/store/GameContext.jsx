@@ -19,7 +19,6 @@ export function GameProvider({ children }) {
   const [isBacklogOpen, setIsBacklogOpen] = useState(false);
   const [isSaveLoadOpen, setIsSaveLoadOpen] = useState(false);
   const [isInventoryOpen, setIsInventoryOpen] = useState(false);
-  const [diceModal, setDiceModal] = useState(null); // { diceValue, statType, mod, dc, isSuccess, isCritSuccess, isCritFail, onComplete }
 
   const [isLoading, setIsLoading] = useState(false);
   const [initLoading, setInitLoading] = useState(true);
@@ -79,7 +78,7 @@ export function GameProvider({ children }) {
     }
   }, [selectedCampaign, showToast]);
 
-  // Execute action with dice roll integration
+  // Execute narrative action
   const handleChooseAction = useCallback(async (choice) => {
     if (!session || isLoading) return;
     setIsLoading(true);
@@ -91,9 +90,8 @@ export function GameProvider({ children }) {
         body: JSON.stringify({
           sessionId: session.id,
           choiceId: choice.id,
-          statType: choice.statType,
-          dc: choice.dc,
-          customText: choice.customText
+          customText: choice.customText,
+          tone: choice.tone
         })
       });
 
@@ -107,7 +105,6 @@ export function GameProvider({ children }) {
         setCharacter(nextChar);
         setCurrentNode(nextNode);
         setCombatState(null);
-        setDiceModal(null);
       } else {
         showToast(data.error || 'Gagal mengambil tindakan.', 'error');
       }
@@ -265,8 +262,6 @@ export function GameProvider({ children }) {
     setIsSaveLoadOpen,
     isInventoryOpen,
     setIsInventoryOpen,
-    diceModal,
-    setDiceModal,
     isLoading,
     initLoading,
     toast,

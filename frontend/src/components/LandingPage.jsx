@@ -160,7 +160,7 @@ export default function LandingPage({
       {/* 4. Footer */}
       <footer className="relative z-20 w-full border-t border-slate-800/80 bg-slate-950 py-8 px-6 md:px-12 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-500 font-mono">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="flex items-center gap-1.5"><IconSwords className="w-4 h-4 text-amber-400 inline-block" /> AetherMaster VTT Platform</span>
+          <span>⚔️ AetherMaster VTT Platform</span>
           <span>•</span>
           <span>D&amp;D 5E Virtual Tabletop Engine</span>
           <span>•</span>
@@ -216,9 +216,9 @@ export default function LandingPage({
                   </div>
 
                   <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
-                    <h4 className="font-semibold text-white">2. Difficulty Class (DC)</h4>
+                    <h4 className="font-semibold text-white">2. Logika Skenario &amp; Konteks Dunia</h4>
                     <p>
-                      Tingkat kesulitan ditentukan oleh konteks skenario: Mudah (DC 10), Sedang (DC 15), Sulit (DC 20), Sangat Sulit (DC 25). Jika aksi dan kalkulasi karakter memenuhi ambang DC, aksi dinyatakan berhasil.
+                      Keberhasilan atau konsekuensi aksi dievaluasi secara cerdas oleh Dungeon Master berdasarkan situasi lingkungan, kesiapan perlengkapan, dan kecerdikan keputusanmu.
                     </p>
                   </div>
 
@@ -274,8 +274,8 @@ export default function LandingPage({
                   <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex gap-3">
                     <span className="w-6 h-6 rounded-full bg-slate-800 flex items-center justify-center text-amber-400 font-bold shrink-0">3</span>
                     <div>
-                      <h4 className="font-semibold text-white">Tentukan Aksi &amp; Lempar Dadu D20</h4>
-                      <p>Gunakan tombol pilihan aksi taktis atau ketik aksi bebas. Dadu D20 3D akan memvalidasi keberhasilan aksimu!</p>
+                      <h4 className="font-semibold text-white">Tentukan Aksi Petualangan</h4>
+                      <p>Gunakan tombol pilihan aksi taktis atau ketik aksi bebas sesuka hati. Dungeon Master akan merespons konsekuensinya secara mendalam!</p>
                     </div>
                   </div>
                 </div>

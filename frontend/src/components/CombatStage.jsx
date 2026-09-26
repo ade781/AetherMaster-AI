@@ -25,7 +25,7 @@ export default function CombatStage({
     hp: 32,
     ac: 13,
     attackBonus: 3,
-    damageDice: '1d6+2'
+    damageBonus: 4
   };
 
   const [enemyHp, setEnemyHp] = useState(enemyData.hp || enemyData.maxHp || 30);
@@ -74,20 +74,17 @@ export default function CombatStage({
     setIsActing(true);
     audio.playSwordClash();
 
-    // D20 Roll
-    const roll = Math.floor(Math.random() * 20) + 1;
     const strMod = Math.floor(((character?.str || 10) - 10) / 2);
-    const attackTotal = roll + strMod;
-    const isHit = roll === 20 || attackTotal >= (enemyData.ac || 13);
+    const isHit = Math.random() > 0.2;
 
     if (isHit) {
-      const isCrit = roll === 20;
-      const baseDmg = Math.floor(Math.random() * 8) + 1 + Math.max(1, strMod);
+      const isCrit = Math.random() < 0.15;
+      const baseDmg = Math.floor(Math.random() * 8) + 4 + Math.max(1, strMod);
       const dmg = isCrit ? baseDmg * 2 : baseDmg;
       const newEnemyHp = Math.max(0, enemyHp - dmg);
       setEnemyHp(newEnemyHp);
       addFloating(`-${dmg}`, 'damage', 'enemy');
-      addLog(`⚔️ Ronde ${round}: ${isCrit ? 'CRITICAL HIT! Tebasan mematikan menembus zirah lawan' : 'Serangan telak mendarat'} (${roll} + ${strMod} = ${attackTotal} vs AC ${enemyData.ac || 13}), menorehkan ${dmg} damage!`);
+      addLog(`⚔️ Ronde ${round}: ${isCrit ? 'CRITICAL HIT! Tebasan mematikan menembus pertahanan lawan' : 'Serangan telak mendarat'}, menorehkan ${dmg} damage!`);
 
       if (newEnemyHp <= 0) {
         audio.playCriticalSuccess();
@@ -99,7 +96,7 @@ export default function CombatStage({
       }
     } else {
       addFloating('LUPUT!', 'miss', 'enemy');
-      addLog(`💨 Ronde ${round}: Ayunan senjatamu (${roll} + ${strMod} = ${attackTotal}) meleset tipis dari celah zirah ${enemyData.name}.`);
+      addLog(`💨 Ronde ${round}: Ayunan senjatamu meleset tipis dari celah pertahanan ${enemyData.name}.`);
     }
 
     // Enemy Counter-attack after short delay
@@ -115,7 +112,6 @@ export default function CombatStage({
     setIsActing(true);
 
     if (spell.id === 'fireball') {
-      audio.playDiceRoll();
       const dmg = Math.floor(Math.random() * 12) + 6;
       const newEnemyHp = Math.max(0, enemyHp - dmg);
       setEnemyHp(newEnemyHp);
@@ -146,17 +142,15 @@ export default function CombatStage({
 
   // Enemy Turn
   const handleEnemyTurn = () => {
-    const enemyRoll = Math.floor(Math.random() * 20) + 1;
-    const enemyAtk = enemyRoll + (enemyData.attackBonus || 2);
-    const playerAc = character?.armorClass || 14;
+    const isHit = Math.random() > 0.3;
 
-    if (enemyRoll === 20 || enemyAtk >= playerAc) {
+    if (isHit) {
       audio.playSwordClash();
-      const dmg = Math.floor(Math.random() * 6) + 2;
+      const dmg = Math.floor(Math.random() * 6) + 3;
       const newHp = Math.max(0, playerHp - dmg);
       setPlayerHp(newHp);
       addFloating(`-${dmg}`, 'damage', 'player');
-      addLog(`🩸 Ronde ${round}: ${enemyData.name} menerjang ganas (${enemyRoll} + ${enemyData.attackBonus || 2} = ${enemyAtk} vs AC ${playerAc})! Kamu terhantam ${dmg} damage.`);
+      addLog(`🩸 Ronde ${round}: ${enemyData.name} menerjang ganas! Kamu terhantam ${dmg} damage.`);
 
       if (newHp <= 0) {
         audio.playCriticalFailure();
@@ -168,7 +162,7 @@ export default function CombatStage({
       }
     } else {
       addFloating('TANGKIS!', 'miss', 'player');
-      addLog(`🛡️ Ronde ${round}: Tangkisan tangguh! Kamu berhasil menepis serangan ${enemyData.name} (${enemyRoll} + ${enemyData.attackBonus || 2} = ${enemyAtk} vs AC ${playerAc})!`);
+      addLog(`🛡️ Ronde ${round}: Tangkisan tangguh! Kamu berhasil menepis serangan ${enemyData.name}!`);
     }
 
     setRound(r => r + 1);
@@ -179,19 +173,18 @@ export default function CombatStage({
   const handleFlee = () => {
     if (isActing) return;
     setIsActing(true);
-    const dexRoll = Math.floor(Math.random() * 20) + 1;
     const dexMod = Math.floor(((character?.dex || 10) - 10) / 2);
-    const total = dexRoll + dexMod;
+    const isFlee = (dexMod >= 0 && Math.random() > 0.35);
 
-    if (total >= 12) {
+    if (isFlee) {
       audio.playSelect();
-      addLog(`💨 Kamu berhasil meloloskan diri dari pertempuran (DEX Roll: ${total} vs DC 12)!`);
+      addLog(`💨 Kamu berhasil meloloskan diri dari pertempuran memanfaatkan kelincahanmu!`);
       setTimeout(() => {
         onFleeCombat?.();
       }, 1200);
     } else {
       audio.playClick();
-      addLog(`❌ Gagal kabur (DEX Roll: ${total} vs DC 12)! Musuh menghalangi jalan.`);
+      addLog(`❌ Gagal melarikan diri! Musuh menghalangi jalan.`);
       setTimeout(() => {
         handleEnemyTurn();
       }, 800);

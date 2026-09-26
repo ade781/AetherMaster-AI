@@ -1,4 +1,6 @@
-const { calculateModifier } = require('./diceEngine');
+function calculateModifier(score = 10) {
+  return Math.floor((score - 10) / 2);
+}
 
 /**
  * Calculate effective character stats including passive equipment bonuses.
@@ -62,5 +64,6 @@ function getEffectiveStats(character) {
 }
 
 module.exports = {
-  getEffectiveStats
+  getEffectiveStats,
+  calculateModifier
 };

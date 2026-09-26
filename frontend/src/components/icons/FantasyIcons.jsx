@@ -8,107 +8,31 @@ import React from 'react';
 export function IconSwords({ className = "w-6 h-6", ...props }) {
   return (
     <svg
-      viewBox="0 0 100 100"
+      viewBox="0 0 64 64"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
       {...props}
     >
       <defs>
-        <linearGradient id="blade_light" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#ffffff" />
-          <stop offset="40%" stopColor="#e2e8f0" />
-          <stop offset="100%" stopColor="#94a3b8" />
+        <linearGradient id="gold_swords" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#fef08a" />
+          <stop offset="0.5" stopColor="#eab308" />
+          <stop offset="1" stopColor="#854d0e" />
         </linearGradient>
-        <linearGradient id="blade_dark" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#64748b" />
-          <stop offset="60%" stopColor="#475569" />
-          <stop offset="100%" stopColor="#334155" />
-        </linearGradient>
-        <linearGradient id="gold_trim" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#fef08a" />
-          <stop offset="30%" stopColor="#f59e0b" />
-          <stop offset="70%" stopColor="#d97706" />
-          <stop offset="100%" stopColor="#78350f" />
-        </linearGradient>
-        <linearGradient id="grip_leather" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#451a03" />
-          <stop offset="50%" stopColor="#78350f" />
-          <stop offset="100%" stopColor="#270e02" />
-        </linearGradient>
-        <radialGradient id="ruby_gem" cx="40%" cy="40%" r="60%">
-          <stop offset="0%" stopColor="#fda4af" />
-          <stop offset="30%" stopColor="#f43f5e" />
-          <stop offset="70%" stopColor="#be123c" />
-          <stop offset="100%" stopColor="#4c0519" />
-        </radialGradient>
-        <filter id="fantasy_glow" x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="0" dy="2" stdDeviation="2.5" floodColor="#000000" floodOpacity="0.8" />
-          <feDropShadow dx="0" dy="0" stdDeviation="1.5" floodColor="#fbbf24" floodOpacity="0.3" />
+        <filter id="glow_swords" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="1" stdDeviation="1" floodColor="#000000" floodOpacity="0.6" />
         </filter>
       </defs>
-
-      <g filter="url(#fantasy_glow)">
-        {/* Sword 1: Diagonal Top-Left to Bottom-Right */}
-        <g transform="rotate(-45 50 50)">
-          <path d="M 50 8 L 47 16 L 47.5 58 L 50 58 Z" fill="url(#blade_light)" />
-          <path d="M 50 8 L 53 16 L 52.5 58 L 50 58 Z" fill="url(#blade_dark)" />
-          <line x1="50" y1="18" x2="50" y2="52" stroke="#1e293b" strokeWidth="0.8" strokeLinecap="round" />
-          
-          <path d="M 50 58 C 42 57, 36 54, 34 52 C 33 55, 36 59, 44 60 L 50 60 Z" fill="url(#gold_trim)" />
-          <path d="M 50 58 C 58 57, 64 54, 66 52 C 67 55, 64 59, 56 60 L 50 60 Z" fill="url(#gold_trim)" />
-          <circle cx="34" cy="53" r="1.5" fill="url(#gold_trim)" />
-          <circle cx="66" cy="53" r="1.5" fill="url(#gold_trim)" />
-
-          <polygon points="50,56.5 54,60 50,63.5 46,60" fill="url(#gold_trim)" stroke="#78350f" strokeWidth="0.4" />
-          <circle cx="50" cy="60" r="1.5" fill="url(#ruby_gem)" />
-
-          <rect x="48" y="62" width="4" height="22" rx="1" fill="url(#grip_leather)" stroke="#270e02" strokeWidth="0.3" />
-          <line x1="48" y1="66" x2="52" y2="67.5" stroke="url(#gold_trim)" strokeWidth="0.75" />
-          <line x1="48" y1="71" x2="52" y2="72.5" stroke="url(#gold_trim)" strokeWidth="0.75" />
-          <line x1="48" y1="76" x2="52" y2="77.5" stroke="url(#gold_trim)" strokeWidth="0.75" />
-          <line x1="48" y1="81" x2="52" y2="82.5" stroke="url(#gold_trim)" strokeWidth="0.75" />
-
-          <circle cx="50" cy="87.5" r="3.5" fill="url(#gold_trim)" stroke="#78350f" strokeWidth="0.5" />
-          <circle cx="50" cy="87.5" r="1.6" fill="url(#ruby_gem)" />
-          <polygon points="48.8,91 51.2,91 50,93.5" fill="url(#gold_trim)" />
-        </g>
-
-        {/* Sword 2: Diagonal Top-Right to Bottom-Left */}
-        <g transform="rotate(45 50 50)">
-          <path d="M 50 8 L 47 16 L 47.5 58 L 50 58 Z" fill="url(#blade_light)" />
-          <path d="M 50 8 L 53 16 L 52.5 58 L 50 58 Z" fill="url(#blade_dark)" />
-          <line x1="50" y1="18" x2="50" y2="52" stroke="#1e293b" strokeWidth="0.8" strokeLinecap="round" />
-          
-          <path d="M 50 58 C 42 57, 36 54, 34 52 C 33 55, 36 59, 44 60 L 50 60 Z" fill="url(#gold_trim)" />
-          <path d="M 50 58 C 58 57, 64 54, 66 52 C 67 55, 64 59, 56 60 L 50 60 Z" fill="url(#gold_trim)" />
-          <circle cx="34" cy="53" r="1.5" fill="url(#gold_trim)" />
-          <circle cx="66" cy="53" r="1.5" fill="url(#gold_trim)" />
-
-          <polygon points="50,56.5 54,60 50,63.5 46,60" fill="url(#gold_trim)" stroke="#78350f" strokeWidth="0.4" />
-          <circle cx="50" cy="60" r="1.5" fill="url(#ruby_gem)" />
-
-          <rect x="48" y="62" width="4" height="22" rx="1" fill="url(#grip_leather)" stroke="#270e02" strokeWidth="0.3" />
-          <line x1="48" y1="66" x2="52" y2="67.5" stroke="url(#gold_trim)" strokeWidth="0.75" />
-          <line x1="48" y1="71" x2="52" y2="72.5" stroke="url(#gold_trim)" strokeWidth="0.75" />
-          <line x1="48" y1="76" x2="52" y2="77.5" stroke="url(#gold_trim)" strokeWidth="0.75" />
-          <line x1="48" y1="81" x2="52" y2="82.5" stroke="url(#gold_trim)" strokeWidth="0.75" />
-
-          <circle cx="50" cy="87.5" r="3.5" fill="url(#gold_trim)" stroke="#78350f" strokeWidth="0.5" />
-          <circle cx="50" cy="87.5" r="1.6" fill="url(#ruby_gem)" />
-          <polygon points="48.8,91 51.2,91 50,93.5" fill="url(#gold_trim)" />
-        </g>
-
-        {/* Center Clash Gleam Spark */}
-        <circle cx="50" cy="50" r="2.5" fill="#ffffff" opacity="0.95" />
-        <polygon points="50,42 51.8,48.2 58,50 51.8,51.8 50,58 48.2,51.8 42,50 48.2,48.2" fill="url(#gold_trim)" opacity="0.9" />
-      </g>
+      <path
+        d="M 37.73 35.23 L 36.48 36.69 L 47.32 47.95 L 50.03 51.49 L 35.65 37.32 L 34.4 38.57 L 34.61 39.4 L 52.74 57.75 L 55.24 59.41 L 60.04 61.71 L 59.21 59.41 L 56.29 53.99 L 38.15 35.23 Z M 20.43 24.6 L 24.6 29.19 L 28.98 33.56 L 29.39 33.56 L 30.44 32.31 L 30.44 31.9 L 26.27 27.52 L 23.35 24.6 L 22.31 24.6 L 22.1 24.39 L 21.26 24.39 L 21.06 24.6 Z M 46.7 24.6 L 43.78 24.6 L 15.84 52.74 L 15.64 52.33 L 42.74 23.97 L 42.74 21.06 L 10.84 53.99 L 7.09 61.5 L 11.05 59.83 L 14.38 57.75 Z M 24.18 21.06 L 24.18 23.77 L 25.22 25.02 L 31.27 31.27 L 32.73 30.02 L 32.73 29.6 L 32.1 28.77 L 26.89 23.35 L 24.6 21.06 Z M 46.28 18.55 L 46.28 18.97 L 48.99 21.06 L 50.45 19.18 L 49.82 19.18 L 48.99 18.76 L 47.32 18.35 Z M 19.18 17.09 L 18.97 17.51 L 18.55 18.76 L 18.14 20.22 L 18.35 21.06 L 18.76 21.06 L 19.6 20.01 L 20.01 19.6 L 20.22 19.6 L 20.85 18.97 L 20.85 18.55 Z M 47.32 17.72 L 47.74 17.93 L 49.2 18.14 L 50.66 18.76 L 51.07 18.76 L 52.33 17.3 L 51.7 17.3 L 49.41 16.47 L 48.36 16.47 Z M 39.19 15.64 L 39.19 16.05 L 38.78 16.68 L 38.57 17.3 L 38.57 17.93 L 39.4 17.93 L 40.65 18.35 L 42.32 19.18 L 43.36 20.22 L 43.57 20.64 L 43.78 21.47 L 43.78 23.77 L 46.07 23.56 L 46.91 23.77 L 47.32 23.97 L 48.16 24.81 L 48.57 25.43 L 49.2 26.68 L 49.41 27.73 L 49.82 28.77 L 50.24 28.77 L 52.12 27.93 L 52.12 27.52 L 51.7 26.68 L 50.03 24.18 L 48.16 21.89 L 45.86 19.6 L 42.32 16.89 L 40.65 15.84 L 39.82 15.43 Z M 27.73 15.43 L 27.31 15.43 L 26.06 16.05 L 24.18 17.3 L 21.47 19.39 L 18.35 22.51 L 15.64 26.27 L 15.01 27.31 L 15.01 27.93 L 16.89 28.77 L 17.3 28.77 L 17.51 28.35 L 17.72 27.1 L 18.55 25.43 L 18.97 24.81 L 19.8 23.97 L 20.85 23.56 L 23.35 23.77 L 23.35 20.85 L 23.77 20.01 L 24.81 19.18 L 26.48 18.35 L 27.73 17.93 L 28.56 17.93 L 28.56 17.51 L 28.14 16.26 Z M 17.51 15.43 L 17.09 15.64 L 16.89 16.26 L 16.89 16.89 L 16.26 18.35 L 16.26 18.97 L 17.72 19.8 L 17.72 19.18 L 18.55 17.09 L 18.55 16.47 Z M 49.2 15.84 L 49.62 15.84 L 50.45 16.26 L 52.33 16.68 L 52.74 16.89 L 53.99 15.43 L 53.58 15.22 L 52.95 15.22 L 52.12 14.8 L 51.28 14.59 L 50.45 14.59 L 49.82 15.22 L 49.62 15.22 Z M 15.22 13.55 L 15.01 14.38 L 14.38 16.26 L 14.38 16.89 L 14.8 17.51 L 15.84 18.35 L 15.84 17.51 L 16.68 15.43 L 16.68 14.59 L 15.64 13.55 Z M 51.28 13.97 L 51.7 14.18 L 52.33 14.18 L 53.79 14.8 L 54.62 14.8 L 55.45 13.34 L 54.83 13.34 L 53.99 12.93 L 53.16 12.72 L 52.33 12.72 Z M 13.34 11.67 L 13.34 12.3 L 12.72 13.76 L 12.72 14.38 L 12.51 14.59 L 12.51 15.01 L 13.55 16.05 L 13.97 16.05 L 14.18 15.22 L 14.8 13.34 L 14.8 12.93 Z M 59.83 8.13 L 59.0 7.3 L 58.58 7.09 L 56.5 7.09 L 56.08 7.3 L 55.24 8.13 L 55.04 8.76 L 55.04 10.21 L 53.37 11.67 L 53.16 12.09 L 53.58 12.3 L 54.2 12.3 L 55.04 12.72 L 55.66 12.72 L 55.87 12.93 L 56.29 12.93 L 56.91 12.3 L 57.33 12.09 L 58.58 12.09 L 59.0 11.88 L 59.83 11.05 L 60.04 10.63 L 60.25 10.01 L 60.25 9.17 L 60.04 8.55 Z M 57.12 8.34 L 57.95 8.34 L 58.79 9.17 L 58.79 10.01 L 57.95 10.84 L 57.33 10.84 L 56.91 10.63 L 56.5 10.21 L 56.29 9.8 L 56.29 9.38 L 56.5 8.96 Z M 8.13 7.3 L 7.3 8.13 L 6.88 8.96 L 6.88 10.01 L 7.09 10.63 L 7.3 11.05 L 8.13 11.88 L 8.55 12.09 L 9.17 12.3 L 10.21 12.3 L 12.09 14.18 L 12.09 13.76 L 12.3 13.55 L 12.93 11.47 L 12.93 11.05 L 12.09 10.21 L 12.09 8.76 L 11.88 8.34 L 11.47 7.71 L 10.84 7.3 L 10.42 7.09 L 8.55 7.09 Z M 9.17 8.34 L 9.8 8.34 L 10.21 8.55 L 10.63 8.96 L 10.63 10.21 L 10.21 10.63 L 9.8 10.84 L 9.17 10.84 L 8.76 10.63 L 8.55 10.42 L 8.34 10.01 L 8.34 8.96 L 8.76 8.55 Z"
+        fill="url(#gold_swords)"
+        fillRule="evenodd"
+        filter="url(#glow_swords)"
+      />
     </svg>
   );
 }
-
-export const IconCrossedSwords = IconSwords;
-
 
 export function IconSkull({ className = "w-6 h-6", ...props }) {
   return (

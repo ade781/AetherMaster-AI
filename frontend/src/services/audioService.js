@@ -40,28 +40,7 @@ class AudioService {
   // --- PROCEDURAL SFX GENERATION ---
 
   playDiceRoll() {
-    if (this.isMuted) return;
-    this.init();
-    const now = this.ctx.currentTime;
-    
-    // Simulate dice tumbling on wood
-    for (let i = 0; i < 6; i++) {
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(140 + Math.random() * 220, now + i * 0.08);
-      osc.frequency.exponentialRampToValueAtTime(60, now + i * 0.08 + 0.06);
-
-      gain.gain.setValueAtTime(0.2, now + i * 0.08);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.06);
-
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
-
-      osc.start(now + i * 0.08);
-      osc.stop(now + i * 0.08 + 0.07);
-    }
+    // Dice mechanic removed
   }
 
   playCriticalSuccess() {
