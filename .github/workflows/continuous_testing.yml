@@ -22,12 +22,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
 
       - name: 📦 Install Root & Backend Dependencies
         run: |
-          npm install
-          npm --prefix backend install
+          npm install --legacy-peer-deps
+          npm --prefix backend install --legacy-peer-deps
+
 
       - name: 🧪 Jalankan Autonomous Playtester (Audit Skenario 1-12)
         env:
