@@ -106,9 +106,8 @@ export default function CharacterHUD({
             </div>
             <div className="w-full h-1.5 bg-black/50 rounded-full overflow-hidden border border-white/5 relative shadow-inner">
               <div
-                className={`h-full transition-all duration-500 rounded-full ${
-                  isHpCritical ? 'bg-rose-500 animate-pulse' : 'bg-gradient-to-r from-rose-700 to-rose-400'
-                }`}
+                className={`h-full transition-all duration-500 rounded-full ${isHpCritical ? 'bg-rose-500 animate-pulse' : 'bg-gradient-to-r from-rose-700 to-rose-400'
+                  }`}
                 style={{ width: `${hpPercent}%` }}
               />
             </div>
@@ -157,11 +156,11 @@ export default function CharacterHUD({
 
       {/* 6-Slot Grid Inventory Modal / Drawer */}
       {showInventory && (
-        <div 
+        <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-150"
           onClick={() => setShowInventory(false)}
         >
-          <div 
+          <div
             className="relative w-full max-w-md rounded-2xl border border-slate-700 bg-slate-950/95 shadow-2xl p-5 text-white"
             onClick={(e) => e.stopPropagation()}
           >

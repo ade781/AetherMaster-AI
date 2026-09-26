@@ -42,13 +42,20 @@ export default function CombatStage({
   const enemyHpPercent = Math.max(0, Math.min(100, Math.round((enemyHp / maxEnemyHp) * 100)));
   const playerHpPercent = Math.max(0, Math.min(100, Math.round((playerHp / (character?.maxHp || 20)) * 100)));
 
-  // Play epic combat BGM during battle encounter
+  // Play epic combat or intense boss BGM during battle encounter
   useEffect(() => {
-    audio.playBGM('combat', 0.26);
+    const enemyName = (enemyData.name || '').toLowerCase();
+    const isBoss = enemyName.includes('naga') || 
+                   enemyName.includes('dragon') || 
+                   enemyName.includes('vampire') || 
+                   enemyName.includes('raja') || 
+                   enemyName.includes('lord') || 
+                   (maxEnemyHp >= 50);
+    audio.playBGM(isBoss ? 'boss' : 'combat', 0.26);
     return () => {
       audio.stopBGM();
     };
-  }, []);
+  }, [enemyData.name, maxEnemyHp]);
 
   const addFloating = (text, type, target) => {
     const id = Date.now() + Math.random();

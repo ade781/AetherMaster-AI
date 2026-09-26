@@ -12,6 +12,13 @@ class AudioService {
     this.isSpeechEnabled = false;
     this.bgmAudio = null;
     this.currentBgmSrc = null;
+    this.speechAudio = null;
+    this.speechAbortController = null;
+    this.voiceConfig = {
+      voice: 'id-ID-ArdiNeural', // Pria Indonesia Neural
+      pitch: '-25Hz',            // Deep / Bass tua
+      rate: '-10%'              // Tenang, lambat berwibawa
+    };
   }
 
   init() {
@@ -292,7 +299,11 @@ class AudioService {
     const sources = {
       tavern: '/assets/audio/bgm_tavern.mp3',
       dungeon: '/assets/audio/bgm_dungeon.mp3',
-      combat: '/assets/audio/bgm_combat.mp3'
+      combat: '/assets/audio/bgm_combat.mp3',
+      mystic: '/assets/audio/bgm_mystic.mp3',
+      exploration: '/assets/audio/bgm_exploration.mp3',
+      boss: '/assets/audio/bgm_boss.mp3',
+      graveyard: '/assets/audio/bgm_graveyard.mp3'
     };
     const src = sources[type] || sources.tavern;
     if (this.currentBgmSrc === src && this.bgmAudio && !this.bgmAudio.paused) {
@@ -328,7 +339,7 @@ class AudioService {
     this.stopAmbient();
   }
 
-  // --- WEB SPEECH API NARRATION ---
+  // --- NEURAL AI & WEB SPEECH NARRATION ---
 
   toggleSpeech() {
     this.isSpeechEnabled = !this.isSpeechEnabled;
@@ -338,19 +349,95 @@ class AudioService {
     return this.isSpeechEnabled;
   }
 
+  setVoiceConfig(config = {}) {
+    this.voiceConfig = { ...this.voiceConfig, ...config };
+  }
+
+  async speakNarration(text) {
+    if (!text) return;
+    this.stopSpeech();
+
+    const clean = text.replace(/[*_~`#>]/g, '').replace(/\[.*?\]\(.*?\)/g, '').trim();
+    if (!clean) return;
+
+    // 1. Coba Neural Edge TTS via Backend (Suara Pria Tua Deep Alami)
+    try {
+      this.speechAbortController = new AbortController();
+
+      const apiBase = (typeof window !== 'undefined' && window.__API_BASE__) 
+        || import.meta.env?.VITE_API_BASE 
+        || 'http://127.0.0.1:5000/api/story';
+
+      const response = await fetch(`${apiBase}/tts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: clean,
+          voice: this.voiceConfig.voice,
+          pitch: this.voiceConfig.pitch,
+          rate: this.voiceConfig.rate
+        }),
+        signal: this.speechAbortController.signal
+      });
+
+      if (!response.ok) {
+        throw new Error(`TTS HTTP ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      const audioUrl = URL.createObjectURL(blob);
+      const audioEl = new Audio(audioUrl);
+      this.speechAudio = audioEl;
+
+      audioEl.onended = () => {
+        URL.revokeObjectURL(audioUrl);
+        if (this.speechAudio === audioEl) {
+          this.speechAudio = null;
+        }
+      };
+
+      await audioEl.play();
+      return;
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      console.warn('[AudioService] Neural TTS dialihkan ke Web Speech API:', err.message);
+    }
+
+    // 2. Fallback jika offline: Web Speech API dengan tuning Deep Pitch & Calm Pace
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(clean);
+      const voices = window.speechSynthesis.getVoices();
+      const maleVoice = voices.find(v => 
+        (v.lang.startsWith('id') && !v.name.toLowerCase().includes('gadis')) || 
+        v.name.includes('Andika') || 
+        v.name.includes('David')
+      );
+      if (maleVoice) utterance.voice = maleVoice;
+      utterance.lang = 'id-ID';
+      utterance.pitch = 0.65; // Suara deep / berat
+      utterance.rate = 0.85;  // Tempo tenang tetua
+      window.speechSynthesis.speak(utterance);
+    }
+  }
+
   speakText(text, lang = 'id-ID') {
-    if (!this.isSpeechEnabled || !('speechSynthesis' in window)) return;
-    window.speechSynthesis.cancel();
-    const clean = text.replace(/[*_~`]/g, '');
-    const utterance = new SpeechSynthesisUtterance(clean);
-    utterance.lang = lang;
-    utterance.rate = 1.0;
-    utterance.pitch = 0.95;
-    window.speechSynthesis.speak(utterance);
+    return this.speakNarration(text);
   }
 
   stopSpeech() {
-    if ('speechSynthesis' in window) {
+    if (this.speechAbortController) {
+      this.speechAbortController.abort();
+      this.speechAbortController = null;
+    }
+    if (this.speechAudio) {
+      try {
+        this.speechAudio.pause();
+        this.speechAudio.currentTime = 0;
+      } catch (e) {}
+      this.speechAudio = null;
+    }
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
     }
   }

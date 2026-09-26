@@ -77,7 +77,20 @@ const Character = sequelize.define('Character', {
   },
   inventory: {
     type: DataTypes.JSON,
-    defaultValue: []
+    defaultValue: [],
+    get() {
+      const raw = this.getDataValue('inventory');
+      if (Array.isArray(raw)) return raw;
+      if (typeof raw === 'string') {
+        try {
+          const parsed = JSON.parse(raw);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+          return [];
+        }
+      }
+      return [];
+    }
   },
   equippedItems: {
     type: DataTypes.JSON,

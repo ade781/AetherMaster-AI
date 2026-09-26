@@ -2,12 +2,37 @@ const { Character, Campaign, GameSession, StoryNode } = require('../models');
 const geminiService = require('../services/geminiService');
 const { getEffectiveStats } = require('../utils/statEngine');
 
+function safeArray(val) {
+  if (Array.isArray(val)) return val;
+  if (typeof val === 'string') {
+    try {
+      const parsed = JSON.parse(val);
+      if (Array.isArray(parsed)) return parsed;
+      if (parsed && typeof parsed === 'object') return Object.values(parsed);
+    } catch (e) {}
+  }
+  if (val && typeof val === 'object') return Object.values(val);
+  return [];
+}
+
+function safeObject(val) {
+  if (val && typeof val === 'object' && !Array.isArray(val)) return { ...val };
+  if (typeof val === 'string') {
+    try {
+      const parsed = JSON.parse(val);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+    } catch (e) {}
+  }
+  return {};
+}
+
+
 function resolveChoice(currentNode, choiceId, customText, tone) {
-  const choiceList = currentNode?.choices || [];
-  const matched = choiceList.find(c => c.id === choiceId);
+  const choiceList = safeArray(currentNode?.choices);
+  const matched = choiceList.find(c => c && (c.id === choiceId || c.text === choiceId));
   if (matched) return matched;
 
-  const text = customText || 'Melangkah maju dengan waspada';
+  const text = customText || (typeof choiceId === 'string' && choiceId !== 'custom' ? choiceId : 'Melangkah maju dengan waspada');
 
   return {
     id: choiceId || 'custom',
@@ -54,7 +79,7 @@ async function advanceStoryState({ session, character, currentNode, chosenChoice
   character.gold = Math.max(0, character.gold + (stateUpdates.goldChange || 0));
 
   // Process inventory: consumption and receiving
-  let currentInv = [...(character.inventory || [])];
+  let currentInv = safeArray(character.inventory);
   const toConsume = stateUpdates.consumedItem || (chosenChoice?.requiredItem ? chosenChoice.requiredItem : null);
   if (toConsume) {
     const lowerReq = String(toConsume).toLowerCase();
@@ -81,9 +106,9 @@ async function advanceStoryState({ session, character, currentNode, chosenChoice
   await character.save();
 
   // Update world ledger (quest flags & persistent faction reputation)
-  const ledger = session.worldLedger || { questFlags: {}, reputation: {} };
-  if (!ledger.reputation) ledger.reputation = {};
-  if (!ledger.questFlags) ledger.questFlags = {};
+  const ledger = safeObject(session.worldLedger);
+  if (!ledger.reputation || typeof ledger.reputation !== 'object') ledger.reputation = {};
+  if (!ledger.questFlags || typeof ledger.questFlags !== 'object') ledger.questFlags = {};
   if (stateUpdates.addLedgerFact) {
     ledger.questFlags[`turn_${session.turnCount + 1}`] = stateUpdates.addLedgerFact;
   }
@@ -99,11 +124,20 @@ async function advanceStoryState({ session, character, currentNode, chosenChoice
   }
 
   // Stage 12 Cap: force resolution choice for final stage
-  let stageChoices = nextScene.choices;
+  let stageChoices = safeArray(nextScene.choices);
   if (session.turnCount >= 12) {
     stageChoices = [
       { id: 'finish_game', text: 'Tutup Lembaran Takdir & Rayakan Kemenangan Legenda', tone: 'bold' }
     ];
+  }
+
+  // Preserve campaign location background unless explicit room transfer
+  const campaignBg = session.Campaign?.defaultBackgroundId;
+  const currentBg = currentNode?.backgroundId;
+  const candidateBg = nextScene?.backgroundId;
+  let resolvedBg = candidateBg;
+  if (!resolvedBg || (resolvedBg === 'bg_01_tavern' && campaignBg && campaignBg !== 'bg_01_tavern')) {
+    resolvedBg = currentBg || campaignBg || 'bg_01_tavern';
   }
 
   // Create next node with character state snapshot for precise rewind
@@ -112,7 +146,7 @@ async function advanceStoryState({ session, character, currentNode, chosenChoice
     parentNodeId: currentNode.id,
     chapterTitle: session.turnCount >= 12 ? 'Babak XII: Grand Finale & Fajar Kemenangan' : nextScene.chapterTitle,
     location: nextScene.location,
-    backgroundId: nextScene.backgroundId,
+    backgroundId: resolvedBg,
     speaker: nextScene.speaker,
     characterId: nextScene.characterId,
     mood: session.turnCount >= 12 ? 'triumphant' : nextScene.mood,
@@ -231,7 +265,7 @@ exports.startCampaign = async (req, res) => {
 
     // Apply any initial state updates
     if (openingScene.stateUpdates?.receivedItem) {
-      const inv = [...character.inventory];
+      const inv = safeArray(character.inventory);
       if (inv.length < 6) {
         inv.push(openingScene.stateUpdates.receivedItem);
         character.inventory = inv;
@@ -239,18 +273,22 @@ exports.startCampaign = async (req, res) => {
       }
     }
 
+    const startingBgId = (openingScene.backgroundId && openingScene.backgroundId !== 'bg_01_tavern')
+      ? openingScene.backgroundId
+      : (campaign.defaultBackgroundId || 'bg_01_tavern');
+
     const rootNode = await StoryNode.create({
       sessionId: session.id,
       parentNodeId: null,
       chapterTitle: openingScene.chapterTitle,
       location: openingScene.location,
-      backgroundId: openingScene.backgroundId,
+      backgroundId: startingBgId,
       speaker: openingScene.speaker,
       characterId: openingScene.characterId,
       mood: openingScene.mood,
       dialogueText: openingScene.dialogue,
       consequenceNote: openingScene.consequenceNote,
-      choices: openingScene.choices,
+      choices: safeArray(openingScene.choices),
       combatEncounter: openingScene.combatEncounter || null,
       characterSnapshot: {
         hp: character.hp,
@@ -258,7 +296,7 @@ exports.startCampaign = async (req, res) => {
         mana: character.mana,
         maxMana: character.maxMana,
         gold: character.gold,
-        inventory: [...character.inventory],
+        inventory: safeArray(character.inventory),
         turnCount: session.turnCount
       }
     });

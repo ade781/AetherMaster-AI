@@ -49,7 +49,20 @@ const StoryNode = sequelize.define('StoryNode', {
   },
   choices: {
     type: DataTypes.JSON,
-    defaultValue: []
+    defaultValue: [],
+    get() {
+      const raw = this.getDataValue('choices');
+      if (Array.isArray(raw)) return raw;
+      if (typeof raw === 'string') {
+        try {
+          const parsed = JSON.parse(raw);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+          return [];
+        }
+      }
+      return [];
+    }
   },
   combatEncounter: {
     type: DataTypes.JSON,

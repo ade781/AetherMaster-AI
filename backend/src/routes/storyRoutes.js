@@ -3,6 +3,7 @@ const router = express.Router();
 const rateLimit = require('express-rate-limit');
 const storyController = require('../controllers/storyController');
 const saveLoadController = require('../controllers/saveLoadController');
+const ttsController = require('../controllers/ttsController');
 
 // Rate limiter for LLM / narrative endpoints (Fase 6: Max 30 req/min per IP)
 const storyAiLimiter = rateLimit({
@@ -35,5 +36,8 @@ router.post('/saves/save', saveLoadController.saveToSlot);
 router.get('/saves/load/:slotNumber', saveLoadController.loadFromSlot);
 router.get('/saves/export/:sessionId', saveLoadController.exportSessionJson);
 router.post('/saves/import', saveLoadController.importSessionJson);
+
+// Neural AI Text-to-Speech Route (Edge TTS)
+router.all('/tts', ttsController.synthesizeSpeech);
 
 module.exports = router;

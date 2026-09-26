@@ -26,19 +26,42 @@ const GameSession = sequelize.define('GameSession', {
   combatState: {
     type: DataTypes.JSON,
     allowNull: true,
-    defaultValue: null
+    defaultValue: null,
+    get() {
+      const raw = this.getDataValue('combatState');
+      if (!raw) return null;
+      if (typeof raw === 'object') return raw;
+      try { return JSON.parse(raw); } catch (e) { return null; }
+    }
   },
   worldLedger: {
     type: DataTypes.JSON,
     defaultValue: {
       questFlags: {},
       reputation: {}
+    },
+    get() {
+      const raw = this.getDataValue('worldLedger');
+      if (raw && typeof raw === 'object' && !Array.isArray(raw)) return raw;
+      if (typeof raw === 'string') {
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed === 'object') return parsed;
+        } catch (e) {}
+      }
+      return { questFlags: {}, reputation: {} };
     }
   },
   missionLog: {
     type: DataTypes.JSON,
     allowNull: true,
-    defaultValue: null
+    defaultValue: null,
+    get() {
+      const raw = this.getDataValue('missionLog');
+      if (!raw) return null;
+      if (typeof raw === 'object') return raw;
+      try { return JSON.parse(raw); } catch (e) { return null; }
+    }
   },
   isGameOver: {
     type: DataTypes.BOOLEAN,

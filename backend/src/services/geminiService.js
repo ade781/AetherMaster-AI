@@ -13,7 +13,7 @@ const choiceSchema = z.object({
 const sceneSchema = z.object({
   chapterTitle: z.string().default('Babak Petualangan'),
   location: z.string().default('Kedai Whispering Tavern'),
-  backgroundId: z.string().default('bg_01_tavern'),
+  backgroundId: z.string().optional(),
   speaker: z.string().default('Eldrin sang Barkeep'),
   characterId: z.string().default('char_npc_01_barkeep'),
   mood: z.enum(['tense', 'mysterious', 'triumphant', 'ominous', 'peaceful']).default('mysterious'),
@@ -464,6 +464,9 @@ class GeminiService {
 
     const charName = character?.name || 'Petualang';
     const charClass = character?.characterClass || 'Pengelana';
+    const targetBgId = campaign?.defaultBackgroundId || 'bg_01_tavern';
+    const targetNpcId = campaign?.defaultNpcId || 'char_npc_01_barkeep';
+
     const systemPrompt = `Kamu adalah Dungeon Master (DM) untuk game RPG Visual Novel interaktif.
 Tugasmu adalah menyusun pembuka petualangan yang ON-POINT, ATMOSFERIK, dan BEBAS HIPERBOLA LEBAY.
 Gunakan Bahasa Indonesia sastrawi lugas, taktis, dan fokus pada situasi nyata.
@@ -486,6 +489,7 @@ ATURAN STRUKTUR DUA KOMPONEN PEMBUKA:
    - JANGAN PERNAH gunakan em dash (—). Gunakan koma atau titik.
    - MUTLAK TANPA unsur dadu (d20, DC, roll).
    - combatEncounter WAJIB null.
+   - 'backgroundId' WAJIB bernilai "${targetBgId}".
 
 SKEMA JSON RESMI:
 {
@@ -495,10 +499,10 @@ SKEMA JSON RESMI:
     "targetGoal": "string sasaran utama"
   },
   "chapterTitle": "Babak I: [Judul Babak]",
-  "location": "string",
-  "backgroundId": "string (pilih dari bg_01 s.d bg_29)",
+  "location": "${campaign.title || 'Wilayah Petualangan'}",
+  "backgroundId": "${targetBgId}",
   "speaker": "string (nama NPC atau Narator)",
-  "characterId": "string (char_hero_01 s.d 09 atau char_npc_01 s.d 09)",
+  "characterId": "${targetNpcId}",
   "mood": "tense | mysterious | triumphant | ominous | peaceful",
   "dialogue": "string adegan langsung di TKP tanpa mengulang prolog",
   "consequenceNote": "string ringkas",
@@ -526,13 +530,18 @@ SKEMA JSON RESMI:
 }`;
 
     const prompt = `Kampanye: "${campaign.title}" (${campaign.premise}).
-Karakter Pemain: ${charName}, Ras: ${character.race}, Kelas: ${charClass}.
+Karakter Pemain: ${charName}, Ras: ${character?.race || 'Human'}, Kelas: ${charClass}.
+Latar Visual Panggung: WAJIB gunakan backgroundId: "${targetBgId}".
 Buatlah:
 1. 'missionLog' yang memadukan premis kampanye dengan latar belakang personal ${charName} sang ${charClass} serta targetGoal yang jelas.
 2. Adegan panggung Babak I yang dimulai langsung di tempat kejadian (in media res), di mana ${charName} sudah berada di lokasi dan langsung menghadapi situasi pertama yang menuntut pilihan aksi segera. Jangan ulangi isi missionLog di teks dialogue!`;
 
     try {
-      return parseSceneJson(await this.callWithFallback(prompt, systemPrompt));
+      const parsed = parseSceneJson(await this.callWithFallback(prompt, systemPrompt));
+      if (!parsed.backgroundId || (parsed.backgroundId === 'bg_01_tavern' && targetBgId !== 'bg_01_tavern')) {
+        parsed.backgroundId = targetBgId;
+      }
+      return parsed;
     } catch (err) {
       console.warn('[GeminiService] Error calling Gemini API for opening, using deterministic fallback:', err.message);
       return getFallbackOpening(campaign, character);
@@ -615,7 +624,7 @@ KONTEKS DUNIA & RIWAYAT LANGKAH SEBELUMNYA:
 ${historyContext}
 
 KONDISI PEMAIN SAAT INI:
-- Karakter: ${charName} (Kelas / Role: ${charClass}, Ras: ${character.race || 'Human'}, HP: ${character.hp}/${character.maxHp}, Mana: ${character.mana}/${character.maxMana}, Gold: ${character.gold})
+- Karakter: ${charName} (Kelas / Role: ${charClass}, Ras: ${character?.race || 'Human'}, HP: ${character?.hp ?? 100}/${character?.maxHp ?? 100}, Mana: ${character?.mana ?? 50}/${character?.maxMana ?? 50}, Gold: ${character?.gold ?? 0})
 - Lokasi Terakhir: ${prevLocation}
 - Latar Aktif Saat Ini: "${prevBgId}"
 - Memori Dunia: ${ledgerFacts}
@@ -693,7 +702,11 @@ SKEMA JSON RESMI:
     const prompt = `Lanjutkan petualangan untuk ${charName} sang ${charClass}! Aksi pemain yang baru saja diambil: "${actionText}". Ceritakan reaksi langsungnya secara mendalam, sertakan dialog NPC jika berinteraksi, dan kembangkan cerita babak ini!`;
 
     try {
-      return parseSceneJson(await this.callWithFallback(prompt, systemPrompt));
+      const parsed = parseSceneJson(await this.callWithFallback(prompt, systemPrompt));
+      if (!parsed.backgroundId || (parsed.backgroundId === 'bg_01_tavern' && prevBgId !== 'bg_01_tavern')) {
+        parsed.backgroundId = prevBgId;
+      }
+      return parsed;
     } catch (err) {
       console.warn('[GeminiService] Error calling Gemini API for next scene, using smart contextual fallback:', err.message);
       return getFallbackNextScene(previousNode, actionTaken, character, session?.turnCount || 1);

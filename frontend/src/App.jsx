@@ -4,7 +4,6 @@ import CharacterHUD from './components/CharacterHUD';
 import VisualNovelStage from './components/VisualNovelStage';
 import CharacterCreationModal from './components/CharacterCreationModal';
 import StoryTreeModal from './components/StoryTreeModal';
-import BacklogModal from './components/BacklogModal';
 import SaveLoadModal from './components/SaveLoadModal';
 import GameOverModal from './components/GameOverModal';
 import LandingPage from './components/LandingPage';
@@ -49,11 +48,10 @@ function MainGame() {
     if (!toast) return null;
     return (
       <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] animate-slideDown">
-        <div className={`px-4 py-2.5 rounded-xl shadow-2xl border flex items-center gap-2 ${
-          toast.type === 'error' 
-            ? 'bg-rose-950/90 border-rose-500/50 text-rose-200' 
+        <div className={`px-4 py-2.5 rounded-xl shadow-2xl border flex items-center gap-2 ${toast.type === 'error'
+            ? 'bg-rose-950/90 border-rose-500/50 text-rose-200'
             : 'bg-emerald-950/90 border-emerald-500/50 text-emerald-200'
-        }`}>
+          }`}>
           <span className="text-xs md:text-sm font-medium">{toast.message}</span>
         </div>
       </div>
@@ -102,9 +100,10 @@ function MainGame() {
       <VisualNovelStage
         node={currentNode}
         character={character}
+        campaign={selectedCampaign || session?.Campaign}
+        session={session}
         onChooseAction={handleChooseAction}
         onOpenStoryTree={() => setIsStoryTreeOpen(true)}
-        onOpenBacklog={() => setIsBacklogOpen(true)}
         onOpenSaveLoad={() => setIsSaveLoadOpen(true)}
         onToggleInventory={() => setIsInventoryOpen(prev => !prev)}
         isLoading={isLoading}
@@ -125,14 +124,6 @@ function MainGame() {
         sessionId={session?.id}
         currentNodeId={currentNode?.id}
         onRewind={handleRewind}
-      />
-
-      {/* Personalized Mission & Prologue Log Modal */}
-      <BacklogModal
-        isOpen={isBacklogOpen}
-        onClose={() => setIsBacklogOpen(false)}
-        session={session}
-        character={character}
       />
 
       {/* Multi-Slot Save/Load Modal */}
