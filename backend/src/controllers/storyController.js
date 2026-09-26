@@ -146,8 +146,8 @@ exports.getCampaigns = async (req, res) => {
 
 exports.startCampaign = async (req, res) => {
   try {
-    const characterData = req.body.characterData || req.body.character || {};
-    const campaignId = req.body.campaignId;
+    const characterData = req.body.characterData || req.body.character || req.body || {};
+    const campaignId = req.body.campaignId || characterData.campaignId;
     const campaign = await Campaign.findByPk(campaignId || 'whispering_tavern');
     if (!campaign) {
       return res.status(404).json({ success: false, error: 'Kampanye tidak ditemukan.' });
@@ -358,6 +358,22 @@ exports.submitAction = async (req, res) => {
     }
 
     const character = session.Character;
+
+    // Direct game resolution if finish_game is chosen at final stage
+    if (choiceId === 'finish_game') {
+      session.isGameOver = true;
+      await session.save();
+      return res.json({
+        success: true,
+        data: {
+          session,
+          character,
+          currentNode,
+          checkResult: null
+        }
+      });
+    }
+
     const chosenChoice = resolveChoice(currentNode, choiceId, customText, null, null, tone);
 
     // Fetch recent story history for rolling context window (last 4 steps)
@@ -710,6 +726,22 @@ exports.actionStream = async (req, res) => {
     }
 
     const character = session.Character;
+
+    if (choiceId === 'finish_game') {
+      session.isGameOver = true;
+      await session.save();
+      res.write(`data: ${JSON.stringify({
+        type: 'done',
+        data: {
+          session,
+          character,
+          currentNode,
+          checkResult: null
+        }
+      })}\n\n`);
+      return res.end();
+    }
+
     const chosenChoice = resolveChoice(currentNode, choiceId, customText, statType, dc ? Number(dc) : undefined, 'kreatif');
     const effectiveChar = getEffectiveStats(character);
 
@@ -775,11 +807,21 @@ exports.getGameSummary = async (req, res) => {
       return res.status(404).json({ success: false, error: 'Sesi tidak ditemukan.' });
     }
 
-    const nodes = await StoryNode.findAll({
+    const allNodes = await StoryNode.findAll({
       where: { sessionId },
       order: [['createdAt', 'ASC']],
-      attributes: ['id', 'chapterTitle', 'location', 'speaker', 'mood', 'consequenceNote', 'createdAt']
+      attributes: ['id', 'parentNodeId', 'chapterTitle', 'location', 'speaker', 'mood', 'consequenceNote', 'createdAt']
     });
+
+    // Reconstruct linear branch history from root to current node
+    const nodeMap = new Map(allNodes.map(n => [n.id, n]));
+    const chain = [];
+    let curr = nodeMap.get(session.currentSceneId);
+    while (curr) {
+      chain.unshift(curr);
+      curr = curr.parentNodeId ? nodeMap.get(curr.parentNodeId) : null;
+    }
+    const finalNodes = chain.length > 0 ? chain : allNodes;
 
     const character = session.Character;
     const campaign = session.Campaign;
@@ -794,13 +836,13 @@ exports.getGameSummary = async (req, res) => {
         campaignTitle: campaign?.title || 'Petualangan Aether',
         characterName: character?.name || 'Pahlawan',
         characterClass: character?.characterClass || 'Petualang',
-        totalStages: Math.min(12, session.turnCount),
+        totalStages: Math.min(12, finalNodes.length),
         isVictory: character ? character.hp > 0 : false,
         finalHp: character?.hp || 0,
         maxHp: character?.maxHp || 30,
         finalGold: character?.gold || 0,
         inventoryCount: character?.inventory?.length || 0,
-        timeline: nodes.map((n, idx) => ({
+        timeline: finalNodes.map((n, idx) => ({
           stage: idx + 1,
           title: n.chapterTitle,
           location: n.location,
