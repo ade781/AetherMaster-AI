@@ -7,9 +7,7 @@ const choiceSchema = z.object({
   id: z.string(),
   text: z.string(),
   requiredItem: z.string().nullable().optional(),
-  tone: z.string().optional(),
-  statType: z.string().optional(),
-  dc: z.number().optional()
+  tone: z.string().optional()
 });
 
 const sceneSchema = z.object({
@@ -36,6 +34,11 @@ const sceneSchema = z.object({
     consumedItem: null,
     addLedgerFact: null
   }),
+  missionLog: z.object({
+    title: z.string().default('Jurnal Misi Petualang'),
+    prologue: z.string().default(''),
+    targetGoal: z.string().default('Tuntaskan penyelidikan dan atasi krisis utama.')
+  }).nullable().optional(),
   choices: z.array(choiceSchema).default([]),
   combatEncounter: z.any().nullable().optional()
 });
@@ -50,6 +53,7 @@ function parseSceneJson(rawText) {
   const match = rawText.match(/\{[\s\S]*\}/);
   const parsed = JSON.parse(match ? match[0] : rawText);
   if (parsed.dialogue) parsed.dialogue = cleanText(parsed.dialogue);
+  if (parsed.missionLog?.prologue) parsed.missionLog.prologue = cleanText(parsed.missionLog.prologue);
   return sceneSchema.parse(parsed);
 }
 
@@ -83,14 +87,13 @@ function getFallbackOpening(campaign, character) {
   };
   const speaker = npcNames[npcId] || 'Pemandu Petualangan';
 
-  let dialogue = '';
-  if (campaign?.introDialogue) {
-    dialogue = `${campaign.introDialogue}\n\nDi hadapanmu, ${charName} sang ${charClass}, takdir kini memanggil untuk bertindak.`;
-  } else if (campaign?.premise) {
-    dialogue = `${campaign.premise}\n\n${charName}, petualang ${charClass} yang tangguh, kini berdiri di ambang misteri ini.`;
-  } else {
-    dialogue = `Selamat datang di ${title}, ${charName}. Petualangan epikmu baru saja dimulai.`;
-  }
+  const missionLog = {
+    title: `Jurnal Misi: ${title}`,
+    prologue: `${campaign?.premise || 'Krisis tak terduga mengancam wilayah ini.'}\n\nKehadiran ${charName} sebagai seorang ${charClass} membawa harapan penting bagi penyelesaian masalah ini. Penyelidikan mendalam harus segera dilakukan untuk mengungkap fakta sebelum dampak buruk kian meluas.`,
+    targetGoal: `Selesaikan investigasi di ${location} dan netralkan sumber ancaman.`
+  };
+
+  const dialogue = `${speaker} menatap ${charName} sang ${charClass} dengan raut wajah tegang saat kamu tiba di ${location}. "Syukurlah kamu lekas tiba," ucapnya pelan seraya menunjuk ke arah celah lorong di hadapanmu. "Situasi di sini tidak beres. Kita harus bertindak sekarang."`;
 
   // Campaign specific starting bonus item if available
   let receivedItem = null;
@@ -113,14 +116,15 @@ function getFallbackOpening(campaign, character) {
   }
 
   return {
-    chapterTitle: `Babak I: ${title}`,
+    missionLog,
+    chapterTitle: `Babak I: Langkah Awal di ${title}`,
     location,
     backgroundId: bgId,
     speaker,
     characterId: npcId,
     mood: 'mysterious',
     dialogue: cleanText(dialogue),
-    consequenceNote: `Memulai babak pertama kampanye ${title}.`,
+    consequenceNote: `Tiba di ${location} untuk memulai investigasi misi.`,
     stateUpdates: {
       hpChange: 0,
       manaChange: 0,
@@ -133,29 +137,23 @@ function getFallbackOpening(campaign, character) {
       {
         id: 'c1',
         text: 'Amati situasi sekitar dengan saksama dan cari petunjuk tersembunyi',
-        tone: 'cautious',
-        statType: 'WIS',
-        dc: 10
+        tone: 'cautious'
       },
       {
         id: 'c2',
         text: 'Melangkah maju mendekati sumber suara atau sosok di hadapanmu',
-        tone: 'bold',
-        statType: 'STR',
-        dc: 12
+        tone: 'bold'
       },
       {
         id: 'c3',
         text: 'Selidiki ornamen dan energi gaib yang terpancar di sekitar tempat ini',
-        tone: 'curious',
-        statType: 'INT',
-        dc: 11
+        tone: 'curious'
       }
     ]
   };
 }
 
-function getFallbackNextScene(previousNode, actionTaken, checkResult, character, turnCount = 1) {
+function getFallbackNextScene(previousNode, actionTaken, character, turnCount = 1) {
   const actionText = actionTaken?.text || 'Melangkah maju dengan waspada';
   const actionTone = actionTaken?.tone || 'cautious';
   const prevLoc = previousNode?.location || 'Ruang Petualangan';
@@ -466,35 +464,44 @@ class GeminiService {
 
     const charName = character?.name || 'Petualang';
     const charClass = character?.characterClass || 'Pengelana';
+    const systemPrompt = `Kamu adalah Dungeon Master (DM) untuk game RPG Visual Novel interaktif.
+Tugasmu adalah menyusun pembuka petualangan yang ON-POINT, ATMOSFERIK, dan BEBAS HIPERBOLA LEBAY.
+Gunakan Bahasa Indonesia sastrawi lugas, taktis, dan fokus pada situasi nyata.
 
-    const systemPrompt = `Kamu adalah Dungeon Master (DM) legendaris untuk game Visual Novel Virtual Tabletop (VTT).
-Tugasmu adalah merajut narasi interaktif dengan Bahasa Indonesia sastrawi yang imersif dan atmosferik.
+ATURAN STRUKTUR DUA KOMPONEN PEMBUKA:
+1. 'missionLog' (Jurnal Misi & Prolog Personal):
+   - 'title': Judul berkas misi singkat (misal: "Jurnal Misi: [Nama Misi]")
+   - 'prologue': Narasi 2-3 paragraf mengalir tentang latar belakang kampanye, krisis yang dihadapi, serta peran ${charName} sang ${charClass} (Ras: ${character.race || 'Human'}) dalam penugasan ini. Jangan gunakan subjudul kaku seperti "Latar Belakang: ...", biarkan mengalir alami dan elegan.
+   - 'targetGoal': 1 kalimat lugas sasaran utama misi yang harus dicapai.
 
-ATURAN WAJIB DUNGEON MASTER:
-1. PERSONALISASI NAMA & KELAS:
-   Karakter pemain adalah "${charName}", bertindak sebagai seorang "${charClass}" (Ras: ${character.race || 'Human'}).
-   DM dan seluruh NPC WAJIB secara personal menyapa dan memanggil nama "${charName}", serta menyesuaikan sudut pandang dan suasana adegan dengan persona kelas ${charClass}.
-2. STRUKTUR 12 STAGE KAMPANYE:
-   Petualangan ini dirancang tepat dalam 12 babak bertahap menuju klimaks epik. Adegan ini adalah BABAK I: Permulaan Takdir.
-3. Respon WAJIB berupa objek JSON murni tanpa pembungkus markdown seperti \`\`\`json.
-4. JANGAN PERNAH menggunakan karakter em dash (—). Gunakan koma, titik dua, tanda kurung, atau titik.
-5. backgroundId WAJIB dipilih dari daftar resmi berikut sesuai suasana dan lokasi:
-   bg_01_tavern, bg_02_cursed_woods, bg_03_sunken_citadel, bg_04_crimson_crypt, bg_05_vampire_castle, bg_06_alchemy_lab, bg_07_smuggler_cave, bg_08_arcane_library, bg_09_dragon_crater,
-   bg_10_ancient_ruins, bg_11_throne_room, bg_12_underdark_cavern, bg_13_lava_forge, bg_14_frost_peak, bg_15_haunted_graveyard, bg_16_swamp_huts, bg_17_desert_temple, bg_18_celestial_sanctum, bg_19_shadowfell_citadel,
-   bg_20_pirate_ship_deck, bg_21_goblin_war_camp, bg_22_crystal_mines, bg_23_dungeon_torture_chamber, bg_24_feywild_glade, bg_25_abandoned_cathedral, bg_26_clockwork_vault, bg_27_dragon_hoard, bg_28_city_market_alley, bg_29_abyssal_rift.
-6. characterId WAJIB dipilih dari: char_hero_01 s.d 09 atau char_npc_01 s.d 09.
-7. Tidak ada lemparan dadu dan tidak ada pertarungan layar terpisah (combatEncounter selalu null).
+2. PANGGUNG BABAK I IN MEDIA RES ('chapterTitle', 'location', 'speaker', 'dialogue', 'choices'):
+   - Adegan Babak I HARUS LANGSUNG BERADA DI TENGAH SITUASI AKTIF / DI LOKASI KEJADIAN (in media res).
+   - DILARANG KERAS mengulang teks latar belakang dari 'missionLog'!
+   - Teks 'dialogue' fokus pada situasi darurat saat ini di depan mata, ucapan langsung dari NPC di lokasi yang menyambut kedatangan ${charName}, serta ketegangan nyata yang menuntut tindakan pertama pemain.
+   - Maksimal 2-3 kalimat tajam dan berbobot.
+
+3. GAYA BAHASA:
+   - On-point, lugas, deskriptif taktis.
+   - HINDARI kata-kata hiperbolis yang terlalu puitis berlebihan ("takdir memanggil", "hawa maut merayap dingin", "jiwa bergetar hebat", dll.).
+   - JANGAN PERNAH gunakan em dash (—). Gunakan koma atau titik.
+   - MUTLAK TANPA unsur dadu (d20, DC, roll).
+   - combatEncounter WAJIB null.
 
 SKEMA JSON RESMI:
 {
+  "missionLog": {
+    "title": "string",
+    "prologue": "string 2-3 paragraf personal",
+    "targetGoal": "string sasaran utama"
+  },
   "chapterTitle": "Babak I: [Judul Babak]",
   "location": "string",
-  "backgroundId": "string",
-  "speaker": "string",
-  "characterId": "string",
+  "backgroundId": "string (pilih dari bg_01 s.d bg_29)",
+  "speaker": "string (nama NPC atau Narator)",
+  "characterId": "string (char_hero_01 s.d 09 atau char_npc_01 s.d 09)",
   "mood": "tense | mysterious | triumphant | ominous | peaceful",
-  "dialogue": "string 2-4 kalimat sastrawi",
-  "consequenceNote": "string",
+  "dialogue": "string adegan langsung di TKP tanpa mengulang prolog",
+  "consequenceNote": "string ringkas",
   "stateUpdates": {
     "hpChange": 0,
     "manaChange": 0,
@@ -507,16 +514,22 @@ SKEMA JSON RESMI:
   "choices": [
     {
       "id": "c1",
-      "text": "string deskripsi aksi",
+      "text": "string tindakan taktis (singkat, lugas)",
+      "tone": "bold | cautious | curious | shrewd"
+    },
+    {
+      "id": "c2",
+      "text": "string tindakan taktis (singkat, lugas)",
       "tone": "bold | cautious | curious | shrewd"
     }
   ]
 }`;
 
     const prompt = `Kampanye: "${campaign.title}" (${campaign.premise}).
-Karakter Pemain: ${charName}, Ras: ${character.race}, Kelas: ${charClass}, STR: ${character.str}, DEX: ${character.dex}, INT: ${character.int}, WIS: ${character.wis}, CHA: ${character.cha}, CON: ${character.con}.
-Buatlah adegan pembuka Babak I dari 12 Babak Petualangan yang sangat memukau, menyebut nama ${charName}, dan mencerminkan keahlian ${charClass}.
-PENTING: Pada teks 'dialogue', sampaikan terlebih dahulu Latar Belakang Cerita (Premise) dari kampanye ini secara naratif dan epik. Setelah latar belakang cerita diceritakan dengan jelas, barulah pada paragraf berikutnya berikan naratif situasi karakter saat ini yang mendorong pemain untuk mengambil tindakan atau pilihan pertama.`;
+Karakter Pemain: ${charName}, Ras: ${character.race}, Kelas: ${charClass}.
+Buatlah:
+1. 'missionLog' yang memadukan premis kampanye dengan latar belakang personal ${charName} sang ${charClass} serta targetGoal yang jelas.
+2. Adegan panggung Babak I yang dimulai langsung di tempat kejadian (in media res), di mana ${charName} sudah berada di lokasi dan langsung menghadapi situasi pertama yang menuntut pilihan aksi segera. Jangan ulangi isi missionLog di teks dialogue!`;
 
     try {
       return parseSceneJson(await this.callWithFallback(prompt, systemPrompt));
@@ -620,9 +633,10 @@ ATURAN REAKTIVITAS NARATIF & DIALOG (SANGAT KRUSIAL):
    - Jika aksi pemain adalah menginterogasi, berbicara, atau bertanya kepada NPC/pedagang: Tuliskan dialog ucapan NPC tersebut secara langsung menggunakan tanda petik "...", gambarkan reaksi emosionalnya (gemetar ketakutan, membual licik, atau terkesiap kagum), dan ungkapkan petunjuk/informasi rahasia yang terkuak!
    - Jika aksi pemain adalah memeriksa, menggeledah, atau mencari: Ceritakan secara rinci apa yang ditemukan, mekanisme apa yang terbuka, atau benda apa yang terungkap.
    - DILARANG KERAS menggunakan kalimat template generik atau jawaban klise hambar yang tidak berhubungan dengan aksi pemain!
-2. TANPA MEKANIK DADU & TANPA COMBAT TERPISAH:
+2. MUTLAK TANPA UNSUR DADU & TANPA COMBAT TERPISAH:
+   - DILARANG KERAS menyebut kata dadu, lemparan dadu, d20, DC, check, roll, atau modifier dadu di seluruh teks 'dialogue', 'consequenceNote', maupun 'choices'!
    - Seluruh alur berjalan mengalir murni secara visual novel naratif.
-   - Evaluasi keberhasilan aksi didasarkan pada logika fantasi, kecerdikan tindakan, dan keahlian kelas ${charClass}.
+   - Evaluasi keberhasilan aksi didasarkan pada logika situasi fantasi, kecerdikan tindakan, dan keahlian kelas ${charClass}.
    - 'combatEncounter' WAJIB selalu bernilai null.
 3. PERSONALISASI NAMA & KELAS:
    - Panggil nama "${charName}" dan sesuaikan sudut pandang narasi dengan kelas "${charClass}".
@@ -637,8 +651,9 @@ ATURAN REAKTIVITAS NARATIF & DIALOG (SANGAT KRUSIAL):
    - Jika memperoleh barang/ramuan/kunci: isi pada 'receivedItem' (objek { id, name, category, effect, icon }).
 7. PILIHAN TINDAKAN BERIKUTNYA ('choices'):
    - Sediakan 2 sampai 3 pilihan aksi taktis baru yang ALAMI, RINGKAS (maksimal 1 kalimat lugas), dan relevan dengan situasi terbaru (Kecuali jika turnCount >= 11, berikan opsi penutup finish_game).
-8. FORMAT TEKS:
-   - Gunakan Bahasa Indonesia sastrawi bermutu tinggi.
+8. FORMAT TEKS & GAYA BAHASA:
+   - Gunakan Bahasa Indonesia sastrawi yang ON-POINT, taktis, dan atmosferik.
+   - Hindari hiperbola bombastis berlebihan ("lebay"). Ceritakan peristiwa secara lugas dan mengena.
    - JANGAN PERNAH gunakan em dash (—). Gunakan koma, titik dua, atau tanda kurung.
    - Respon WAJIB berupa objek JSON murni tanpa pembungkus markdown \`\`\`json.
 

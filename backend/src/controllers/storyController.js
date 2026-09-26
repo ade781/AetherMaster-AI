@@ -1,21 +1,17 @@
 const { Character, Campaign, GameSession, StoryNode } = require('../models');
 const geminiService = require('../services/geminiService');
-const diceEngine = require('../utils/diceEngine');
 const { getEffectiveStats } = require('../utils/statEngine');
 
-function resolveChoice(currentNode, choiceId, customText, statType, dc, tone) {
+function resolveChoice(currentNode, choiceId, customText, tone) {
   const choiceList = currentNode?.choices || [];
   const matched = choiceList.find(c => c.id === choiceId);
   if (matched) return matched;
 
   const text = customText || 'Melangkah maju dengan waspada';
-  const detected = diceEngine.detectActionStatAndDC(text);
 
   return {
     id: choiceId || 'custom',
     text,
-    statType: statType || detected.statType,
-    dc: typeof dc === 'number' ? dc : detected.dc,
     tone: tone || 'kreatif'
   };
 }
@@ -217,8 +213,14 @@ exports.startCampaign = async (req, res) => {
       isGameOver: false
     });
 
-    // Generate initial scene
+    // Generate initial scene and personalized mission log
     const openingScene = await geminiService.generateOpeningScene(campaign, character);
+
+    session.missionLog = openingScene.missionLog || {
+      title: `Jurnal Misi: ${campaign.title}`,
+      prologue: `${campaign.premise || 'Sebuah krisis menuntut penyelidikan mendalam.'}\n\nKehadiran ${character.name} sang ${character.characterClass} diharapkan dapat menuntaskan persoalan ini sebelum dampaknya meluas.`,
+      targetGoal: `Selesaikan investigasi dan netralkan sumber krisis.`
+    };
 
     // Apply any initial state updates
     if (openingScene.stateUpdates?.receivedItem) {
@@ -374,7 +376,7 @@ exports.submitAction = async (req, res) => {
       });
     }
 
-    const chosenChoice = resolveChoice(currentNode, choiceId, customText, null, null, tone);
+    const chosenChoice = resolveChoice(currentNode, choiceId, customText, tone);
 
     // Fetch recent story history for rolling context window (last 4 steps)
     const recentHistory = await getRecentStoryHistory(session.id, currentNode.id, 4);
@@ -544,31 +546,9 @@ exports.combatAction = async (req, res) => {
 
     if (upperAction === 'ATTACK') {
       const charMod = effectiveChar.modifiers.str;
-      const attackBonus = charMod + (character.level || 1);
-      const attackRes = diceEngine.performCombatAttack({
-        attackerName: character.name,
-        targetName: combatState.enemy.name,
-        attackBonus,
-        targetAC: combatState.enemy.ac,
-        damageDice: 8,
-        damageBonus: Math.max(0, charMod)
-      });
-      if (attackRes.isHit) {
-        combatState.enemy.hp = Math.max(0, combatState.enemy.hp - attackRes.damageDealt);
-      }
-      const narration = await geminiService.generateCombatNarration({
-        character,
-        enemy: combatState.enemy,
-        action: 'ATTACK',
-        rollResult: attackRes.attackRoll,
-        damageDealt: attackRes.damageDealt,
-        isHit: attackRes.isHit,
-        isCrit: attackRes.isCrit,
-        isFumble: attackRes.isFumble,
-        isDefeated: combatState.enemy.hp <= 0,
-        isPlayerDefeated: false
-      });
-      actionLog = `${narration} [${attackRes.log}]`;
+      const damageDealt = Math.max(4, charMod * 2 + 6);
+      combatState.enemy.hp = Math.max(0, combatState.enemy.hp - damageDealt);
+      actionLog = `${character.name} melancarkan tebasan presisi pada ${combatState.enemy.name}, menghasilkan ${damageDealt} damage!`;
       combatState.combatLog.push(actionLog);
 
     } else if (upperAction === 'CAST_SPELL') {
@@ -577,31 +557,9 @@ exports.combatAction = async (req, res) => {
       }
       character.mana = Math.max(0, character.mana - 5);
       const spellMod = Math.max(effectiveChar.modifiers.int, effectiveChar.modifiers.wis, effectiveChar.modifiers.cha);
-      const attackBonus = spellMod + (character.level || 1);
-      const spellRes = diceEngine.performCombatAttack({
-        attackerName: `${character.name} (Sihir)`,
-        targetName: combatState.enemy.name,
-        attackBonus,
-        targetAC: combatState.enemy.ac,
-        damageDice: 10,
-        damageBonus: Math.max(0, spellMod)
-      });
-      if (spellRes.isHit) {
-        combatState.enemy.hp = Math.max(0, combatState.enemy.hp - spellRes.damageDealt);
-      }
-      const narration = await geminiService.generateCombatNarration({
-        character,
-        enemy: combatState.enemy,
-        action: 'CAST_SPELL',
-        rollResult: spellRes.attackRoll,
-        damageDealt: spellRes.damageDealt,
-        isHit: spellRes.isHit,
-        isCrit: spellRes.isCrit,
-        isFumble: spellRes.isFumble,
-        isDefeated: combatState.enemy.hp <= 0,
-        isPlayerDefeated: false
-      });
-      actionLog = `${narration} [${spellRes.log}]`;
+      const damageDealt = Math.max(6, spellMod * 2 + 8);
+      combatState.enemy.hp = Math.max(0, combatState.enemy.hp - damageDealt);
+      actionLog = `${character.name} merapalkan pancaran magis ke arah ${combatState.enemy.name}, menimpakan ${damageDealt} damage sihir!`;
       combatState.combatLog.push(actionLog);
 
     } else if (upperAction === 'USE_ITEM') {
@@ -619,14 +577,10 @@ exports.combatAction = async (req, res) => {
       actionLog = useLog;
 
     } else if (upperAction === 'FLEE') {
-      const fleeCheck = diceEngine.performCheck({
-        character: effectiveChar,
-        statType: 'DEX',
-        dc: 12
-      });
-      if (fleeCheck.isSuccess) {
+      const isFleeSuccess = (effectiveChar.dex || 10) >= 10;
+      if (isFleeSuccess) {
         combatState.inCombat = false;
-        const fleeLog = `${character.name} berhasil melarikan diri dari medan tempur (DEX Roll ${fleeCheck.total} vs DC 12)!`;
+        const fleeLog = `${character.name} berhasil meloloskan diri dari pertempuran memanfaatkan kelincahan gerakan!`;
         combatState.combatLog.push(fleeLog);
         session.combatState = combatState;
         await session.save();
@@ -642,7 +596,7 @@ exports.combatAction = async (req, res) => {
           }
         });
       } else {
-        const failLog = `${character.name} gagal melarikan diri dari sergapan musuh!`;
+        const failLog = `${character.name} gagal meloloskan diri karena musuh menutup celah keluar!`;
         combatState.combatLog.push(failLog);
         actionLog = failLog;
       }
@@ -656,21 +610,13 @@ exports.combatAction = async (req, res) => {
       character.gold += 25;
     } else if (combatState.inCombat) {
       // Monster counter-attack turn
-      const enemyAttack = diceEngine.performCombatAttack({
-        attackerName: combatState.enemy.name,
-        targetName: character.name,
-        attackBonus: combatState.enemy.attackBonus,
-        targetAC: effectiveChar.armorClass,
-        damageDice: combatState.enemy.damageDice,
-        damageBonus: combatState.enemy.damageBonus
-      });
-      if (enemyAttack.isHit) {
-        character.hp = Math.max(0, character.hp - enemyAttack.damageDealt);
-        if (character.hp <= 0) {
-          session.isGameOver = true;
-        }
+      const enemyDmg = Math.max(3, (combatState.enemy.damageBonus || 2) + 3);
+      character.hp = Math.max(0, character.hp - enemyDmg);
+      if (character.hp <= 0) {
+        session.isGameOver = true;
       }
-      combatState.combatLog.push(enemyAttack.log);
+      const enemyLog = `${combatState.enemy.name} melancarkan serangan balasan pada ${character.name}, mengakibatkan ${enemyDmg} damage!`;
+      combatState.combatLog.push(enemyLog);
       combatState.round += 1;
     }
 
@@ -742,19 +688,7 @@ exports.actionStream = async (req, res) => {
       return res.end();
     }
 
-    const chosenChoice = resolveChoice(currentNode, choiceId, customText, statType, dc ? Number(dc) : undefined, 'kreatif');
-    const effectiveChar = getEffectiveStats(character);
-
-    const checkStat = statType || chosenChoice.statType || 'STR';
-    const checkDc = typeof dc === 'number' ? Number(dc) : (typeof chosenChoice.dc === 'number' ? chosenChoice.dc : 10);
-    const checkResult = diceEngine.performCheck({
-      character: effectiveChar,
-      statType: checkStat,
-      dc: checkDc
-    });
-
-    res.write(`data: ${JSON.stringify({ type: 'check', checkResult })}\n\n`);
-
+    const chosenChoice = resolveChoice(currentNode, choiceId, customText, 'kreatif');
     const recentHistory = await getRecentStoryHistory(session.id, currentNode.id, 4);
 
     const nextScene = await geminiService.generateNextScene({
@@ -762,7 +696,6 @@ exports.actionStream = async (req, res) => {
       character,
       previousNode: currentNode,
       actionTaken: chosenChoice,
-      checkResult,
       recentHistory
     });
 
@@ -786,7 +719,7 @@ exports.actionStream = async (req, res) => {
         session,
         character,
         currentNode: newNode,
-        checkResult
+        checkResult: null
       }
     })}\n\n`);
     res.end();

@@ -99,6 +99,7 @@ exports.saveToSlot = async (req, res) => {
       characterId: charClone.id,
       turnCount: session.turnCount,
       worldLedger: JSON.parse(JSON.stringify(session.worldLedger || {})),
+      missionLog: session.missionLog ? JSON.parse(JSON.stringify(session.missionLog)) : null,
       isGameOver: session.isGameOver,
       slotNumber: slotNum,
       saveTitle: saveTitle || `Slot ${slotNum}: ${session.Character.name} (Babak ke-${session.turnCount})`,
@@ -185,6 +186,7 @@ exports.loadFromSlot = async (req, res) => {
       characterId: activeChar.id,
       turnCount: slotSess.turnCount,
       worldLedger: JSON.parse(JSON.stringify(slotSess.worldLedger || {})),
+      missionLog: slotSess.missionLog ? JSON.parse(JSON.stringify(slotSess.missionLog)) : null,
       isGameOver: false,
       slotNumber: null
     });
