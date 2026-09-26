@@ -1,0 +1,62 @@
+name: Autonomous QA & Antigravity Agent Cloud Runner
+
+on:
+  schedule:
+    - cron: '*/30 * * * *' # Berjalan otomatis di server GitHub setiap 30 menit
+  workflow_dispatch:       # Tombol pemicu manual di tab GitHub Actions
+
+jobs:
+  run-testing-and-agent:
+    name: Run Playtest & Antigravity Agent
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 📦 Install Root & Backend Dependencies
+        run: |
+          npm install
+          npm --prefix backend install
+
+      - name: 🧪 Jalankan Autonomous Playtester (Audit Skenario 1-12)
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          node scripts/autonomous_playtester.js
+
+      - name: 🤖 Panggil Google Antigravity Agent (Cloud Remote Sandbox)
+        if: env.GEMINI_API_KEY != ''
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          node scripts/run_antigravity_agent.js
+
+      - name: 📋 Publikasikan Ringkasan ke Halaman GitHub Actions
+        if: always()
+        run: |
+          echo "## 🛡️ Laporan Eksekusi Otomatis Server" >> $GITHUB_STEP_SUMMARY
+          echo "Waktu Server: $(date -u)" >> $GITHUB_STEP_SUMMARY
+          if [ -f logs/latest_qa_report.md ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            cat logs/latest_qa_report.md >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ -f logs/latest_agent_report.md ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            cat logs/latest_agent_report.md >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: 📁 Simpan File Log sebagai Artifact Unduhan
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: execution-logs-${{ github.run_number }}
+          path: logs/
+          retention-days: 7

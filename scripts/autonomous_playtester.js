@@ -134,17 +134,42 @@ async function simulatePlaythrough(personaKey, runIndex) {
   };
 }
 
+const fs = require('fs');
+const path = require('path');
+
+const LOGS_DIR = path.join(__dirname, '../logs');
+const LOG_FILE = path.join(LOGS_DIR, 'playtester.log');
+const REPORT_MD = path.join(LOGS_DIR, 'latest_qa_report.md');
+
+// Pastikan direktori logs tersedia
+if (!fs.existsSync(LOGS_DIR)) {
+  fs.mkdirSync(LOGS_DIR, { recursive: true });
+}
+
+function writeLog(message) {
+  const timestamp = new Date().toISOString();
+  const formatted = `[${timestamp}] ${message}\n`;
+  process.stdout.write(formatted);
+  try {
+    fs.appendFileSync(LOG_FILE, formatted, 'utf8');
+  } catch (err) {
+    console.error('Gagal menulis log ke file:', err.message);
+  }
+}
+
 // 3. Runner Utama: Menjalankan Playtest Massal
 async function runAutonomousQA(iterationsPerPersona = 5) {
-  console.log('===============================================================');
-  console.log('       AETHERMASTER AI - AUTONOMOUS PLAYTESTER & QA AUDITOR     ');
-  console.log('===============================================================\n');
+  const runTimestamp = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
+  writeLog('===============================================================');
+  writeLog('       AETHERMASTER AI - AUTONOMOUS PLAYTESTER & QA AUDITOR     ');
+  writeLog(`             WAKTU PENGUJIAN: ${runTimestamp}                 `);
+  writeLog('===============================================================');
 
   const allReports = [];
   const startTime = Date.now();
 
   for (const personaKey of Object.keys(PERSONAS)) {
-    console.log(`▶ Menguji Persona: ${PERSONAS[personaKey].name} (${PERSONAS[personaKey].class})...`);
+    writeLog(`▶ Menguji Persona: ${PERSONAS[personaKey].name} (${PERSONAS[personaKey].class})...`);
     for (let i = 1; i <= iterationsPerPersona; i++) {
       const result = await simulatePlaythrough(personaKey, i);
       allReports.push(result);
@@ -159,35 +184,105 @@ async function runAutonomousQA(iterationsPerPersona = 5) {
   const avgFinalTurn = (allReports.reduce((acc, r) => acc + r.finalTurn, 0) / totalRuns).toFixed(1);
   const totalInventoryOverlaps = allReports.reduce((acc, r) => acc + r.fullInventoryDrops, 0);
 
-  console.log('\n===============================================================');
-  console.log('                    RINGKASAN AUDIT & QA                        ');
-  console.log('===============================================================');
-  console.log(`• Total Playthrough Otomatis : ${totalRuns} sesi (${durationMs}ms)`);
-  console.log(`• Rasio Kemenangan (Babak 12): ${victories}/${totalRuns} (${((victories/totalRuns)*100).toFixed(0)}%)`);
-  console.log(`• Total Kematian Player      : ${deaths}`);
-  console.log(`• Terdeteksi Alur Buntu     : ${softlocks === 0 ? '0 (AMAN - Tidak ada softlock)' : `${softlocks} TERDETEKSI!`}`);
-  console.log(`• Rata-rata Babak Tercapai   : ${avgFinalTurn} dari 12 Babak`);
-  console.log(`• Drop Item karena Tas Penuh : ${totalInventoryOverlaps} kali`);
+  writeLog('===============================================================');
+  writeLog('                    RINGKASAN AUDIT & QA                        ');
+  writeLog('===============================================================');
+  writeLog(`• Total Playthrough Otomatis : ${totalRuns} sesi (${durationMs}ms)`);
+  writeLog(`• Rasio Kemenangan (Babak 12): ${victories}/${totalRuns} (${((victories/totalRuns)*100).toFixed(0)}%)`);
+  writeLog(`• Total Kematian Player      : ${deaths}`);
+  writeLog(`• Terdeteksi Alur Buntu     : ${softlocks === 0 ? '0 (AMAN - Tidak ada softlock)' : `${softlocks} TERDETEKSI!`}`);
+  writeLog(`• Rata-rata Babak Tercapai   : ${avgFinalTurn} dari 12 Babak`);
+  writeLog(`• Drop Item karena Tas Penuh : ${totalInventoryOverlaps} kali`);
 
-  console.log('\n--- DETAIL PER PERSONA ---');
+  writeLog('\n--- DETAIL PER PERSONA ---');
+  const personaDetails = [];
   for (const personaKey of Object.keys(PERSONAS)) {
     const pName = PERSONAS[personaKey].name;
     const pRuns = allReports.filter(r => r.persona === pName);
     const pVic = pRuns.filter(r => r.survived).length;
     const pAvgHp = (pRuns.reduce((acc, r) => acc + r.finalHp, 0) / pRuns.length).toFixed(0);
-    console.log(`* ${pName}: Win Rate ${((pVic/pRuns.length)*100).toFixed(0)}% | Rata-rata HP Akhir: ${pAvgHp}`);
+    const line = `* ${pName}: Win Rate ${((pVic/pRuns.length)*100).toFixed(0)}% | Rata-rata HP Akhir: ${pAvgHp}`;
+    writeLog(line);
+    personaDetails.push({ name: pName, winRate: ((pVic/pRuns.length)*100).toFixed(0), avgHp: pAvgHp });
   }
 
-  console.log('\n===============================================================');
-  console.log('KESIMPULAN AUDITOR:');
+  writeLog('\n===============================================================');
+  writeLog('KESIMPULAN AUDITOR:');
+  let conclusion = '';
   if (softlocks > 0) {
-    console.log('⚠️ PERINGATAN: Ditemukan cabang cerita yang tidak memiliki pilihan!');
+    conclusion = '⚠️ PERINGATAN: Ditemukan cabang cerita yang tidak memiliki pilihan!';
   } else if (victories === totalRuns) {
-    console.log('ℹ️ BALANCING NOTE: Game terasa agak terlalu mudah, semua persona selamat hingga Babak 12.');
+    conclusion = 'ℹ️ BALANCING NOTE: Game terasa agak terlalu mudah, semua persona selamat hingga Babak 12.';
   } else {
-    console.log('✅ STATUS SEHAT: Mekanik permainan seimbang, ada variasi kemenangan sesuai gaya main.');
+    conclusion = '✅ STATUS SEHAT: Mekanik permainan seimbang, ada variasi kemenangan sesuai gaya main.';
   }
-  console.log('===============================================================\n');
+  writeLog(conclusion);
+  writeLog('===============================================================\n');
+
+  // Tulis ringkasan termutakhir ke markdown file logs/latest_qa_report.md
+  try {
+    const mdContent = `# 🛡️ AetherMaster AI - Laporan QA & Playtest Terakhir
+**Waktu Eksekusi**: ${runTimestamp}  
+**Durasi Pengujian**: ${(durationMs / 1000).toFixed(2)} detik  
+
+## 📊 Ringkasan Statistik
+- **Total Playthrough**: ${totalRuns} sesi
+- **Rasio Kemenangan (Tamat Babak 12)**: ${victories}/${totalRuns} (${((victories/totalRuns)*100).toFixed(0)}%)
+- **Total Kematian**: ${deaths}
+- **Softlock Terdeteksi**: ${softlocks}
+- **Rata-rata Babak Bertahan**: ${avgFinalTurn} / 12
+- **Insiden Tas Penuh (Drop Item)**: ${totalInventoryOverlaps} kali
+
+## 🎭 Performa per Persona
+${personaDetails.map(p => `- **${p.name}**: Menang ${p.winRate}% | Rata-rata HP Akhir ${p.avgHp}`).join('\n')}
+
+## 🔍 Kesimpulan Auditor
+> **${conclusion}**
+
+---
+*Log lengkap riwayat eksekusi dapat dilihat di: \`logs/playtester.log\`*
+`;
+    fs.writeFileSync(REPORT_MD, mdContent, 'utf8');
+  } catch (err) {
+    console.error('Gagal menulis report markdown:', err.message);
+  }
 }
 
-runAutonomousQA(10);
+// 4. Runner Eksekusi & Penjadwalan Berkala (30 Menit)
+async function start() {
+  const args = process.argv.slice(2);
+  let intervalMinutes = null;
+
+  // Deteksi argumen --interval=30 atau -i 30 atau --watch
+  for (let i = 0; i < args.length; i++) {
+    if (args[i].startsWith('--interval=')) {
+      intervalMinutes = parseFloat(args[i].split('=')[1]);
+    } else if (args[i] === '-i' || args[i] === '--interval') {
+      intervalMinutes = parseFloat(args[i + 1]);
+    } else if (args[i] === '--watch' || args[i] === '--loop') {
+      intervalMinutes = 30; // default 30 menit
+    }
+  }
+
+  // Jalankan pengujian pertama kali langsung
+  await runAutonomousQA(5);
+
+  if (intervalMinutes && !isNaN(intervalMinutes) && intervalMinutes > 0) {
+    const intervalMs = intervalMinutes * 60 * 1000;
+    writeLog(`⏳ MODE BERKALA AKTIF: Playtester akan dijalankan otomatis setiap ${intervalMinutes} menit.`);
+    writeLog(`👉 Pantau log langsung dengan: npm run playtest:log`);
+    writeLog(`👉 Tekan Ctrl + C di terminal ini untuk menghentikan scheduler.\n`);
+
+    setInterval(async () => {
+      writeLog(`⏰ Memulai pengujian berkala otomatis (Interval ${intervalMinutes} menit)...`);
+      try {
+        await runAutonomousQA(5);
+      } catch (err) {
+        writeLog(`❌ Terjadi error saat pengujian berkala: ${err.message}`);
+      }
+    }, intervalMs);
+  }
+}
+
+start();
+
