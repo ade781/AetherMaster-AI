@@ -73,6 +73,10 @@ export default function LandingPage({
           >
             Panduan
           </button>
+
+          <span className="px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-[10px] font-bold tracking-wider text-amber-400 font-mono shadow-sm select-none">
+            MADE BY ADE7
+          </span>
         </nav>
 
         {/* Top Right Save Load */}
@@ -113,12 +117,17 @@ export default function LandingPage({
           >
             Sistem Aturan D&amp;D 5E
           </button>
-          <button
-            onClick={() => { setMobileMenuOpen(false); setActiveModal('guide'); }}
-            className="text-left py-2 font-medium text-slate-200 hover:text-amber-400 min-h-[44px]"
-          >
-            Panduan Bermain
-          </button>
+          <div className="flex items-center justify-between py-1 min-h-[44px]">
+            <button
+              onClick={() => { setMobileMenuOpen(false); setActiveModal('guide'); }}
+              className="text-left font-medium text-slate-200 hover:text-amber-400"
+            >
+              Panduan Bermain
+            </button>
+            <span className="px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-[10px] font-bold text-amber-400 font-mono select-none">
+              MADE BY ADE7
+            </span>
+          </div>
           <div className="pt-2 border-t border-slate-800">
             <button
               onClick={() => { setMobileMenuOpen(false); onOpenSaveLoad(); }}
