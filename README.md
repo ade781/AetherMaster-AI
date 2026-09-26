@@ -43,7 +43,7 @@
 AetherMaster AI/
 ├── backend/                  # Server Node.js & REST API
 │   ├── src/
-│   │   ├── config/           # Konfigurasi SQLite & Sequelize ORM
+│   │   ├── config/           # Konfigurasi Database (MySQL/PostgreSQL) & Sequelize ORM
 │   │   ├── controllers/      # Logika alur cerita, aksi D20, & save/load
 │   │   ├── models/           # Skema Campaign, Character, GameSession, StoryNode
 │   │   ├── routes/           # Endpoint API RESTful
