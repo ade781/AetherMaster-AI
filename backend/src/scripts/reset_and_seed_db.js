@@ -5,16 +5,6 @@ const { sequelize, initDb, Campaign } = require('../models');
 async function resetAndSeed() {
   console.log('=== [AetherMaster AI] Reset & Seed Database ===');
 
-  // 1. Remove obsolete database.sqlite if exists
-  const oldDbPath = path.resolve(__dirname, '../../database.sqlite');
-  if (fs.existsSync(oldDbPath)) {
-    try {
-      fs.unlinkSync(oldDbPath);
-      console.log('✓ Cleaned up obsolete database.sqlite file.');
-    } catch (e) {
-      console.warn('Could not remove database.sqlite:', e.message);
-    }
-  }
 
   // 2. Force sync sequelize to rebuild schema
   console.log(`Rebuilding tables (${sequelize.getDialect()})...`);

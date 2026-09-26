@@ -48,7 +48,7 @@ const Campaign = sequelize.define('Campaign', {
   },
   coverImage: {
     type: DataTypes.STRING,
-    defaultValue: '/assets/covers/cover_tavern.jpg'
+    defaultValue: '/assets/backgrounds/bg_01_tavern.png'
   },
   factions: {
     type: DataTypes.JSON,
