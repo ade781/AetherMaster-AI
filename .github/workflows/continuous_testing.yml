@@ -4,6 +4,9 @@ on:
   schedule:
     - cron: '*/30 * * * *' # Berjalan otomatis di server GitHub setiap 30 menit
   workflow_dispatch:       # Tombol pemicu manual di tab GitHub Actions
+  push:
+    branches: [main]       # Jalankan verifikasi seketika saat ada update ke main
+
 
 jobs:
   run-testing-and-agent:
