@@ -1,0 +1,824 @@
+﻿Kamu adalah senior full-stack engineer dan AI game-system architect. Kamu sedang mengerjakan repository AetherMaster-AI.
+
+Tujuan utama task ini adalah memperbaiki arsitektur AI Dungeon Master agar lebih stabil, deterministik pada game state, lebih adaptif terhadap aksi pemain, dan tidak bergantung pada template `if/else` sebagai fallback utama.
+
+JANGAN melakukan rewrite total project.
+JANGAN menghapus fitur yang sudah berjalan.
+JANGAN mengubah UI/frontend kecuali memang diperlukan oleh perubahan kontrak API.
+JANGAN membuat fitur baru yang tidak berkaitan dengan task ini.
+Sebelum mengubah kode, audit struktur repository dan pahami alur backend, session, world ledger, quest state, database/model, API route, serta frontend yang mengonsumsi scene JSON.
+
+## KONTEKS IMPLEMENTASI SAAT INI
+
+File utama yang perlu diperhatikan adalah service Gemini/Dungeon Master yang memiliki:
+
+* `sceneSchema`
+* `choiceSchema`
+* `parseSceneJson()`
+* `getFallbackOpening()`
+* `getFallbackNextScene()`
+* `GeminiService`
+* `generateOpeningScene()`
+* `generateNextScene()`
+* `callWithFallback()`
+
+Sistem saat ini sudah memiliki konsep:
+
+* `worldLedger`
+* `questFlags`
+* `reputation`
+* `recentHistory`
+* `session`
+* `turnCount`
+* `stateUpdates`
+* `receivedItem`
+* `consumedItem`
+* `choices`
+* `combatEncounter`
+
+Pertahankan konsep-konsep tersebut jika masih relevan.
+
+## MASALAH ARSITEKTUR YANG HARUS DIPERBAIKI
+
+### 1. Pisahkan AI Narrative Layer dan Game State Engine
+
+Saat ini Gemini dapat menentukan perubahan state secara langsung melalui:
+
+```js
+stateUpdates: {
+  hpChange,
+  manaChange,
+  goldChange,
+  receivedItem,
+  consumedItem
+}
+```
+
+Ubah arsitektur agar Gemini tidak menjadi sumber kebenaran utama game state.
+
+Target arsitektur:
+
+PLAYER ACTION
+â†“
+AI Intent / Narrative Interpretation
+â†“
+Deterministic Game Logic
+â†“
+Validated World State Update
+â†“
+AI Narrative Generation
+â†“
+Scene JSON
+â†“
+Frontend
+
+Gemini boleh menginterpretasikan aksi pemain dan menghasilkan narasi.
+
+Gemini TIDAK boleh memiliki otoritas mutlak untuk mengubah HP, mana, gold, inventory, quest completion, atau world flags.
+
+Game engine/backend harus menjadi source of truth.
+
+Jika repository sudah memiliki service/state manager yang relevan, gunakan dan refactor komponen tersebut daripada membuat sistem paralel.
+
+---
+
+# 2. Buat schema data yang ketat
+
+Cari seluruh penggunaan `z.any()` yang berkaitan dengan scene/state.
+
+Khususnya:
+
+```js
+receivedItem: z.any()
+consumedItem: z.any()
+combatEncounter: z.any()
+```
+
+Ganti dengan schema terstruktur.
+
+Buat schema item yang konsisten, misalnya:
+
+```js
+const itemSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  category: z.string(),
+  effect: z.string(),
+  icon: z.string()
+});
+```
+
+Sesuaikan dengan struktur database/model yang sebenarnya jika repository memiliki definisi item sendiri.
+
+Jangan membuat schema yang bertentangan dengan database.
+
+Pastikan:
+
+* Scene tervalidasi
+* Choice tervalidasi
+* Item tervalidasi
+* State update tervalidasi
+* Mood tervalidasi
+* Character ID tervalidasi bila memungkinkan
+* Background ID tervalidasi bila memungkinkan
+
+---
+
+# 3. Perbaiki JSON generation
+
+Saat ini parsing menggunakan:
+
+```js
+const match = rawText.match(/\{[\s\S]*\}/);
+const parsed = JSON.parse(match ? match[0] : rawText);
+```
+
+Ini rapuh.
+
+Cari kemampuan structured output/JSON schema yang sudah didukung oleh SDK Gemini yang digunakan project.
+
+Gunakan structured output jika kompatibel dengan versi dependency yang terpasang.
+
+Prioritas:
+
+1. Gemini menghasilkan struktur JSON tervalidasi.
+2. Zod melakukan validasi tambahan.
+3. Jika output invalid, lakukan repair/retry terbatas.
+4. Jika semua gagal, gunakan deterministic fallback.
+
+Jangan mengandalkan regex `{...}` sebagai parser JSON utama.
+
+Tetap sediakan fallback agar sistem tidak crash ketika Gemini gagal.
+
+---
+
+# 4. Perbaiki fallback narrative
+
+Fallback saat ini terlalu bergantung pada keyword:
+
+```js
+if (lowerAction.includes('interogasi'))
+else if (lowerAction.includes('periksa'))
+else if (lowerAction.includes('serang'))
+else if (lowerAction.includes('sihir'))
+...
+```
+
+Jangan langsung menghapus fallback.
+
+Refactor agar fallback menjadi lebih generik dan aman.
+
+Fallback harus:
+
+* tetap mempertahankan konteks lokasi
+* mempertahankan karakter
+* mempertahankan quest/world state
+* tidak mengarang item secara sembarangan
+* tidak mengarang reward tanpa validasi
+* tidak otomatis menyatakan pemain berhasil
+* tidak mengubah game state secara arbitrer
+
+Jika diperlukan, buat fungsi:
+
+```js
+classifyPlayerIntent()
+```
+
+atau struktur intent sederhana yang dapat digunakan baik oleh AI maupun deterministic fallback.
+
+Contoh intent:
+
+```text
+TALK
+INVESTIGATE
+MOVE
+ATTACK
+MAGIC
+STEALTH
+USE_ITEM
+OBSERVE
+INTERACT
+UNKNOWN
+```
+
+Tetapi jangan membuat klasifikasi keyword yang terlalu kompleks jika intent sebenarnya dapat diperoleh dari model.
+
+---
+
+# 5. Game state harus deterministic
+
+Buat atau refactor Game State Engine.
+
+Minimal harus memiliki konsep:
+
+```js
+playerState
+worldState
+questState
+inventory
+reputation
+history
+```
+
+Semua perubahan state harus melalui fungsi/service terpusat.
+
+Contoh konsep:
+
+```js
+applyStateUpdate(state, event)
+```
+
+atau:
+
+```js
+gameEngine.resolveAction(state, action)
+```
+
+Jangan biarkan berbagai service langsung melakukan:
+
+```js
+character.hp += ...
+character.gold += ...
+```
+
+secara tersebar.
+
+Buat satu sumber kebenaran untuk mutasi state.
+
+---
+
+# 6. Jangan gunakan turnCount sebagai syarat kemenangan
+
+Saat ini terdapat logic seperti:
+
+```js
+if (turnCount >= 11)
+```
+
+yang memaksa Grand Finale.
+
+Hapus ketergantungan langsung antara jumlah turn dan kemenangan.
+
+Turn count hanya boleh digunakan untuk pacing.
+
+Ending harus bergantung pada kondisi dunia/quest, misalnya secara konseptual:
+
+```js
+mainQuestCompleted
+finalEncounterCompleted
+requiredObjectivesCompleted
+```
+
+Gunakan struktur quest yang memang sudah ada di repository jika tersedia.
+
+Jika belum ada quest-state yang cukup kuat, buat perubahan minimal yang diperlukan.
+
+Jangan membuat pemain menang hanya karena sudah memilih aksi sebanyak 12 kali.
+
+---
+
+# 7. World Ledger harus menyimpan fakta, bukan hanya narasi
+
+Audit `worldLedger`.
+
+Jika sekarang hanya menyimpan string seperti:
+
+```js
+addLedgerFact
+```
+
+perbaiki secara bertahap agar fakta penting dapat disimpan secara terstruktur.
+
+Contoh:
+
+```js
+{
+  type: "ITEM_ACQUIRED",
+  itemId: "item_06_skeleton_key",
+  turn: 4
+}
+```
+
+atau struktur ekuivalen yang sesuai dengan repository.
+
+World ledger harus dapat merepresentasikan fakta seperti:
+
+* item diperoleh
+* item digunakan
+* pintu terbuka
+* NPC sudah ditemui
+* NPC memberikan informasi
+* quest objective selesai
+* lokasi telah dikunjungi
+* faction reputation berubah
+* event penting telah terjadi
+
+Narasi dapat berubah.
+
+Fakta dunia tidak boleh berubah hanya karena model lupa.
+
+---
+
+# 8. Perbaiki recentHistory
+
+Saat ini history terlalu berfokus pada:
+
+* dialogue
+* location
+* speaker
+
+Tambahkan informasi event/state yang relevan jika struktur repository memungkinkan.
+
+AI harus menerima konteks seperti:
+
+```text
+CURRENT WORLD STATE
+- Skeleton Key acquired
+- Crypt Gate locked
+- Goblin reputation +2
+- Main quest objective 2 completed
+
+RECENT EVENTS
+- Player interrogated Goblin Merchant
+- Goblin revealed secret passage
+- Player obtained Skeleton Key
+```
+
+Jangan mengirim seluruh history tanpa batas.
+
+Gunakan rolling context window.
+
+Tetapi jangan hanya menyimpan percakapan. Prioritaskan fakta dan event penting.
+
+---
+
+# 9. Konsistensi item ID
+
+Audit seluruh item ID.
+
+Saat ini terdapat potensi inkonsistensi seperti:
+
+```text
+item_01_potion_heal
+item_01_health_potion
+```
+
+Cari seluruh repository untuk item ID yang duplikat atau memiliki nama berbeda untuk entitas yang sama.
+
+Buat master data atau constant jika sesuai dengan arsitektur project:
+
+```js
+ITEMS.HEALTH_POTION
+ITEMS.SKELETON_KEY
+ITEMS.SILVER_DAGGER
+```
+
+Jangan menyimpan ID item yang sama secara manual di banyak file jika dapat dihindari.
+
+Jangan mengubah ID database yang sudah digunakan tanpa migration atau kompatibilitas yang jelas.
+
+---
+
+# 10. Perbaiki out-of-context action detection
+
+Saat ini sistem menggunakan daftar:
+
+```js
+modernNonsenseWords
+```
+
+sebagai deteksi utama.
+
+Jangan mengandalkan daftar keyword sebagai sistem utama.
+
+Sistem harus membedakan:
+
+* aksi valid dalam dunia game
+* aksi modern/out-of-context
+* aksi ambigu
+* aksi tidak dapat dilakukan karena state dunia
+
+Jika aksi tidak valid, jangan langsung menghukum pemain secara arbitrer.
+
+Contoh:
+
+Pemain:
+"aku menggunakan smartphone"
+
+Respons yang benar secara gameplay:
+
+* dunia tidak mengenal smartphone
+* tindakan gagal
+* narasi menjelaskan kebingungan NPC atau ketidakmungkinan tindakan
+* tidak perlu selalu mengurangi HP
+
+Jangan menggunakan damage sebagai hukuman default.
+
+---
+
+# 11. Hilangkan reward yang muncul tanpa alasan
+
+Audit fallback seperti:
+
+```js
+goldDelta = 15;
+receivedItem = ...
+```
+
+Pastikan reward memiliki alasan yang berasal dari game state/event.
+
+Jangan membuat:
+
+```text
+Player bertanya kepada NPC
+â†“
++15 gold
++Potion
+```
+
+hanya karena fallback template mengatakan demikian.
+
+Reward harus berasal dari:
+
+* quest
+* loot
+* NPC
+* event
+* item
+* objective
+* world state
+
+dan harus diputuskan oleh game engine.
+
+---
+
+# 12. Kurangi prompt yang kontradiktif
+
+Audit `systemPrompt`.
+
+Pertahankan instruksi penting:
+
+* Bahasa Indonesia
+* narasi taktis
+* tidak hiperbolis
+* tidak menggunakan em dash
+* tidak menggunakan dice mechanics
+* scene responsif terhadap aksi pemain
+* konsistensi lokasi
+* konsistensi karakter
+
+Namun rapikan prompt menjadi beberapa bagian:
+
+```text
+ROLE
+WORLD RULES
+CURRENT STATE
+PLAYER ACTION
+NARRATIVE RULES
+OUTPUT CONTRACT
+```
+
+Jangan mengulang aturan yang sama berkali-kali.
+
+Prompt harus mudah dirawat.
+
+---
+
+# 13. Pisahkan prompt dari business logic
+
+Jangan membuat satu fungsi menjadi tempat:
+
+* state management
+* prompt construction
+* API request
+* JSON parsing
+* fallback
+* narrative generation
+
+Refactor secara bertahap menjadi komponen seperti:
+
+```text
+GeminiService
+NarrativePromptBuilder
+SceneParser
+GameStateEngine
+IntentResolver
+SceneFallback
+WorldLedger
+```
+
+Gunakan nama sesuai konvensi project jika sudah ada struktur service yang lebih cocok.
+
+Tujuannya bukan menambah file sebanyak mungkin.
+
+Tujuannya adalah memisahkan tanggung jawab.
+
+---
+
+# 14. Perbaiki retry/fallback Gemini
+
+Audit:
+
+```js
+callWithFallback()
+```
+
+Jangan selalu melakukan retry untuk semua jenis error.
+
+Bedakan setidaknya:
+
+```text
+authentication error
+invalid request
+rate limit
+timeout
+server error
+schema/output error
+```
+
+Gunakan retry hanya untuk error yang memang layak diulang.
+
+Batasi jumlah retry.
+
+Jangan membuat user menunggu terlalu lama hanya karena semua model dicoba satu per satu.
+
+Jika fallback digunakan, log harus jelas:
+
+```text
+[GeminiService] primary model failed
+[GeminiService] fallback model selected
+[GeminiService] deterministic fallback activated
+```
+
+Jangan expose API key atau informasi sensitif di log.
+
+---
+
+# 15. Pertahankan compatibility dengan frontend
+
+Sebelum mengubah response API, cari seluruh penggunaan:
+
+```text
+chapterTitle
+location
+backgroundId
+speaker
+characterId
+mood
+dialogue
+consequenceNote
+stateUpdates
+choices
+combatEncounter
+missionLog
+```
+
+Pastikan perubahan backend tidak merusak frontend.
+
+Jika perlu perubahan schema, lakukan backward-compatible transformation.
+
+Jangan mengubah nama field secara sembarangan.
+
+---
+
+# 16. Testing
+
+Setelah refactor, buat atau perbarui test yang relevan.
+
+Minimal test kasus berikut:
+
+### Normal action
+
+```text
+Player menyelidiki meja
+```
+
+Harus menghasilkan respons investigasi yang valid.
+
+### Invalid modern action
+
+```text
+Player membuka smartphone
+```
+
+Tidak boleh crash dan tidak boleh otomatis mengurangi HP tanpa alasan.
+
+### Item acquisition
+
+Pastikan item masuk inventory hanya jika game engine memvalidasi event tersebut.
+
+### Item consumption
+
+Pastikan item tidak dapat digunakan dua kali jika hanya tersedia satu.
+
+### Quest completion
+
+Pastikan game tidak selesai hanya karena:
+
+```js
+turnCount >= 12
+```
+
+### Final scene
+
+Pastikan ending hanya dapat terjadi jika kondisi quest terpenuhi.
+
+### Gemini failure
+
+Simulasikan API failure.
+
+Pastikan deterministic fallback tetap menghasilkan valid scene.
+
+### Invalid Gemini JSON
+
+Pastikan parser/retry/fallback menangani output invalid.
+
+### State consistency
+
+Pastikan:
+
+```text
+HP tidak negatif
+Mana tidak negatif
+Gold tidak negatif jika game rule melarangnya
+item tidak muncul secara duplikat tanpa alasan
+quest state tidak mundur secara tidak sengaja
+```
+
+---
+
+# 17. Logging
+
+Tambahkan logging yang berguna tetapi jangan berlebihan.
+
+Untuk setiap turn, secara ideal dapat dilacak:
+
+```text
+TURN
+PLAYER ACTION
+RESOLVED INTENT
+STATE BEFORE
+EVENT
+STATE AFTER
+NARRATIVE RESULT
+```
+
+Jangan log API key.
+
+Jika repository menggunakan logger sendiri, gunakan logger tersebut.
+
+Jangan memasukkan console.log sembarangan jika sudah ada sistem logging.
+
+---
+
+# 18. Jangan melakukan overengineering
+
+Ini penting.
+
+Jangan membuat:
+
+* framework baru
+* database baru
+* state-management library baru
+* AI orchestration framework
+* microservices
+* sistem event bus kompleks
+
+kecuali repository memang sudah membutuhkan dan tidak ada alternatif sederhana.
+
+Gunakan dependency dan struktur project yang sudah ada.
+
+Prioritaskan perubahan kecil, jelas, dan dapat diuji.
+
+---
+
+# WORKFLOW YANG WAJIB DIIKUTI
+
+Sebelum coding:
+
+1. Audit repository.
+2. Cari semua penggunaan `GeminiService`.
+3. Cari semua penggunaan `stateUpdates`.
+4. Cari semua penggunaan `worldLedger`.
+5. Cari semua penggunaan `turnCount`.
+6. Cari semua penggunaan `receivedItem`.
+7. Cari semua penggunaan item ID.
+8. Cari API route yang memanggil `generateOpeningScene()` dan `generateNextScene()`.
+9. Cari frontend yang mengonsumsi response scene.
+10. Buat ringkasan arsitektur saat ini.
+
+Setelah audit, tampilkan:
+
+```text
+CURRENT ARCHITECTURE
+PROBLEMS FOUND
+FILES TO MODIFY
+FILES THAT SHOULD NOT BE TOUCHED
+PROPOSED REFACTOR
+```
+
+Jangan langsung coding sebelum audit selesai.
+
+Setelah itu lakukan implementasi bertahap.
+
+Setiap perubahan harus mempertahankan fitur existing.
+
+---
+
+# PRIORITAS IMPLEMENTASI
+
+Kerjakan dalam urutan:
+
+P0:
+
+* deterministic game state
+* strict schema
+* structured JSON output
+* reliable parsing
+* ending berdasarkan quest state
+
+P1:
+
+* world ledger terstruktur
+* event/state history
+* item master data
+* fallback refactor
+
+P2:
+
+* intent classification
+* retry/error handling
+* prompt cleanup
+* logging
+
+P3:
+
+* tests tambahan
+* cleanup
+* documentation
+
+---
+
+# ATURAN PENTING
+
+Jangan hanya mengganti prompt Gemini.
+
+Task ini adalah REFACTOR ARSITEKTUR.
+
+Jangan menyelesaikan masalah dengan menambahkan lebih banyak instruksi ke system prompt.
+
+Jika sebuah masalah seharusnya diselesaikan oleh backend/game engine, implementasikan di backend.
+
+AI bertugas memahami dan menceritakan dunia.
+
+Backend bertugas menentukan apa yang benar-benar terjadi di dunia.
+
+---
+
+# DEFINITION OF DONE
+
+Refactor dianggap selesai jika:
+
+1. Gemini tidak lagi menjadi sumber kebenaran mutlak untuk game state.
+2. HP/mana/gold/inventory/quest state dikontrol oleh backend/game engine.
+3. Scene JSON memiliki schema yang ketat.
+4. Invalid Gemini output tidak menyebabkan server crash.
+5. Fallback tidak sekadar menjadi kumpulan template keyword.
+6. Ending tidak ditentukan hanya berdasarkan `turnCount`.
+7. World state dapat mempertahankan fakta penting antar-turn.
+8. Item ID konsisten.
+9. Frontend existing tetap dapat menerima scene.
+10. Gemini failure tetap menghasilkan gameplay yang valid.
+11. Test untuk kasus normal, invalid action, Gemini failure, item, quest, dan ending berhasil.
+12. Tidak ada API key atau secret yang masuk ke source code atau log.
+13. Tidak ada perubahan besar pada UI yang tidak diperlukan.
+14. Tidak ada fitur existing yang sengaja dihapus.
+
+Setelah implementasi selesai, berikan laporan:
+
+```text
+IMPLEMENTED
+- ...
+
+FILES CHANGED
+- ...
+
+ARCHITECTURE CHANGES
+- ...
+
+API/SCHEMA CHANGES
+- ...
+
+TESTS
+- ...
+
+KNOWN LIMITATIONS
+- ...
+
+NEXT TECHNICAL PRIORITY
+- ...
+```
+
+Jangan mengklaim test berhasil jika sebenarnya belum dijalankan.
+Jangan mengklaim fitur selesai jika hanya mengubah prompt.
+Jangan membuat perubahan di luar scope.
