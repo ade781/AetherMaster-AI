@@ -109,13 +109,7 @@ function resolveItemById(itemId) {
   if (KNOWN_ITEMS[normalizedId]) {
     return { ...KNOWN_ITEMS[normalizedId] };
   }
-  return {
-    id: normalizedId,
-    name: normalizedId.replace(/^item_\d+_?/, '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) || 'Benda Misterius',
-    category: 'Pusaka',
-    effect: 'Benda berharga dari penjelajahan',
-    icon: KNOWN_ITEMS[normalizedId]?.icon || 'item_04_silver_dagger'
-  };
+  return null;
 }
 
 // 1. Strict Item Schema (No z.any())
@@ -249,25 +243,27 @@ function normalizeSceneData(raw) {
   const goldChange = typeof rawSu.goldChange === 'number' ? rawSu.goldChange : (rawSu.proposedGoldChange || 0);
   const proposedGoldChange = typeof rawSu.proposedGoldChange === 'number' ? rawSu.proposedGoldChange : goldChange;
 
-  let receivedItemId = rawSu.receivedItemId || (rawSu.receivedItem && typeof rawSu.receivedItem === 'object' ? rawSu.receivedItem.id : null);
-  if (typeof rawSu.receivedItem === 'string') {
-    receivedItemId = rawSu.receivedItem;
-  }
+  let candidateItemId = rawSu.receivedItemId || (rawSu.receivedItem && typeof rawSu.receivedItem === 'object' ? rawSu.receivedItem.id : (typeof rawSu.receivedItem === 'string' ? rawSu.receivedItem : null));
   let receivedItem = null;
-  if (rawSu.receivedItem && typeof rawSu.receivedItem === 'object' && rawSu.receivedItem.id && rawSu.receivedItem.name) {
-    receivedItem = {
-      id: rawSu.receivedItem.id,
-      name: cleanText(rawSu.receivedItem.name),
-      category: rawSu.receivedItem.category || 'Pusaka',
-      effect: cleanText(rawSu.receivedItem.effect || ''),
-      icon: rawSu.receivedItem.icon || 'item_04_silver_dagger'
-    };
-  } else if (receivedItemId) {
-    receivedItem = resolveItemById(receivedItemId);
+  let receivedItemId = null;
+  if (candidateItemId) {
+    const resolved = resolveItemById(candidateItemId);
+    if (resolved) {
+      receivedItem = resolved;
+      receivedItemId = resolved.id;
+    }
   }
 
-  let consumedItemId = rawSu.consumedItemId || (typeof rawSu.consumedItem === 'string' ? rawSu.consumedItem : (rawSu.consumedItem?.id || null));
-  let consumedItem = consumedItemId;
+  let consumedCandidate = rawSu.consumedItemId || (typeof rawSu.consumedItem === 'string' ? rawSu.consumedItem : (rawSu.consumedItem?.id || null));
+  let consumedItemId = null;
+  let consumedItem = null;
+  if (consumedCandidate) {
+    const resolvedConsumed = resolveItemById(consumedCandidate);
+    if (resolvedConsumed) {
+      consumedItemId = resolvedConsumed.id;
+      consumedItem = resolvedConsumed.id;
+    }
+  }
 
   const factDiscovered = rawSu.factDiscovered || rawSu.addLedgerFact || null;
   const addLedgerFact = rawSu.addLedgerFact || factDiscovered;
