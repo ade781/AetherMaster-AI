@@ -136,7 +136,14 @@ const combatEncounterSchema = z.object({
 const choiceSchema = z.object({
   id: z.string().min(1, 'Choice ID cannot be empty'),
   text: z.string().min(1, 'Choice text cannot be empty'),
-  tone: z.enum([
+  tone: z.preprocess((val) => {
+    if (typeof val === 'string') {
+      const lower = val.toLowerCase().trim();
+      const valid = ['cautious', 'aggressive', 'diplomatic', 'inquisitive', 'bold', 'curious', 'shrewd', 'kreatif'];
+      if (valid.includes(lower)) return lower;
+    }
+    return 'cautious';
+  }, z.enum([
     'cautious',
     'aggressive',
     'diplomatic',
@@ -145,8 +152,23 @@ const choiceSchema = z.object({
     'curious',
     'shrewd',
     'kreatif'
-  ]).default('cautious'),
-  actionType: z.enum([
+  ])).default('cautious'),
+  actionType: z.preprocess((val) => {
+    if (typeof val === 'string') {
+      const upper = val.toUpperCase().trim();
+      const valid = ['INVESTIGATE', 'ATTACK', 'TALK', 'MOVE', 'USE_ITEM', 'MAGIC', 'STEALTH', 'INTERACT', 'OBSERVE', 'UNKNOWN'];
+      if (valid.includes(upper)) return upper;
+      if (upper.includes('ATTACK') || upper.includes('FIGHT') || upper.includes('COMBAT')) return 'ATTACK';
+      if (upper.includes('TALK') || upper.includes('SPEAK') || upper.includes('NEGOTIATE')) return 'TALK';
+      if (upper.includes('MOVE') || upper.includes('RUN') || upper.includes('FLEE') || upper.includes('ESCAPE')) return 'MOVE';
+      if (upper.includes('MAGIC') || upper.includes('SPELL') || upper.includes('CAST')) return 'MAGIC';
+      if (upper.includes('ITEM') || upper.includes('POTION')) return 'USE_ITEM';
+      if (upper.includes('STEALTH') || upper.includes('SNEAK') || upper.includes('HIDE')) return 'STEALTH';
+      if (upper.includes('LOOK') || upper.includes('OBSERVE') || upper.includes('WATCH')) return 'OBSERVE';
+      return 'INVESTIGATE';
+    }
+    return 'INVESTIGATE';
+  }, z.enum([
     'INVESTIGATE',
     'ATTACK',
     'TALK',
@@ -157,7 +179,7 @@ const choiceSchema = z.object({
     'INTERACT',
     'OBSERVE',
     'UNKNOWN'
-  ]).default('INVESTIGATE'),
+  ])).default('INVESTIGATE'),
   requiredItem: z.string().nullable().optional()
 });
 

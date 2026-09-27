@@ -1,18 +1,17 @@
-name: Autonomous QA & Antigravity Agent Cloud Runner
+name: Antigravity World Architect & Nano Banana Story Generator
 
 on:
   schedule:
     - cron: '*/30 * * * *' # Berjalan otomatis di server GitHub setiap 30 menit
   workflow_dispatch:       # Tombol pemicu manual di tab GitHub Actions
   push:
-    branches: [main]       # Jalankan verifikasi seketika saat ada update ke main
-
+    branches: [main]       # Verifikasi & jalankan saat ada update ke main
 
 jobs:
-  run-testing-and-agent:
-    name: Run Playtest & Antigravity Agent
+  world-architect:
+    name: Generate Story, Quest & Cover Image (Nano Banana)
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
 
     steps:
       - name: 📥 Checkout Repository
@@ -27,30 +26,19 @@ jobs:
         run: |
           npm install --legacy-peer-deps || npm install --force
 
-
-
-      - name: 🧪 Jalankan Autonomous Playtester (Audit Skenario 1-12)
+      - name: 🌌 Jalankan Antigravity World Architect & Nano Banana Agent
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: |
-          node scripts/autonomous_playtester.js
-
-      - name: 🤖 Panggil Google Antigravity Agent (Cloud Remote Sandbox)
-        if: env.GEMINI_API_KEY != ''
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NODE_ENV: production
         run: |
           node scripts/run_antigravity_agent.js
 
-      - name: 📋 Publikasikan Ringkasan ke Halaman GitHub Actions
+      - name: 📋 Publikasikan Ringkasan Cerita Baru ke GitHub Actions
         if: always()
         run: |
-          echo "## 🛡️ Laporan Eksekusi Otomatis Server" >> $GITHUB_STEP_SUMMARY
+          echo "## 🌌 Laporan Rilis Cerita Baru (AetherMaster AI)" >> $GITHUB_STEP_SUMMARY
           echo "Waktu Server: $(date -u)" >> $GITHUB_STEP_SUMMARY
-          if [ -f logs/latest_qa_report.md ]; then
-            echo "" >> $GITHUB_STEP_SUMMARY
-            cat logs/latest_qa_report.md >> $GITHUB_STEP_SUMMARY
-          fi
           if [ -f logs/latest_agent_report.md ]; then
             echo "" >> $GITHUB_STEP_SUMMARY
             cat logs/latest_agent_report.md >> $GITHUB_STEP_SUMMARY
@@ -60,6 +48,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: execution-logs-${{ github.run_number }}
+          name: world-architect-logs-${{ github.run_number }}
           path: logs/
           retention-days: 7

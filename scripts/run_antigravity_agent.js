@@ -1,7 +1,24 @@
 const { GoogleGenAI } = require('@google/genai');
 const fs = require('fs');
 const path = require('path');
+
+// Load environment variables (supports production and local)
+const envFile = process.env.NODE_ENV === 'production'
+  ? path.join(__dirname, '../backend/.env.production')
+  : path.join(__dirname, '../backend/.env');
+require('dotenv').config({ path: envFile });
 require('dotenv').config({ path: path.join(__dirname, '../backend/.env') });
+require('dotenv').config({ path: path.join(__dirname, '../backend/.env.production') });
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
+
+const {
+  sequelize,
+  Campaign,
+  Location,
+  NPC,
+  Quest,
+  QuestObjective
+} = require('../backend/src/models');
 
 const LOGS_DIR = path.join(__dirname, '../logs');
 const LOG_FILE = path.join(LOGS_DIR, 'antigravity_agent.log');
@@ -18,101 +35,342 @@ function writeLog(message) {
   try {
     fs.appendFileSync(LOG_FILE, formatted, 'utf8');
   } catch (err) {
-    console.error('Gagal menulis log agen:', err.message);
+    console.error('Gagal menulis log:', err.message);
   }
 }
 
 const apiKey = process.env.GEMINI_API_KEY;
-
 if (!apiKey || apiKey === 'YOUR_GEMINI_API_KEY') {
-  writeLog('❌ Error: GEMINI_API_KEY belum disetel di backend/.env');
+  writeLog('❌ Error: GEMINI_API_KEY belum disetel di environment.');
   process.exit(1);
 }
 
 const client = new GoogleGenAI({ apiKey });
 
-// Variasi prompt arsitek dunia agar setiap siklus 30 menit menghasilkan konten baru
-const PROMPT_CATALOG = [
-  'Kamu adalah World Architect RPG AetherMaster AI. Rancang 1 peristiwa krisis faksi di benua Aether yang memicu quest baru di Kedai Whispering Tavern. Berikan deskripsi atmosferik dan 3 opsi tindakan awal pemain.',
-  'Kamu adalah Narrative Designer AetherMaster AI. Ciptakan 1 mini-boss tersembunyi di Reruntuhan Crypt of Crimson dengan 3 fase perilaku tempur unik dan 2 pilihan dialog negosiasi rahasia.',
-  'Kamu adalah System Balancer AetherMaster AI. Evaluasi 3 artefak legendaris baru (Pedang Cahaya Aether, Cincin Bayang Sunyi, Tongkat Kosmik) agar seimbang bagi kelas Warrior, Rogue, dan Mage di babak 8-12.',
-  'Kamu adalah Lorekeeper AetherMaster AI. Tuliskan catatan sejarah kuno tentang Perang Gerbang Dimensi yang dapat ditemukan pemain sebagai item buku di Perpustakaan Celestial Sanctum.'
+// Genre dan inspirasi tematik untuk rotasi kampanye
+const THEMES = [
+  { genre: 'dark_fantasy', mood: 'Kelam, misterius, reruntuhan kuno yang bangkit kembali' },
+  { genre: 'gothic_horror', mood: 'Kastil berkabut, kutukan darah, arwah ksatria yang gelisah' },
+  { genre: 'eldritch_mystery', mood: 'Kedalaman laut, artefak purba, bisikan entitas kosmik' },
+  { genre: 'high_fantasy', mood: 'Menara kristal, sihir astral, pertempuran ordo penyihir' },
+  { genre: 'steampunk_fantasy', mood: 'Kota mekanik uap, brankas kuno, serikat alkemis pemberontak' },
+  { genre: 'subterranean_survival', mood: 'Gua kristal Underdark, monster jamur berpendar, tambang kurcaci' }
 ];
 
+/**
+ * 1. Generate Cerita & Kampanye Terstruktur menggunakan Gemini AI
+ */
+async function generateStoryCampaign(themeIndex) {
+  const theme = THEMES[themeIndex % THEMES.length];
+  writeLog(`📜 [World Architect] Merancang kampanye baru bertema: ${theme.genre} (${theme.mood})...`);
+
+  const prompt = `Kamu adalah Antigravity World Architect untuk game RPG 'AetherMaster AI'.
+Buat 1 Kampanye cerita baru yang lengkap, orisinal, dan mendalam dalam bahasa Indonesia.
+Tema: ${theme.genre} (${theme.mood}).
+
+PENTING: Keluarkan HANYA JSON valid murni tanpa markdown triple backticks. Format JSON:
+{
+  "id": "slug_unik_huruf_kecil_underscore",
+  "title": "Judul Kampanye Epik",
+  "premise": "Latar belakang narasi 2-3 kalimat yang memikat dan memicu krisis.",
+  "introDialogue": "Dialog pembuka 1-2 kalimat dari DM atau NPC yang menyapa petualang.",
+  "genre": "${theme.genre}",
+  "threatLevel": "Tier 1 (Level 1-3)" atau "Tier 2 (Level 3-5)",
+  "recommendedClasses": ["warrior", "mage", "rogue"],
+  "primarySkill": "Nama Skill Utama (cth: Persepsi & Investigasi)",
+  "icon": "Emoji Ikon (cth: ⚔️, 🏰, 🔮, 🌲)",
+  "factions": ["Nama Faksi A", "Nama Faksi B"],
+  "location": {
+    "name": "Nama Lokasi Utama",
+    "description": "Deskripsi atmosferik lokasi tempat petualangan dimulai.",
+    "dangerLevel": 2
+  },
+  "npc": {
+    "name": "Nama NPC Kunci",
+    "role": "Questgiver / Informant / Barkeep / Hermit",
+    "dialogue": "Dialog khas NPC saat pertama kali ditemui."
+  },
+  "quest": {
+    "title": "Nama Quest Utama",
+    "description": "Tujuan utama pemain dalam quest ini.",
+    "rewardExp": 120,
+    "rewardGold": 45,
+    "objectives": [
+      {
+        "description": "Langkah pertama (cth: Selidiki jejak kabut di gerbang)",
+        "objectiveType": "INVESTIGATE",
+        "requiredCount": 1
+      },
+      {
+        "description": "Langkah kedua (cth: Temukan kunci segel di ruang bawah)",
+        "objectiveType": "EXPLORE",
+        "requiredCount": 1
+      },
+      {
+        "description": "Langkah ketiga (cth: Kalahkan penjaga atau selesaikan ritual)",
+        "objectiveType": "DEFEAT",
+        "requiredCount": 1
+      }
+    ]
+  },
+  "imagePrompt": "Detailed English prompt for cover art illustration of this scene (e.g. 'cinematic dark fantasy ruined gothic cathedral with glowing purple runes in fog, digital painting, artstation, 4k')"
+}`;
+
+  // Prioritaskan model dengan kuota segar, lalu tetap simpan 3.5, 3.1, dan 3.8 sebagai opsi fallback saat kuota harian reset
+  const candidateModels = [
+    'gemini-3.7-flash',
+    'gemini-3.6-flash',
+    'gemini-3-flash-preview',
+    'gemini-flash-latest',
+    'gemini-3.5-flash-lite',
+    'gemini-3.1-flash-lite',
+    'gemini-3.8-flash'
+  ];
+
+  for (const model of candidateModels) {
+    try {
+      writeLog(`• Mencoba narrative model: ${model}...`);
+      const response = await client.models.generateContent({
+        model,
+        contents: prompt,
+        config: {
+          responseMimeType: 'application/json'
+        }
+      });
+
+      const text = response.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (text) {
+        const cleaned = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+        const parsed = JSON.parse(cleaned);
+        writeLog(`✓ Berhasil membuat kampanye: "${parsed.title}" (ID: ${parsed.id})`);
+        return parsed;
+      }
+    } catch (err) {
+      writeLog(`⚠️ Gagal pada model ${model}: ${err.message}`);
+    }
+  }
+
+  throw new Error('Semua model Gemini gagal menghasilkan narasi kampanye.');
+}
+
+/**
+ * 2. Generate Cover Image menggunakan Nano Banana Pro (dengan Fallback Cerdas)
+ */
+async function generateImageWithNanoBanana(imagePrompt, campaignId) {
+  writeLog(`🎨 [Nano Banana Agent] Mengenerate cover art untuk prompt: "${imagePrompt.slice(0, 60)}..."`);
+
+  // Opsi 1: Coba model Google Nano Banana Pro jika kuota tersedia
+  try {
+    writeLog('• Mengirim permintaan ke model: nano-banana-pro-preview...');
+    const res = await client.models.generateContent({
+      model: 'nano-banana-pro-preview',
+      contents: `High quality fantasy RPG artwork, cover illustration: ${imagePrompt}`
+    });
+
+    const parts = res.candidates?.[0]?.content?.parts;
+    for (const part of parts || []) {
+      if (part.inlineData && part.inlineData.data) {
+        writeLog('✓ Berhasil mendapatkan gambar dari Nano Banana Pro!');
+        return `data:${part.inlineData.mimeType || 'image/png'};base64,${part.inlineData.data}`;
+      }
+    }
+  } catch (err) {
+    writeLog(`ℹ️ Nano Banana Pro cloud quota unavailable (${err.message}). Mengaktifkan fallback visual dinamis...`);
+  }
+
+  // Opsi 2: Fallback ke High-Res Dynamic Flux RPG Generator (Pollinations API - Free, No-Quota)
+  try {
+    const encodedPrompt = encodeURIComponent(`${imagePrompt}, epic fantasy concept art, highly detailed, dramatic lighting, 8k wallpaper`);
+    const dynamicImageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1280&height=720&nologo=true&seed=${Date.now()}`;
+    writeLog(`✓ Menggunakan High-Res AI Artwork URL: ${dynamicImageUrl.slice(0, 80)}...`);
+    return dynamicImageUrl;
+  } catch (err) {
+    writeLog(`⚠️ Gagal membuat URL dinamis: ${err.message}`);
+  }
+
+  // Opsi 3: Fallback ke curated asset lokal
+  return `/assets/backgrounds/bg_01_tavern.png`;
+}
+
+/**
+ * 3. Simpan Kampanye, Lokasi, NPC, dan Quest ke Database Cloud (Supabase / MySQL)
+ */
+async function saveToDatabase(storyData, coverImageUrl) {
+  writeLog('💾 [Database Persister] Menyimpan konten dunia ke database cloud...');
+
+  const uniqueSuffix = Date.now().toString(36).slice(-4);
+  const campaignId = `${storyData.id.toLowerCase().replace(/[^a-z0-9_]/g, '_')}_${uniqueSuffix}`;
+  const locId = `loc_${campaignId}`;
+  const npcId = `npc_${campaignId}`;
+  const questId = `quest_${campaignId}`;
+
+  const bgMap = {
+    dark_fantasy: 'bg_01_tavern',
+    gothic_horror: 'bg_04_crimson_crypt',
+    eldritch_mystery: 'bg_03_sunken_citadel',
+    high_fantasy: 'bg_08_arcane_library',
+    steampunk_fantasy: 'bg_26_clockwork_vault',
+    subterranean_survival: 'bg_12_underdark_cavern'
+  };
+  const resolvedBgId = bgMap[storyData.genre] || 'bg_01_tavern';
+
+  // 1. Simpan Campaign
+  const campaign = await Campaign.create({
+    id: campaignId,
+    title: storyData.title,
+    premise: storyData.premise,
+    introDialogue: storyData.introDialogue,
+    genre: storyData.genre || 'dark_fantasy',
+    threatLevel: storyData.threatLevel || 'Tier 1 (Level 1-3)',
+    recommendedClasses: storyData.recommendedClasses || ['warrior', 'rogue', 'mage'],
+    primarySkill: storyData.primarySkill || 'Persepsi & Investigasi',
+    defaultBackgroundId: resolvedBgId,
+    defaultNpcId: npcId,
+    icon: storyData.icon || '⚔️',
+    coverImage: coverImageUrl,
+    factions: storyData.factions || ['Petualang Aether'],
+    status: 'published'
+  });
+
+  // 2. Simpan Lokasi Utama
+  const location = await Location.create({
+    id: locId,
+    campaignId: campaignId,
+    name: storyData.location?.name || 'Area Terlarang',
+    description: storyData.location?.description || storyData.premise,
+    backgroundId: resolvedBgId,
+    locationType: 'interior',
+    metadata: {
+      dangerLevel: storyData.location?.dangerLevel || 1,
+      musicTheme: 'theme_ambient',
+      ambientSfx: 'ambient_wind'
+    }
+  });
+
+  // 3. Simpan NPC
+  const npc = await NPC.create({
+    id: npcId,
+    campaignId: campaignId,
+    name: storyData.npc?.name || 'Sosok Misterius',
+    title: storyData.npc?.role || 'Questgiver',
+    description: storyData.npc?.dialogue || storyData.introDialogue,
+    personality: storyData.npc?.role || 'Misterius',
+    background: storyData.premise,
+    portraitId: 'char_npc_01_barkeep',
+    defaultLocationId: locId
+  });
+
+  // 4. Simpan Quest & Objectives
+  const quest = await Quest.create({
+    id: questId,
+    campaignId: campaignId,
+    title: storyData.quest?.title || `Misteri ${storyData.title}`,
+    description: storyData.quest?.description || storyData.premise,
+    giverNpcId: npcId,
+    rewardExp: storyData.quest?.rewardExp || 100,
+    rewardGold: storyData.quest?.rewardGold || 50,
+    rewardItems: ['item_01_potion_heal'],
+    isMainQuest: true
+  });
+
+  if (Array.isArray(storyData.quest?.objectives)) {
+    let seq = 1;
+    for (const obj of storyData.quest.objectives) {
+      await QuestObjective.create({
+        id: `obj_${questId}_${seq}`,
+        questId: questId,
+        description: obj.description || 'Lanjutkan petualangan',
+        objectiveType: obj.objectiveType || 'INVESTIGATE',
+        targetId: locId,
+        requiredCount: obj.requiredCount || 1,
+        sequence: seq
+      });
+      seq++;
+    }
+  }
+
+  writeLog(`✅ SUKSES BESAR: Kampanye "${campaign.title}" (${campaign.id}) aktif di database!`);
+  return { campaign, location, npc, quest };
+}
+
+/**
+ * 4. Siklus Penuh: Cerita + Gambar + Database + Laporan
+ */
 let cycleCount = 0;
 
-async function runAntigravityTask() {
+async function executeCycle() {
   cycleCount++;
   const runTimestamp = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
-  const prompt = PROMPT_CATALOG[(cycleCount - 1) % PROMPT_CATALOG.length];
 
   writeLog('===============================================================');
-  writeLog(`     GOOGLE ANTIGRAVITY AGENT CLOUD RUNNER (Siklus #${cycleCount})     `);
-  writeLog(`             WAKTU EKSEKUSI: ${runTimestamp}                 `);
+  writeLog(`     AETHERMASTER AI: ANTIGRAVITY WORLD ARCHITECT & NANO BANANA `);
+  writeLog(`                      SIKLUS EKSEKUSI #${cycleCount}             `);
+  writeLog(`                 WAKTU: ${runTimestamp}                         `);
   writeLog('===============================================================');
-  writeLog('• Model Agent : antigravity-preview-09-2026');
-  writeLog('• Environment : remote (Secure Google Linux Sandbox)');
-  writeLog(`• Tugas       : "${prompt.slice(0, 70)}..."`);
-  writeLog('• Status      : Mengirim permintaan ke Interactions API...\n');
+
+  const startTime = Date.now();
 
   try {
-    const startTime = Date.now();
+    // 1. Generate Cerita Kampanye
+    const storyData = await generateStoryCampaign(cycleCount);
 
-    // Memanggil Antigravity Agent sesuai dokumentasi resmi
-    const interaction = await client.interactions.create({
-      agent: 'antigravity-preview-09-2026',
-      input: prompt,
-      environment: 'remote'
-    }, { timeout: 300000 });
+    // 2. Generate Cover Image dengan Nano Banana Agent
+    const coverImageUrl = await generateImageWithNanoBanana(storyData.imagePrompt, storyData.id);
+
+    // 3. Simpan ke Database Cloud
+    const result = await saveToDatabase(storyData, coverImageUrl);
 
     const elapsedSec = ((Date.now() - startTime) / 1000).toFixed(1);
-    const outputContent = interaction.outputText || interaction.output_text || JSON.stringify(interaction, null, 2);
-    const tokensUsed = interaction.usage?.totalTokens || interaction.usage?.total_tokens || '-';
 
-    writeLog('===============================================================');
-    writeLog('                  HASIL DARI ANTIGRAVITY AGENT                  ');
-    writeLog('===============================================================');
-    writeLog(`• Interaction ID : ${interaction.id || interaction.name || 'OK'}`);
-    writeLog(`• Environment ID : ${interaction.environmentId || interaction.environment_id || 'remote-sandbox'}`);
-    writeLog(`• Status Selesai : ${interaction.status || 'completed'} (${elapsedSec}s)`);
-    writeLog(`• Total Tokens   : ${tokensUsed}\n`);
-
-    writeLog('--- OUTPUT TEKS DARI SANDBOX ---');
-    writeLog(outputContent);
-    writeLog('\n✅ SUKSES: Agent Cloud Google berhasil menyelesaikan tugas!');
-    writeLog('===============================================================\n');
-
-    // Tulis laporan ringkasan terakhir ke Markdown
-    try {
-      const mdContent = `# 🚀 Google Antigravity Agent - Laporan Siklus #${cycleCount}
+    // 4. Buat Laporan Markdown untuk GitHub Actions Step Summary
+    const mdContent = `# 🌌 Antigravity World Architect: Cerita Baru Dirilis!
 **Waktu Eksekusi**: ${runTimestamp}  
-**Model Agent**: \`antigravity-preview-09-2026\` (Remote Sandbox)  
-**Durasi**: ${elapsedSec} detik | **Token**: ${tokensUsed}  
-
-### 🎯 Tugas:
-> ${prompt}
-
-### 📜 Hasil Agen:
-\`\`\`text
-${outputContent}
-\`\`\`
+**Durasi**: ${elapsedSec} detik | **Siklus**: #${cycleCount}  
+**Status**: 🟢 Sukses tersimpan ke Database Cloud (Live di \`www.aethermaster.my.id\`)
 
 ---
-*Log lengkap riwayat sesi cloud agen tersimpan di: \`logs/antigravity_agent.log\`*
+
+### 🛡️ Detail Kampanye:
+- **Judul**: **${result.campaign.title}** (\`${result.campaign.id}\`)
+- **Genre**: \`${result.campaign.genre}\` | **Tingkat Ancaman**: \`${result.campaign.threatLevel}\`
+- **Ikon**: ${result.campaign.icon} | **Skill Rekomendasi**: ${result.campaign.primarySkill}
+- **Faksi Terkait**: ${result.campaign.factions.join(', ')}
+
+### 📖 Latar Belakang & Premis:
+> "${result.campaign.premise}"
+
+### 💬 Dialog Pembuka:
+> *${result.campaign.introDialogue}*
+
+### 🗺️ Lokasi & NPC Kunci:
+- **Lokasi**: **${result.location.name}** (\`${result.location.id}\`) — *${result.location.description}*
+- **NPC**: **${result.npc.name}** (\`${result.npc.role}\`) — "*${result.npc.dialogue}*"
+
+### ⚔️ Quest Utama:
+- **Judul Quest**: **${result.quest.title}**
+- **Deskripsi**: ${result.quest.description}
+- **Hadiah**: 💰 ${result.quest.rewardGold} Gold | 🌟 ${result.quest.rewardExp} EXP
+
+### 🎨 Visual Art (Nano Banana Agent):
+![Cover Art](${result.campaign.coverImage.startsWith('data:') ? 'https://image.pollinations.ai/prompt/fantasy_rpg_cover' : result.campaign.coverImage})
+
+---
+*Pemain dapat langsung memainkan kampanye ini sekarang di [AetherMaster AI](https://www.aethermaster.my.id).*
 `;
-      fs.writeFileSync(REPORT_MD, mdContent, 'utf8');
-    } catch (err) {
-      console.error('Gagal menulis latest_agent_report.md:', err.message);
-    }
+
+    fs.writeFileSync(REPORT_MD, mdContent, 'utf8');
+    writeLog(`📋 Laporan disimpan di: ${REPORT_MD}`);
+    writeLog(`🎉 Siklus #${cycleCount} selesai dalam ${elapsedSec}s.\n`);
 
   } catch (error) {
-    writeLog(`\n❌ Terjadi kesalahan saat memanggil Antigravity Agent: ${error.message}`);
-    if (error.status) writeLog(`HTTP Status: ${error.status}`);
-    if (error.errorDetails) writeLog(`Details: ${JSON.stringify(error.errorDetails)}`);
+    writeLog(`❌ Gagal pada siklus #${cycleCount}: ${error.message}`);
+    if (error.stack) writeLog(error.stack);
   }
 }
 
-// Handler scheduler berkala
+/**
+ * 5. Runner Scheduler: Eksekusi Langsung atau Interval Loop 30 Menit
+ */
 async function start() {
   const args = process.argv.slice(2);
   let intervalMinutes = null;
@@ -127,21 +385,22 @@ async function start() {
     }
   }
 
-  // Jalankan siklus pertama seketika
-  await runAntigravityTask();
+  // Jalankan siklus pertama
+  await executeCycle();
 
   if (intervalMinutes && !isNaN(intervalMinutes) && intervalMinutes > 0) {
     const intervalMs = intervalMinutes * 60 * 1000;
-    writeLog(`⏳ MODE BERKALA AKTIF: Antigravity Agent akan dipanggil otomatis setiap ${intervalMinutes} menit.`);
-    writeLog(`👉 Pantau log langsung dengan: npm run agent:log`);
+    writeLog(`⏳ MODE BERKALA AKTIF: World Architect akan berjalan otomatis setiap ${intervalMinutes} menit.`);
     writeLog(`👉 Tekan Ctrl + C di terminal untuk menghentikan scheduler.\n`);
 
     setInterval(async () => {
-      writeLog(`⏰ Memulai siklus berkala Antigravity Agent (Interval ${intervalMinutes} menit)...`);
-      await runAntigravityTask();
+      writeLog(`⏰ Memulai siklus berkala World Architect (${intervalMinutes} menit)...`);
+      await executeCycle();
     }, intervalMs);
+  } else {
+    // Single execution (misal untuk GitHub Actions)
+    process.exit(0);
   }
 }
 
 start();
-

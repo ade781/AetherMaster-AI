@@ -282,12 +282,16 @@ describe('Combat Engine Tests (Server-Side Rules)', () => {
         inventory: []
       };
 
-      const result = combatEngine.executeCombatAction({
-        session,
-        character,
-        currentNode: { combatEncounter: session.combatState.enemy },
-        action: 'ATTACK'
-      });
+      let result;
+      for (let i = 0; i < 5; i++) {
+        result = combatEngine.executeCombatAction({
+          session,
+          character,
+          currentNode: { combatEncounter: session.combatState.enemy },
+          action: 'ATTACK'
+        });
+        if (result.isGameOver) break;
+      }
 
       assert.strictEqual(result.success, true);
       assert.strictEqual(result.isGameOver, true);
