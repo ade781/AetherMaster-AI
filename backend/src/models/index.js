@@ -82,12 +82,20 @@ const initDb = async (options = {}) => {
   if (isProduction) {
     // In production, avoid destructive automatic schema alterations
     await sequelize.sync({ alter: false, ...options });
+    // Optimize serverless cold starts: only seed if table is completely unseeded
+    const campaignCount = await Campaign.count().catch(() => 0);
+    if (campaignCount === 0) {
+      await seedCampaigns();
+      await seedWorldData();
+    }
   } else {
-    // Clean deterministic sync without disruptive SQLite alterations
-    await sequelize.sync({ ...options });
+    // In development (MySQL / Postgres), sync with alter: true to automatically sync missing columns
+    const dialect = sequelize.getDialect();
+    const shouldAlter = dialect === 'mysql' || dialect === 'postgres';
+    await sequelize.sync({ alter: shouldAlter, ...options });
+    await seedCampaigns();
+    await seedWorldData();
   }
-  await seedCampaigns();
-  await seedWorldData();
 };
 
 module.exports = {
