@@ -7,49 +7,52 @@ import {
   Shield,
   Heart,
   Flame,
-  ScrollText
+  ScrollText,
+  Loader2
 } from 'lucide-react';
 import audio from '../services/audioService';
 
 export default function CombatStage({
   character,
   combatState,
+  onCombatAction,
   onResolveCombat,
-  onFleeCombat
+  onFleeCombat,
+  isLoading = false
 }) {
-  // Defensive fallbacks for monster data
   const enemyData = combatState?.enemy || {
-    name: 'Tengkorak Penjaga Kuno',
+    name: 'Musuh Misterius',
     sprite: 'monster_01_skeleton',
-    maxHp: 32,
-    hp: 32,
-    ac: 13,
-    attackBonus: 3,
-    damageBonus: 4
+    maxHp: 30,
+    hp: 30,
+    ac: 12
   };
 
-  const [enemyHp, setEnemyHp] = useState(enemyData.hp || enemyData.maxHp || 30);
-  const [playerHp, setPlayerHp] = useState(character?.hp || 20);
-  const [combatLog, setCombatLog] = useState([
-    `Pertarungan dimulai! ${enemyData.name} (AC ${enemyData.ac || 13}) menghadang jalanmu.`
-  ]);
-  const [round, setRound] = useState(1);
-  const [isActing, setIsActing] = useState(false);
-  const [floatingTexts, setFloatingTexts] = useState([]); // [{ id, text, type: 'damage'|'heal', target: 'enemy'|'player' }]
-  const [showSpellMenu, setShowSpellMenu] = useState(false);
-
+  const enemyHp = enemyData.hp ?? 0;
   const maxEnemyHp = enemyData.maxHp || 30;
-  const enemyHpPercent = Math.max(0, Math.min(100, Math.round((enemyHp / maxEnemyHp) * 100)));
-  const playerHpPercent = Math.max(0, Math.min(100, Math.round((playerHp / (character?.maxHp || 20)) * 100)));
+  const playerHp = character?.hp ?? 0;
+  const maxPlayerHp = character?.maxHp || 20;
 
-  // Play epic combat or intense boss BGM during battle encounter
+  const [floatingTexts, setFloatingTexts] = useState([]);
+  const [showSpellMenu, setShowSpellMenu] = useState(false);
+  const [isConcluding, setIsConcluding] = useState(false);
+
+  const enemyHpPercent = Math.max(0, Math.min(100, Math.round((enemyHp / maxEnemyHp) * 100)));
+  const playerHpPercent = Math.max(0, Math.min(100, Math.round((playerHp / maxPlayerHp) * 100)));
+
+  const round = combatState?.round || 1;
+  const combatLog = combatState?.combatLog || [
+    `Pertarungan dimulai! ${enemyData.name} (AC ${enemyData.ac || 12}) menghadang jalanmu.`
+  ];
+
+  // Play epic combat BGM during battle encounter
   useEffect(() => {
     const enemyName = (enemyData.name || '').toLowerCase();
-    const isBoss = enemyName.includes('naga') || 
-                   enemyName.includes('dragon') || 
-                   enemyName.includes('vampire') || 
-                   enemyName.includes('raja') || 
-                   enemyName.includes('lord') || 
+    const isBoss = enemyName.includes('naga') ||
+                   enemyName.includes('dragon') ||
+                   enemyName.includes('vampire') ||
+                   enemyName.includes('raja') ||
+                   enemyName.includes('lord') ||
                    (maxEnemyHp >= 50);
     audio.playBGM(isBoss ? 'boss' : 'combat', 0.26);
     return () => {
@@ -65,136 +68,51 @@ export default function CombatStage({
     }, 1200);
   };
 
-  const addLog = (msg) => {
-    setCombatLog(prev => [msg, ...prev.slice(0, 15)]);
-  };
-
   const getMonsterSrc = (spriteName) => {
     if (!spriteName) return '/assets/monsters/monster_01_skeleton.png';
     if (spriteName.startsWith('/') || spriteName.startsWith('http')) return spriteName;
     return `/assets/monsters/${spriteName}.png`;
   };
 
-  // Player Attack Action
-  const handleAttack = () => {
-    if (isActing || enemyHp <= 0) return;
-    setIsActing(true);
-    audio.playSwordClash();
+  // Dispatch Action to Server
+  const handleAction = async (action, itemId = null) => {
+    if (isLoading || isConcluding || enemyHp <= 0) return;
+    if (!onCombatAction) return;
 
-    const strMod = Math.floor(((character?.str || 10) - 10) / 2);
-    const isHit = Math.random() > 0.2;
-
-    if (isHit) {
-      const isCrit = Math.random() < 0.15;
-      const baseDmg = Math.floor(Math.random() * 8) + 4 + Math.max(1, strMod);
-      const dmg = isCrit ? baseDmg * 2 : baseDmg;
-      const newEnemyHp = Math.max(0, enemyHp - dmg);
-      setEnemyHp(newEnemyHp);
-      addFloating(`-${dmg}`, 'damage', 'enemy');
-      addLog(`⚔️ Ronde ${round}: ${isCrit ? 'CRITICAL HIT! Tebasan mematikan menembus pertahanan lawan' : 'Serangan telak mendarat'}, menorehkan ${dmg} damage!`);
-
-      if (newEnemyHp <= 0) {
-        audio.playCriticalSuccess();
-        addLog(`🏆 Kemenangan mutlak! Tubuh ${enemyData.name} ambruk binasa tak bernyawa.`);
-        setTimeout(() => {
-          onResolveCombat?.({ victory: true, enemyHp: 0, playerHp });
-        }, 1800);
-        return;
-      }
-    } else {
-      addFloating('LUPUT!', 'miss', 'enemy');
-      addLog(`💨 Ronde ${round}: Ayunan senjatamu meleset tipis dari celah pertahanan ${enemyData.name}.`);
-    }
-
-    // Enemy Counter-attack after short delay
-    setTimeout(() => {
-      handleEnemyTurn();
-    }, 900);
-  };
-
-  // Cast Spell
-  const handleCastSpell = (spell) => {
-    if (isActing || enemyHp <= 0) return;
-    setShowSpellMenu(false);
-    setIsActing(true);
-
-    if (spell.id === 'fireball') {
-      const dmg = Math.floor(Math.random() * 12) + 6;
-      const newEnemyHp = Math.max(0, enemyHp - dmg);
-      setEnemyHp(newEnemyHp);
-      addFloating(`-${dmg}`, 'damage', 'enemy');
-      addLog(`🔥 Ronde ${round}: Mantra Fireball membuncah! Kobaran api arkanum melalap ${enemyData.name} sebesar ${dmg} damage api!`);
-
-      if (newEnemyHp <= 0) {
-        audio.playCriticalSuccess();
-        addLog(`🏆 Tubuh ${enemyData.name} hangus terbakar menjadi abu! Pertarungan usai.`);
-        setTimeout(() => {
-          onResolveCombat?.({ victory: true, enemyHp: 0, playerHp });
-        }, 1800);
-        return;
-      }
-    } else if (spell.id === 'heal') {
-      audio.playHeal();
-      const healAmt = Math.floor(Math.random() * 10) + 6;
-      const newHp = Math.min(character?.maxHp || 25, playerHp + healAmt);
-      setPlayerHp(newHp);
-      addFloating(`+${healAmt}`, 'heal', 'player');
-      addLog(`✨ Ronde ${round}: Cahaya pemulihan Holy Heal terpancar! Memulihkan ${healAmt} HP ragamu.`);
-    }
-
-    setTimeout(() => {
-      handleEnemyTurn();
-    }, 900);
-  };
-
-  // Enemy Turn
-  const handleEnemyTurn = () => {
-    const isHit = Math.random() > 0.3;
-
-    if (isHit) {
+    if (action === 'ATTACK') {
       audio.playSwordClash();
-      const dmg = Math.floor(Math.random() * 6) + 3;
-      const newHp = Math.max(0, playerHp - dmg);
-      setPlayerHp(newHp);
-      addFloating(`-${dmg}`, 'damage', 'player');
-      addLog(`🩸 Ronde ${round}: ${enemyData.name} menerjang ganas! Kamu terhantam ${dmg} damage.`);
-
-      if (newHp <= 0) {
-        audio.playCriticalFailure();
-        addLog(`💀 Karaktermu tumbang tak berdaya menahan serangan maut ${enemyData.name}...`);
-        setTimeout(() => {
-          onResolveCombat?.({ victory: false, playerHp: 0 });
-        }, 1800);
-        return;
-      }
-    } else {
-      addFloating('TANGKIS!', 'miss', 'player');
-      addLog(`🛡️ Ronde ${round}: Tangkisan tangguh! Kamu berhasil menepis serangan ${enemyData.name}!`);
+    } else if (action === 'CAST_SPELL') {
+      audio.playSelect();
+      setShowSpellMenu(false);
+    } else if (action === 'FLEE') {
+      audio.playClick();
     }
 
-    setRound(r => r + 1);
-    setIsActing(false);
-  };
+    const result = await onCombatAction(action, itemId);
+    if (!result) return;
 
-  // Flee
-  const handleFlee = () => {
-    if (isActing) return;
-    setIsActing(true);
-    const dexMod = Math.floor(((character?.dex || 10) - 10) / 2);
-    const isFlee = (dexMod >= 0 && Math.random() > 0.35);
+    // Trigger visual floating text from server results
+    if (result.playerDamageDealt > 0) {
+      addFloating(`-${result.playerDamageDealt}`, 'damage', 'enemy');
+    }
+    if (result.enemyDamageDealt > 0) {
+      addFloating(`-${result.enemyDamageDealt}`, 'damage', 'player');
+      audio.playSwordClash();
+    }
 
-    if (isFlee) {
-      audio.playSelect();
-      addLog(`💨 Kamu berhasil meloloskan diri dari pertempuran memanfaatkan kelincahanmu!`);
+    if (result.isVictory) {
+      setIsConcluding(true);
+      audio.playCriticalSuccess();
+      setTimeout(() => {
+        onResolveCombat?.();
+      }, 1800);
+    } else if (result.isFled) {
+      setIsConcluding(true);
       setTimeout(() => {
         onFleeCombat?.();
       }, 1200);
-    } else {
-      audio.playClick();
-      addLog(`❌ Gagal melarikan diri! Musuh menghalangi jalan.`);
-      setTimeout(() => {
-        handleEnemyTurn();
-      }, 800);
+    } else if (result.isGameOver) {
+      audio.playCriticalFailure();
     }
   };
 
@@ -214,12 +132,12 @@ export default function CombatStage({
         <div className="relative z-10 flex items-center justify-between">
           <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-rose-950/80 border border-rose-500/50 text-rose-300 text-xs font-cinzel font-bold shadow-lg">
             <Swords className="w-4 h-4 text-rose-400 animate-pulse" />
-            <span>Pertempuran Taktis D&amp;D 5E • Ronde {round}</span>
+            <span>Pertempuran Taktis Server RPG • Ronde {round}</span>
           </div>
 
           <div className="flex items-center gap-2 text-xs font-mono text-slate-300 bg-black/60 px-3 py-1.5 rounded-xl border border-white/10">
             <Shield className="w-3.5 h-3.5 text-amber-400" />
-            <span>Target AC: {enemyData.ac || 13}</span>
+            <span>Target AC: {enemyData.ac || 12}</span>
           </div>
         </div>
 
@@ -275,8 +193,9 @@ export default function CombatStage({
                   animate={{ y: -60, opacity: 0, scale: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.9 }}
-                  className={`absolute font-cinzel text-2xl md:text-3xl font-black drop-shadow-[0_4px_8px_rgba(0,0,0,1)] ${f.type === 'damage' ? 'text-rose-500' : 'text-slate-300'
-                    }`}
+                  className={`absolute font-cinzel text-2xl md:text-3xl font-black drop-shadow-[0_4px_8px_rgba(0,0,0,1)] ${
+                    f.type === 'damage' ? 'text-rose-500' : 'text-slate-300'
+                  }`}
                 >
                   {f.text}
                 </motion.div>
@@ -289,7 +208,7 @@ export default function CombatStage({
         <div className="relative z-10 w-full max-w-sm bg-slate-950/80 border border-white/10 rounded-2xl p-3.5 backdrop-blur-md space-y-2">
           <div className="flex items-center justify-between text-xs">
             <span className="font-cinzel font-bold text-amber-300">{character?.name || 'Ksatria'}</span>
-            <span className="font-mono text-slate-300">{playerHp} / {character?.maxHp || 20} HP</span>
+            <span className="font-mono text-slate-300">{playerHp} / {maxPlayerHp} HP</span>
           </div>
           <div className="w-full h-2 bg-black/60 rounded-full overflow-hidden border border-white/10">
             <motion.div
@@ -297,6 +216,11 @@ export default function CombatStage({
               animate={{ width: `${playerHpPercent}%` }}
               transition={{ duration: 0.3 }}
             />
+          </div>
+
+          <div className="flex items-center justify-between text-[11px] font-mono text-cyan-300">
+            <span>Mana: {character?.mana || 0} / {character?.maxMana || 15}</span>
+            <span>Gold: {character?.gold || 0}</span>
           </div>
 
           {/* Floating text on player */}
@@ -308,8 +232,9 @@ export default function CombatStage({
                 animate={{ y: -40, opacity: 0, scale: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.9 }}
-                className={`absolute top-0 right-4 font-cinzel text-xl font-black drop-shadow ${f.type === 'heal' ? 'text-emerald-400' : 'text-rose-500'
-                  }`}
+                className={`absolute top-0 right-4 font-cinzel text-xl font-black drop-shadow ${
+                  f.type === 'heal' ? 'text-emerald-400' : 'text-rose-500'
+                }`}
               >
                 {f.text}
               </motion.div>
@@ -325,17 +250,18 @@ export default function CombatStage({
         <div className="flex-1 overflow-hidden flex flex-col space-y-2 pb-4">
           <div className="flex items-center gap-2 pb-2 border-b border-slate-800 text-xs font-mono text-slate-400">
             <ScrollText className="w-4 h-4 text-amber-400" />
-            <span>Catatan Pertempuran (Combat Log)</span>
+            <span>Catatan Pertempuran Resmi (Server Verified)</span>
           </div>
 
           <div className="flex-1 overflow-y-auto space-y-2 pr-1 font-outfit text-xs text-slate-300 leading-relaxed scrollbar-hide">
             {combatLog.map((log, i) => (
               <div
                 key={i}
-                className={`p-2.5 rounded-xl border ${i === 0
+                className={`p-2.5 rounded-xl border ${
+                  i === 0
                     ? 'bg-slate-950/80 border-amber-400/40 text-amber-200'
                     : 'bg-slate-950/40 border-slate-800/80 text-slate-400'
-                  }`}
+                }`}
               >
                 {log}
               </div>
@@ -348,35 +274,38 @@ export default function CombatStage({
           {/* Action Grid */}
           <div className="grid grid-cols-2 gap-2.5">
             <button
-              disabled={isActing || enemyHp <= 0}
-              onClick={handleAttack}
+              disabled={isLoading || isConcluding || enemyHp <= 0}
+              onClick={() => handleAction('ATTACK')}
               className="py-3.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-cinzel font-bold text-xs tracking-wider shadow-lg flex items-center justify-center gap-2 transition-all min-h-[48px]"
             >
-              <Swords className="w-4 h-4" />
+              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Swords className="w-4 h-4" />}
               <span>Serang (D20)</span>
             </button>
 
             <button
-              disabled={isActing || enemyHp <= 0}
+              disabled={isLoading || isConcluding || enemyHp <= 0}
               onClick={() => setShowSpellMenu(prev => !prev)}
               className="py-3.5 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-cinzel font-bold text-xs tracking-wider shadow-lg flex items-center justify-center gap-2 transition-all min-h-[48px]"
             >
               <Sparkles className="w-4 h-4" />
-              <span>Mantra</span>
+              <span>Sihir Arkanum</span>
             </button>
 
             <button
-              disabled={isActing || enemyHp <= 0}
-              onClick={() => handleCastSpell({ id: 'heal' })}
+              disabled={isLoading || isConcluding || enemyHp <= 0 || !(character?.inventory || []).some(i => i && (i.category === 'Obat' || i.category === 'Potion' || i.category === 'consumable' || String(i.id).includes('potion')))}
+              onClick={() => {
+                const potion = (character?.inventory || []).find(i => i && (i.category === 'Obat' || i.category === 'Potion' || i.category === 'consumable' || String(i.id).includes('potion')));
+                if (potion) handleAction('USE_ITEM', potion.id);
+              }}
               className="py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-cinzel font-semibold text-xs tracking-wider shadow flex items-center justify-center gap-2 transition-all min-h-[48px]"
             >
               <Heart className="w-4 h-4" />
-              <span>Holy Heal</span>
+              <span>Gunakan Potion</span>
             </button>
 
             <button
-              disabled={isActing || enemyHp <= 0}
-              onClick={handleFlee}
+              disabled={isLoading || isConcluding || enemyHp <= 0}
+              onClick={() => handleAction('FLEE')}
               className="py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed text-slate-300 font-cinzel font-semibold text-xs tracking-wider border border-slate-700 shadow flex items-center justify-center gap-2 transition-all min-h-[48px]"
             >
               <Footprints className="w-4 h-4" />
@@ -388,22 +317,19 @@ export default function CombatStage({
           {showSpellMenu && (
             <div className="p-3 bg-slate-950 border border-purple-500/40 rounded-xl space-y-2 animate-fadeIn">
               <span className="text-[10px] font-mono text-purple-300 uppercase font-bold block">
-                Pilih Mantra Magis:
+                Pilih Mantra Magis (Biaya: 5 Mana):
               </span>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 gap-2">
                 <button
-                  onClick={() => handleCastSpell({ id: 'fireball' })}
-                  className="p-2 rounded-lg bg-red-950/80 border border-red-500/50 hover:bg-red-900 text-red-200 text-xs font-medium flex items-center gap-1.5"
+                  disabled={isLoading || (character?.mana || 0) < 5}
+                  onClick={() => handleAction('CAST_SPELL')}
+                  className="p-2.5 rounded-lg bg-red-950/80 border border-red-500/50 hover:bg-red-900 disabled:opacity-40 text-red-200 text-xs font-medium flex items-center justify-between"
                 >
-                  <Flame className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Fireball (1d12+6)</span>
-                </button>
-                <button
-                  onClick={() => handleCastSpell({ id: 'heal' })}
-                  className="p-2 rounded-lg bg-emerald-950/80 border border-emerald-500/50 hover:bg-emerald-900 text-emerald-200 text-xs font-medium flex items-center gap-1.5"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Holy Heal (1d10+6)</span>
+                  <div className="flex items-center gap-1.5">
+                    <Flame className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Fireball (2d6 + Stat Mod)</span>
+                  </div>
+                  <span className="font-mono text-[10px] text-amber-300">5 Mana</span>
                 </button>
               </div>
             </div>

@@ -104,7 +104,7 @@ export function GameProvider({ children }) {
         setSession(nextSess);
         setCharacter(nextChar);
         setCurrentNode(nextNode);
-        setCombatState(null);
+        setCombatState(nextSess?.combatState || null);
       } else {
         showToast(data.error || 'Gagal mengambil tindakan.', 'error');
       }
@@ -115,11 +115,55 @@ export function GameProvider({ children }) {
     }
   }, [session, isLoading, showToast]);
 
-  // Use item from inventory
+  // Server-Side Tactical Combat Action Dispatcher
+  const handleCombatAction = useCallback(async (action, itemId = null) => {
+    if (!session || isLoading) return null;
+    setIsLoading(true);
+
+    try {
+      const res = await fetch(`${API_BASE}/combat/action`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: session.id,
+          action,
+          itemId
+        })
+      });
+
+      const data = await res.json();
+      if (data.success && data.data) {
+        // Update states purely from authoritative server payload
+        setSession(data.data.session);
+        setCharacter(data.data.character);
+        setCombatState(data.data.combatState);
+
+        if (data.data.isVictory) {
+          showToast('Kemenangan! Pertempuran berakhir gemilang.', 'success');
+        } else if (data.data.isGameOver) {
+          showToast('Karaktermu tumbang dalam pertempuran!', 'error');
+        } else if (data.data.isFled) {
+          showToast('Berhasil meloloskan diri!', 'success');
+        }
+
+        return data.data;
+      } else {
+        showToast(data.error || 'Aksi pertarungan ditolak oleh server.', 'error');
+        return null;
+      }
+    } catch (err) {
+      showToast('Koneksi ke backend gagal saat mengeksekusi aksi tempur.', 'error');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [session, isLoading, showToast]);
+
+  // Use item from inventory (Authoritative Server Confirmation)
   const handleUseItem = useCallback(async (item) => {
     if (!character || !session) return;
-    
-    if (item.category !== 'Obat' && item.category !== 'Potion' && !item.id.includes('potion')) {
+
+    if (item.category !== 'Obat' && item.category !== 'Potion' && item.category !== 'consumable' && !item.id.includes('potion')) {
       showToast(`${item.name} tidak bisa dikonsumsi langsung. Gunakan melalui dialog/pilihan!`, 'error');
       audio.playClick();
       return;
@@ -169,13 +213,15 @@ export function GameProvider({ children }) {
         setCurrentNode(data.data.currentNode);
         setCombatState(data.data.session?.combatState || null);
         setIsStoryTreeOpen(false);
+      } else {
+        showToast(data.error || 'Gagal memulihkan ke node target.', 'error');
       }
     } catch (err) {
-      console.error('Rewind error:', err);
+      showToast('Koneksi ke backend gagal saat rewind.', 'error');
     } finally {
       setIsLoading(false);
     }
-  }, [session]);
+  }, [session, showToast]);
 
   // Load session
   const handleLoadSession = useCallback((loadedData) => {
@@ -186,22 +232,27 @@ export function GameProvider({ children }) {
     setIsSaveLoadOpen(false);
   }, []);
 
-  // Resolve tactical combat outcome
-  const handleResolveCombat = useCallback((result) => {
-    if (result?.playerHp !== undefined && character) {
-      setCharacter(prev => prev ? ({ ...prev, hp: result.playerHp }) : prev);
-    }
+  // Narrative transition after confirmed combat victory (No client-side stat mutation)
+  const handleResolveCombat = useCallback(() => {
     handleChooseAction({
       id: 'combat_victory',
-      text: `Menumbangkan musuh dalam pertempuran taktis! (Sisa HP: ${result?.playerHp ?? character?.hp})`,
+      text: 'Menumbangkan musuh dalam pertempuran taktis dan mengamankan kemenangan!',
       tone: 'heroik'
     });
-  }, [character, handleChooseAction]);
+  }, [handleChooseAction]);
+
+  // Narrative transition after fleeing
+  const handleFleeCombat = useCallback(() => {
+    handleChooseAction({
+      id: 'combat_fled',
+      text: 'Meloloskan diri dari pertempuran sengit untuk mencari jalan lain.',
+      tone: 'waspada'
+    });
+  }, [handleChooseAction]);
 
   // Global Keyboard Shortcuts (I, L, M)
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // Don't trigger if typing in an input or textarea
       if (['INPUT', 'TEXTAREA'].includes(e.target?.tagName)) return;
 
       if (e.key === 'i' || e.key === 'I') {
@@ -269,7 +320,9 @@ export function GameProvider({ children }) {
     handleSelectCampaign,
     handleStartGame,
     handleChooseAction,
+    handleCombatAction,
     handleResolveCombat,
+    handleFleeCombat,
     handleUseItem,
     handleRewind,
     handleLoadSession
