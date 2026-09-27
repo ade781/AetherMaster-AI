@@ -37,19 +37,36 @@ const GameSession = sequelize.define('GameSession', {
   worldLedger: {
     type: DataTypes.JSON,
     defaultValue: {
+      facts: [],
+      flags: {},
       questFlags: {},
       reputation: {}
     },
     get() {
       const raw = this.getDataValue('worldLedger');
-      if (raw && typeof raw === 'object' && !Array.isArray(raw)) return raw;
+      let obj = raw;
       if (typeof raw === 'string') {
         try {
-          const parsed = JSON.parse(raw);
-          if (parsed && typeof parsed === 'object') return parsed;
-        } catch (e) {}
+          obj = JSON.parse(raw);
+        } catch (e) {
+          obj = {};
+        }
       }
-      return { questFlags: {}, reputation: {} };
+      if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
+        obj = {};
+      }
+      const facts = Array.isArray(obj.facts) ? obj.facts : [];
+      const flags = { ...(obj.flags || {}) };
+      const questFlags = { ...(obj.questFlags || {}) };
+      const reputation = { ...(obj.reputation || {}) };
+      // Bi-directional sync
+      for (const [k, v] of Object.entries(questFlags)) {
+        if (flags[k] === undefined) flags[k] = v;
+      }
+      for (const [k, v] of Object.entries(flags)) {
+        if (questFlags[k] === undefined) questFlags[k] = v;
+      }
+      return { facts, flags, questFlags, reputation };
     }
   },
   missionLog: {

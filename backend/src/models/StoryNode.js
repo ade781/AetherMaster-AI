@@ -71,6 +71,21 @@ const StoryNode = sequelize.define('StoryNode', {
   characterSnapshot: {
     type: DataTypes.JSON,
     allowNull: true
+  },
+  gameStateSnapshot: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    get() {
+      const raw = this.getDataValue('gameStateSnapshot');
+      if (raw && typeof raw === 'object') return raw;
+      if (typeof raw === 'string') {
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed === 'object') return parsed;
+        } catch (e) {}
+      }
+      return this.getDataValue('characterSnapshot') || null;
+    }
   }
 }, {
   timestamps: true

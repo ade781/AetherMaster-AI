@@ -19,7 +19,14 @@ StoryNode.hasMany(StoryNode, { as: 'children', foreignKey: 'parentNodeId' });
 StoryNode.belongsTo(StoryNode, { as: 'parent', foreignKey: 'parentNodeId' });
 
 const initDb = async (options = {}) => {
-  await sequelize.sync({ alter: true, ...options });
+  const isProduction = process.env.NODE_ENV === 'production';
+  if (isProduction) {
+    // In production, avoid destructive automatic schema alterations
+    await sequelize.authenticate();
+    await sequelize.sync({ alter: false, ...options });
+  } else {
+    await sequelize.sync({ alter: true, ...options });
+  }
   await seedCampaigns();
 };
 

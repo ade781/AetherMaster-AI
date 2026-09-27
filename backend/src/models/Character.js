@@ -94,11 +94,37 @@ const Character = sequelize.define('Character', {
   },
   equippedItems: {
     type: DataTypes.JSON,
-    defaultValue: []
+    defaultValue: [],
+    get() {
+      const raw = this.getDataValue('equippedItems');
+      if (Array.isArray(raw)) return raw;
+      if (typeof raw === 'string') {
+        try {
+          const parsed = JSON.parse(raw);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+          return [];
+        }
+      }
+      return [];
+    }
   },
   statusEffects: {
     type: DataTypes.JSON,
-    defaultValue: []
+    defaultValue: [],
+    get() {
+      const raw = this.getDataValue('statusEffects');
+      if (Array.isArray(raw)) return raw;
+      if (typeof raw === 'string') {
+        try {
+          const parsed = JSON.parse(raw);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+          return [];
+        }
+      }
+      return [];
+    }
   }
 }, {
   timestamps: true

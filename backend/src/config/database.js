@@ -2,7 +2,8 @@ const path = require('path');
 const { Sequelize } = require('sequelize');
 
 // Load environment variables (.env.production if production, fallback to .env)
-const envFile = process.env.NODE_ENV === 'production'
+const isProduction = process.env.NODE_ENV === 'production';
+const envFile = isProduction
   ? path.join(__dirname, '../../.env.production')
   : path.join(__dirname, '../../.env');
 
@@ -24,12 +25,12 @@ if (process.env.DATABASE_URL) {
       }
     },
     pool: {
-      max: 5,
+      max: isProduction ? 10 : 5,
       min: 0,
       acquire: 30000,
       idle: 10000
     },
-    logging: false
+    logging: process.env.DB_LOGGING === 'true' ? console.log : false
   });
 } else if (dialect === 'postgres') {
   sequelize = new Sequelize(
@@ -48,12 +49,12 @@ if (process.env.DATABASE_URL) {
         }
       },
       pool: {
-        max: 5,
+        max: isProduction ? 10 : 5,
         min: 0,
         acquire: 30000,
         idle: 10000
       },
-      logging: false
+      logging: process.env.DB_LOGGING === 'true' ? console.log : false
     }
   );
 } else {
@@ -68,17 +69,27 @@ if (process.env.DATABASE_URL) {
       dialect: 'mysql',
       dialectModule: require('mysql2'),
       pool: {
-        max: 10,
+        max: isProduction ? 20 : 10,
         min: 0,
         acquire: 30000,
         idle: 10000
       },
-      logging: false
+      logging: process.env.DB_LOGGING === 'true' ? console.log : false
     }
   );
 }
 
-module.exports = { sequelize };
+/**
+ * Validates database connectivity without executing destructive schema migrations.
+ */
+async function assertDatabaseConnection() {
+  try {
+    await sequelize.authenticate();
+    return true;
+  } catch (err) {
+    console.error('[Database Connection Error]:', err.message);
+    throw err;
+  }
+}
 
-
-
+module.exports = { sequelize, assertDatabaseConnection, isProduction };
