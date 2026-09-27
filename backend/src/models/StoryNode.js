@@ -15,6 +15,14 @@ const StoryNode = sequelize.define('StoryNode', {
     type: DataTypes.UUID,
     allowNull: true
   },
+  branchId: {
+    type: DataTypes.STRING,
+    defaultValue: 'main'
+  },
+  status: {
+    type: DataTypes.STRING,
+    defaultValue: 'ACTIVE' // ACTIVE | ABANDONED
+  },
   chapterTitle: {
     type: DataTypes.STRING,
     defaultValue: 'Babak I: Panggilan Takdir'

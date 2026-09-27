@@ -672,6 +672,42 @@ const questsData = [
     ]
   },
   {
+    id: 'quest_abyssal_citadel_main',
+    campaignId: 'abyssal_citadel',
+    title: 'Misteri Palung Sunken Citadel',
+    description: 'Selidiki anomali psionik di kuil bawah laut dan segel gerbang palung purba dari pemuja kedalaman.',
+    type: 'main',
+    status: 'active',
+    priority: 1,
+    targetLocationId: 'loc_abyssal_ruins',
+    objectives: [
+      {
+        id: 'obj_citadel_infiltrate',
+        description: 'Masuk ke dalam kubah udara Reruntuhan Samudra Sunken Citadel.',
+        objectiveType: 'EXPLORE',
+        targetId: 'loc_abyssal_ruins',
+        requiredCount: 1,
+        sequence: 1
+      },
+      {
+        id: 'obj_citadel_disable_beacon',
+        description: 'Nonaktifkan anomali pemancar energi psionik di aula pualam.',
+        objectiveType: 'INVESTIGATE',
+        targetId: 'char_npc_08_cultist',
+        requiredCount: 1,
+        sequence: 2
+      },
+      {
+        id: 'obj_citadel_gate_seal',
+        description: 'Kunci gerbang palung purba dari pemuja kedalaman.',
+        objectiveType: 'DEFEAT',
+        targetId: 'loc_abyssal_ruins',
+        requiredCount: 1,
+        sequence: 3
+      }
+    ]
+  },
+  {
     id: 'quest_vampire_castle_main',
     campaignId: 'vampire_castle_shadows',
     title: 'Penaklukan Tahta Darah Kastil Bloodmere',

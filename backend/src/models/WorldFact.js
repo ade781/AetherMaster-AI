@@ -39,6 +39,10 @@ const WorldFact = sequelize.define('WorldFact', {
     type: DataTypes.UUID,
     allowNull: true
   },
+  branchId: {
+    type: DataTypes.STRING,
+    defaultValue: 'main'
+  },
   turn: {
     type: DataTypes.INTEGER,
     defaultValue: 1

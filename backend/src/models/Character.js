@@ -80,16 +80,42 @@ const Character = sequelize.define('Character', {
     defaultValue: [],
     get() {
       const raw = this.getDataValue('inventory');
-      if (Array.isArray(raw)) return raw;
-      if (typeof raw === 'string') {
+      let arr = [];
+      if (Array.isArray(raw)) arr = raw;
+      else if (typeof raw === 'string') {
         try {
           const parsed = JSON.parse(raw);
-          return Array.isArray(parsed) ? parsed : [];
+          if (Array.isArray(parsed)) arr = parsed;
         } catch (e) {
-          return [];
+          arr = [];
         }
       }
-      return [];
+      return arr.map(item => {
+        if (!item) return null;
+        if (typeof item === 'string') return { itemId: item, id: item, quantity: 1 };
+        const itemId = item.itemId || item.id;
+        return {
+          ...item,
+          itemId,
+          id: item.id || itemId,
+          quantity: Number(item.quantity ?? 1)
+        };
+      }).filter(Boolean);
+    },
+    set(val) {
+      if (!Array.isArray(val)) {
+        this.setDataValue('inventory', []);
+        return;
+      }
+      const canonical = val.map(item => {
+        if (!item) return null;
+        if (typeof item === 'string') return { itemId: item, quantity: 1 };
+        return {
+          itemId: item.itemId || item.id,
+          quantity: Number(item.quantity ?? 1)
+        };
+      }).filter(i => i && i.itemId);
+      this.setDataValue('inventory', canonical);
     }
   },
   equippedItems: {

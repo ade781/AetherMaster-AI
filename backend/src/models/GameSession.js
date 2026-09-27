@@ -19,6 +19,20 @@ const GameSession = sequelize.define('GameSession', {
     type: DataTypes.UUID,
     allowNull: true
   },
+  activeBranchId: {
+    type: DataTypes.STRING,
+    defaultValue: 'main'
+  },
+  questState: {
+    type: DataTypes.JSON,
+    defaultValue: {},
+    get() {
+      const raw = this.getDataValue('questState');
+      if (!raw) return {};
+      if (typeof raw === 'object') return raw;
+      try { return JSON.parse(raw); } catch (e) { return {}; }
+    }
+  },
   turnCount: {
     type: DataTypes.INTEGER,
     defaultValue: 1

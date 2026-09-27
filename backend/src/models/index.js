@@ -77,13 +77,14 @@ NPC.hasMany(StoryNode, { foreignKey: 'speakerId' });
 StoryNode.belongsTo(NPC, { foreignKey: 'speakerId' });
 
 const initDb = async (options = {}) => {
+  await sequelize.authenticate();
   const isProduction = process.env.NODE_ENV === 'production';
   if (isProduction) {
     // In production, avoid destructive automatic schema alterations
-    await sequelize.authenticate();
     await sequelize.sync({ alter: false, ...options });
   } else {
-    await sequelize.sync({ alter: true, ...options });
+    // Clean deterministic sync without disruptive SQLite alterations
+    await sequelize.sync({ ...options });
   }
   await seedCampaigns();
   await seedWorldData();
