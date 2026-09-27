@@ -344,12 +344,12 @@ async function executeCycle() {
 
 ### 🗺️ Lokasi & NPC Kunci:
 - **Lokasi**: **${result.location.name}** (\`${result.location.id}\`) — *${result.location.description}*
-- **NPC**: **${result.npc.name}** (\`${result.npc.role}\`) — "*${result.npc.dialogue}*"
+- **NPC**: **${storyData.npc?.name || result.npc.name}** (\`${storyData.npc?.role || result.npc.title || 'Questgiver'}\`) — "*${storyData.npc?.dialogue || result.npc.description}*"
 
 ### ⚔️ Quest Utama:
 - **Judul Quest**: **${result.quest.title}**
 - **Deskripsi**: ${result.quest.description}
-- **Hadiah**: 💰 ${result.quest.rewardGold} Gold | 🌟 ${result.quest.rewardExp} EXP
+- **Hadiah**: 💰 ${storyData.quest?.rewardGold || 50} Gold | 🌟 ${storyData.quest?.rewardExp || 100} EXP
 
 ### 🎨 Visual Art (Nano Banana Agent):
 ![Cover Art](${result.campaign.coverImage.startsWith('data:') ? 'https://image.pollinations.ai/prompt/fantasy_rpg_cover' : result.campaign.coverImage})
