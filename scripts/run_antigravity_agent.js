@@ -204,15 +204,83 @@ async function saveToDatabase(storyData, coverImageUrl) {
   const npcId = `npc_${campaignId}`;
   const questId = `quest_${campaignId}`;
 
-  const bgMap = {
-    dark_fantasy: 'bg_01_tavern',
-    gothic_horror: 'bg_04_crimson_crypt',
-    eldritch_mystery: 'bg_03_sunken_citadel',
-    high_fantasy: 'bg_08_arcane_library',
-    steampunk_fantasy: 'bg_26_clockwork_vault',
-    subterranean_survival: 'bg_12_underdark_cavern'
+  // Kumpulan latar belakang berkualitas tinggi (29 background D&D) per genre
+  const genreBgPools = {
+    gothic_horror: [
+      'bg_05_vampire_castle',
+      'bg_15_haunted_graveyard',
+      'bg_11_throne_room',
+      'bg_23_dungeon_torture_chamber',
+      'bg_19_shadowfell_citadel',
+      'bg_25_abandoned_cathedral',
+      'bg_04_crimson_crypt',
+      'bg_10_ancient_ruins'
+    ],
+    dark_fantasy: [
+      'bg_01_tavern',
+      'bg_02_cursed_woods',
+      'bg_10_ancient_ruins',
+      'bg_13_lava_forge',
+      'bg_28_city_market_alley',
+      'bg_16_swamp_huts',
+      'bg_04_crimson_crypt'
+    ],
+    eldritch_mystery: [
+      'bg_03_sunken_citadel',
+      'bg_29_abyssal_rift',
+      'bg_07_smuggler_cave',
+      'bg_20_pirate_ship_deck',
+      'bg_12_underdark_cavern'
+    ],
+    high_fantasy: [
+      'bg_08_arcane_library',
+      'bg_18_celestial_sanctum',
+      'bg_24_feywild_glade',
+      'bg_09_dragon_crater',
+      'bg_27_dragon_hoard'
+    ],
+    steampunk_fantasy: [
+      'bg_26_clockwork_vault',
+      'bg_06_alchemy_lab',
+      'bg_13_lava_forge',
+      'bg_28_city_market_alley'
+    ],
+    subterranean_survival: [
+      'bg_12_underdark_cavern',
+      'bg_22_crystal_mines',
+      'bg_14_frost_peak',
+      'bg_16_swamp_huts',
+      'bg_17_desert_temple'
+    ]
   };
-  const resolvedBgId = bgMap[storyData.genre] || 'bg_01_tavern';
+
+  const pool = genreBgPools[storyData.genre] || [
+    'bg_01_tavern', 'bg_02_cursed_woods', 'bg_05_vampire_castle', 'bg_10_ancient_ruins', 'bg_15_haunted_graveyard'
+  ];
+
+  // Hitung penggunaan background di database agar selalu memilih yang paling sedikit dipakai (rotasi variatif)
+  let resolvedBgId = pool[0];
+  try {
+    const existingCampaigns = await Campaign.findAll({ attributes: ['defaultBackgroundId'] });
+    const usageCount = {};
+    existingCampaigns.forEach(c => {
+      if (c.defaultBackgroundId) {
+        usageCount[c.defaultBackgroundId] = (usageCount[c.defaultBackgroundId] || 0) + 1;
+      }
+    });
+
+    const sortedPool = [...pool].sort((a, b) => (usageCount[a] || 0) - (usageCount[b] || 0));
+    const minCount = usageCount[sortedPool[0]] || 0;
+    const leastUsed = sortedPool.filter(bg => (usageCount[bg] || 0) <= minCount);
+    resolvedBgId = leastUsed[Math.floor(Math.random() * leastUsed.length)];
+  } catch (e) {
+    resolvedBgId = pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  // Jika cover image tidak berupa data base64 (dari model AI langsung), gunakan background lokal terkurasi yang dijamin cepat dan tidak 500 error
+  const finalCoverImage = (coverImageUrl && coverImageUrl.startsWith('data:'))
+    ? coverImageUrl
+    : `/assets/backgrounds/${resolvedBgId}.png`;
 
   // 1. Simpan Campaign
   const campaign = await Campaign.create({
@@ -227,7 +295,7 @@ async function saveToDatabase(storyData, coverImageUrl) {
     defaultBackgroundId: resolvedBgId,
     defaultNpcId: npcId,
     icon: storyData.icon || '⚔️',
-    coverImage: coverImageUrl,
+    coverImage: finalCoverImage,
     factions: storyData.factions || ['Petualang Aether'],
     status: 'published'
   });
