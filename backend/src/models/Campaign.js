@@ -10,6 +10,14 @@ const Campaign = sequelize.define('Campaign', {
     type: DataTypes.STRING,
     allowNull: false
   },
+  description: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+  status: {
+    type: DataTypes.STRING,
+    defaultValue: 'published'
+  },
   premise: {
     type: DataTypes.TEXT,
     allowNull: false

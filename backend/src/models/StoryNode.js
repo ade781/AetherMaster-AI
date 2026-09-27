@@ -23,6 +23,10 @@ const StoryNode = sequelize.define('StoryNode', {
     type: DataTypes.STRING,
     defaultValue: 'Kedai Whispering Tavern'
   },
+  locationId: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
   backgroundId: {
     type: DataTypes.STRING,
     defaultValue: 'bg_01_tavern'
@@ -31,9 +35,17 @@ const StoryNode = sequelize.define('StoryNode', {
     type: DataTypes.STRING,
     defaultValue: 'Eldrin sang Barkeep'
   },
+  speakerId: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
   characterId: {
     type: DataTypes.STRING,
     defaultValue: 'char_npc_01_barkeep'
+  },
+  turnNumber: {
+    type: DataTypes.INTEGER,
+    allowNull: true
   },
   mood: {
     type: DataTypes.STRING,

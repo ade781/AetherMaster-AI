@@ -19,6 +19,8 @@ export function GameProvider({ children }) {
   const [isBacklogOpen, setIsBacklogOpen] = useState(false);
   const [isSaveLoadOpen, setIsSaveLoadOpen] = useState(false);
   const [isInventoryOpen, setIsInventoryOpen] = useState(false);
+  const [isJournalOpen, setIsJournalOpen] = useState(false);
+  const [isQuestOpen, setIsQuestOpen] = useState(false);
 
   const [isLoading, setIsLoading] = useState(false);
   const [initLoading, setInitLoading] = useState(true);
@@ -313,6 +315,10 @@ export function GameProvider({ children }) {
     setIsSaveLoadOpen,
     isInventoryOpen,
     setIsInventoryOpen,
+    isJournalOpen,
+    setIsJournalOpen,
+    isQuestOpen,
+    setIsQuestOpen,
     isLoading,
     initLoading,
     toast,

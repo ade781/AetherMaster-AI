@@ -1,9 +1,10 @@
-const { Character, Campaign, GameSession, StoryNode } = require('../models');
+const { Character, Campaign, GameSession, StoryNode, Location, NPC, Item, Quest, QuestObjective, WorldFact, StoryChoice, StorySnapshot } = require('../models');
 const { sequelize } = require('../config/database');
 const geminiService = require('../services/geminiService');
 const combatEngine = require('../engine/combatEngine');
 const logger = require('../utils/logger');
 const { getEffectiveStats } = require('../utils/statEngine');
+const { ItemRepository, NPCRepository, LocationRepository, CampaignRepository, QuestRepository, WorldFactRepository, StoryNodeRepository, SnapshotRepository } = require('../repositories');
 
 // Safely attempt to require Agent 1 engine modules (if already exported via ../engine/index.js)
 let agent1Engine = null;
@@ -282,7 +283,17 @@ async function advanceStoryState({ session, character, currentNode, chosenChoice
     resolvedBg = currentBg || campaignBg || 'bg_01_tavern';
   }
 
-  // 7. Create next node with full snapshot
+  // 7. Resolve locationId and speakerId from repositories
+  let locationId = null;
+  let speakerId = null;
+  try {
+    const loc = await LocationRepository.findByBackgroundId(resolvedBg);
+    locationId = loc?.id || null;
+    const npc = await NPCRepository.findById(nextScene.characterId);
+    speakerId = npc?.id || null;
+  } catch (e) {}
+
+  // 8. Create next node with full snapshot and relational fields
   const snapshot = createGameStateSnapshot(character, session, currentNode);
 
   const newNode = await StoryNode.create({
@@ -290,9 +301,12 @@ async function advanceStoryState({ session, character, currentNode, chosenChoice
     parentNodeId: currentNode.id,
     chapterTitle: nextScene.chapterTitle || `Babak ${session.turnCount}: Petualangan Berlanjut`,
     location: nextScene.location || 'Aetheria',
+    locationId,
     backgroundId: resolvedBg,
     speaker: nextScene.speaker || 'Dungeon Master',
+    speakerId,
     characterId: nextScene.characterId || null,
+    turnNumber: session.turnCount,
     mood: nextScene.mood || 'neutral',
     dialogueText: nextScene.dialogue,
     consequenceNote: nextScene.consequenceNote,
@@ -301,6 +315,45 @@ async function advanceStoryState({ session, character, currentNode, chosenChoice
     characterSnapshot: snapshot,
     gameStateSnapshot: snapshot
   }, { transaction });
+
+  // 9. Persist StoryChoice relational records
+  const choicesArr = safeArray(nextScene.choices);
+  for (let i = 0; i < choicesArr.length; i++) {
+    const c = choicesArr[i];
+    await StoryChoice.create({
+      storyNodeId: newNode.id,
+      choiceKey: c.id || `c_${i + 1}`,
+      text: c.text,
+      actionType: c.actionType || 'INVESTIGATE',
+      tone: c.tone || 'cautious',
+      sequence: i + 1
+    }, { transaction }).catch(() => {});
+  }
+
+  // 10. Persist StorySnapshot relational record
+  await StorySnapshot.create({
+    storyNodeId: newNode.id,
+    characterState: snapshot,
+    inventoryState: snapshot.inventory || [],
+    questState: snapshot.missionLog || {},
+    worldState: snapshot.worldLedger || {},
+    ledgerState: snapshot.worldLedger || {}
+  }, { transaction }).catch(() => {});
+
+  // 11. Persist WorldFact if fact discovered
+  if (stateUpdates.factDiscovered || stateUpdates.addLedgerFact) {
+    const factText = stateUpdates.factDiscovered || stateUpdates.addLedgerFact;
+    await WorldFactRepository.addFact({
+      sessionId: session.id,
+      campaignId: session.campaignId,
+      subjectType: 'WORLD_EVENT',
+      subjectId: locationId || 'location',
+      factType: 'DISCOVERY',
+      fact: factText,
+      turn: session.turnCount,
+      sourceNodeId: newNode.id
+    }, transaction);
+  }
 
   session.currentSceneId = newNode.id;
   await session.save({ transaction });
@@ -415,14 +468,27 @@ exports.startCampaign = async (req, res) => {
 
     const initialSnapshot = createGameStateSnapshot(character, session, null);
 
+    // Resolve locationId and speakerId
+    let startLocId = null;
+    let startSpeakerId = null;
+    try {
+      const loc = await LocationRepository.findByBackgroundId(startingBgId);
+      startLocId = loc?.id || null;
+      const npc = await NPCRepository.findById(openingScene.characterId || campaign.defaultNpcId);
+      startSpeakerId = npc?.id || null;
+    } catch (e) {}
+
     const rootNode = await StoryNode.create({
       sessionId: session.id,
       parentNodeId: null,
       chapterTitle: openingScene.chapterTitle || 'Babak I: Panggilan Takdir',
       location: openingScene.location || 'Aetheria',
+      locationId: startLocId,
       backgroundId: startingBgId,
       speaker: openingScene.speaker || 'Dungeon Master',
+      speakerId: startSpeakerId,
       characterId: openingScene.characterId || null,
+      turnNumber: 1,
       mood: openingScene.mood || 'neutral',
       dialogueText: openingScene.dialogue,
       consequenceNote: openingScene.consequenceNote,
@@ -431,6 +497,42 @@ exports.startCampaign = async (req, res) => {
       characterSnapshot: initialSnapshot,
       gameStateSnapshot: initialSnapshot
     }, { transaction });
+
+    // Persist opening choices
+    const openingChoices = safeArray(openingScene.choices);
+    for (let i = 0; i < openingChoices.length; i++) {
+      const c = openingChoices[i];
+      await StoryChoice.create({
+        storyNodeId: rootNode.id,
+        choiceKey: c.id || `c_${i + 1}`,
+        text: c.text,
+        actionType: c.actionType || 'INVESTIGATE',
+        tone: c.tone || 'cautious',
+        sequence: i + 1
+      }, { transaction }).catch(() => {});
+    }
+
+    // Persist opening snapshot
+    await StorySnapshot.create({
+      storyNodeId: rootNode.id,
+      characterState: initialSnapshot,
+      inventoryState: initialSnapshot.inventory || [],
+      questState: session.missionLog || {},
+      worldState: session.worldLedger || {},
+      ledgerState: session.worldLedger || {}
+    }, { transaction }).catch(() => {});
+
+    // Persist initial world fact
+    await WorldFactRepository.addFact({
+      sessionId: session.id,
+      campaignId: campaign.id,
+      subjectType: 'WORLD_EVENT',
+      subjectId: startLocId || 'tavern',
+      factType: 'CAMPAIGN_START',
+      fact: `Memulai petualangan di ${campaign.title}.`,
+      turn: 1,
+      sourceNodeId: rootNode.id
+    }, transaction);
 
     session.currentSceneId = rootNode.id;
     await session.save({ transaction });
@@ -997,5 +1099,113 @@ exports.getGameSummary = async (req, res) => {
   } catch (err) {
     logger.error('getGameSummary Error', err);
     res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+};
+
+exports.getItems = async (req, res) => {
+  try {
+    const items = await ItemRepository.findAll();
+    res.json({ success: true, data: items });
+  } catch (err) {
+    logger.error('getItems Error', err);
+    res.status(500).json({ success: false, error: 'Gagal mengambil data item.' });
+  }
+};
+
+exports.getNpcs = async (req, res) => {
+  try {
+    const { campaignId } = req.query;
+    const npcs = campaignId ? await NPCRepository.findByCampaign(campaignId) : await NPCRepository.findAll();
+    res.json({ success: true, data: npcs });
+  } catch (err) {
+    logger.error('getNpcs Error', err);
+    res.status(500).json({ success: false, error: 'Gagal mengambil data NPC.' });
+  }
+};
+
+exports.getLocations = async (req, res) => {
+  try {
+    const { campaignId } = req.query;
+    const locations = campaignId ? await LocationRepository.findByCampaign(campaignId) : await LocationRepository.findAll();
+    res.json({ success: true, data: locations });
+  } catch (err) {
+    logger.error('getLocations Error', err);
+    res.status(500).json({ success: false, error: 'Gagal mengambil data lokasi.' });
+  }
+};
+
+exports.getQuests = async (req, res) => {
+  try {
+    const { campaignId } = req.params;
+    const quests = await QuestRepository.findByCampaign(campaignId);
+    res.json({ success: true, data: quests });
+  } catch (err) {
+    logger.error('getQuests Error', err);
+    res.status(500).json({ success: false, error: 'Gagal mengambil data quest.' });
+  }
+};
+
+exports.getJournal = async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const session = await GameSession.findByPk(sessionId, {
+      include: [Character, Campaign]
+    });
+    if (!session) {
+      return res.status(404).json({ success: false, error: 'Sesi tidak ditemukan.' });
+    }
+
+    const worldFacts = await WorldFactRepository.findBySession(sessionId, 50);
+
+    const nodes = await StoryNode.findAll({
+      where: { sessionId },
+      order: [['createdAt', 'ASC']]
+    });
+
+    const visitedLocationNames = new Set();
+    const visitedLocations = [];
+    for (const node of nodes) {
+      if (node.location && !visitedLocationNames.has(node.location)) {
+        visitedLocationNames.add(node.location);
+        visitedLocations.push({
+          location: node.location,
+          backgroundId: node.backgroundId,
+          firstVisitedTurn: node.turnNumber || 1
+        });
+      }
+    }
+
+    const metNpcNames = new Set();
+    const metNpcs = [];
+    for (const node of nodes) {
+      if (node.speaker && node.speaker !== 'Narator' && node.speaker !== 'DM' && !metNpcNames.has(node.speaker)) {
+        metNpcNames.add(node.speaker);
+        metNpcs.push({
+          speaker: node.speaker,
+          characterId: node.characterId,
+          firstMetTurn: node.turnNumber || 1
+        });
+      }
+    }
+
+    const campaignQuests = session.campaignId ? await QuestRepository.findByCampaign(session.campaignId) : [];
+
+    res.json({
+      success: true,
+      data: {
+        sessionId,
+        campaign: session.Campaign,
+        character: session.Character,
+        missionLog: session.missionLog,
+        visitedLocations,
+        metNpcs,
+        worldFacts,
+        quests: campaignQuests,
+        reputation: session.worldLedger?.reputation || {}
+      }
+    });
+  } catch (err) {
+    logger.error('getJournal Error', err);
+    res.status(500).json({ success: false, error: 'Gagal mengambil data jurnal.' });
   }
 };

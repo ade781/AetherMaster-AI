@@ -25,7 +25,7 @@ function buildWorldRulesPrompt() {
    - Perubahan status (HP, mana, gold) harus masuk akal secara diegetik dan proporsional (misal: merapal mantra mengonsumsi sedikit mana, terluka mengonsumsi sedikit HP).`;
 }
 
-function buildCurrentStatePrompt({ character, previousNode, worldLedger, session, questState }) {
+function buildCurrentStatePrompt({ character, previousNode, worldLedger, session, questState, nearbyNpcs, availableLocations }) {
   const charName = character?.name || 'Petualang';
   const charClass = character?.characterClass || 'Pengelana';
   const charRace = character?.race || 'Human';
@@ -46,9 +46,16 @@ function buildCurrentStatePrompt({ character, previousNode, worldLedger, session
 
   // World ledger facts
   let ledgerSummary = 'Belum ada catatan fakta khusus.';
+  const factsList = [];
   if (worldLedger?.questFlags && typeof worldLedger.questFlags === 'object') {
     const facts = Object.values(worldLedger.questFlags).filter(Boolean);
-    if (facts.length > 0) ledgerSummary = facts.join('; ');
+    factsList.push(...facts);
+  }
+  if (Array.isArray(session?.worldFacts)) {
+    factsList.push(...session.worldFacts.map(f => f.fact || f));
+  }
+  if (factsList.length > 0) {
+    ledgerSummary = Array.from(new Set(factsList)).join('; ');
   }
 
   // Reputation
@@ -62,6 +69,14 @@ function buildCurrentStatePrompt({ character, previousNode, worldLedger, session
 
   const turn = session?.turnCount || 1;
 
+  let extraContext = '';
+  if (Array.isArray(nearbyNpcs) && nearbyNpcs.length > 0) {
+    extraContext += `\n- NPC Terkemuka di Sekitar: ${nearbyNpcs.map(n => n.name || n.id).join(', ')}`;
+  }
+  if (Array.isArray(availableLocations) && availableLocations.length > 0) {
+    extraContext += `\n- Wilayah Terkait: ${availableLocations.map(l => l.name || l.id).join(', ')}`;
+  }
+
   return `[CURRENT STATE]
 - Karakter: ${charName} (Ras: ${charRace}, Kelas: ${charClass})
 - Atribut: HP ${hp}/${maxHp}, Mana ${mana}/${maxMana}, Gold ${gold}
@@ -70,7 +85,7 @@ function buildCurrentStatePrompt({ character, previousNode, worldLedger, session
 - Sosok di Hadapanmu: ${prevSpeaker}
 - Turn Sesi: ${turn}
 - Catatan Fakta Dunia (World Ledger): ${ledgerSummary}
-- Reputasi Fraksi: ${repSummary}
+- Reputasi Fraksi: ${repSummary}${extraContext}
 ${questState ? `- Status Quest: ${typeof questState === 'string' ? questState : JSON.stringify(questState)}` : ''}`;
 }
 
@@ -257,7 +272,9 @@ function buildNextSceneSystemPrompt({
   recentHistory,
   worldLedger,
   questState,
-  resolvedIntent
+  resolvedIntent,
+  nearbyNpcs,
+  availableLocations
 }) {
   const role = buildRolePrompt();
   const rules = buildWorldRulesPrompt();
@@ -266,7 +283,9 @@ function buildNextSceneSystemPrompt({
     previousNode,
     worldLedger: worldLedger || session?.worldLedger,
     session,
-    questState
+    questState,
+    nearbyNpcs,
+    availableLocations
   });
   const events = buildRecentEventsPrompt(recentHistory, previousNode);
   const action = buildPlayerActionPrompt(actionTaken, resolvedIntent);

@@ -29,6 +29,11 @@ router.post('/rewind', storyController.rewindToNode);
 router.get('/tree/:sessionId', storyController.getStoryTree);
 router.get('/backlog/:sessionId', storyController.getBacklog);
 router.get('/summary/:sessionId', storyController.getGameSummary);
+router.get('/items', storyController.getItems);
+router.get('/npcs', storyController.getNpcs);
+router.get('/locations', storyController.getLocations);
+router.get('/quests/:campaignId', storyController.getQuests);
+router.get('/journal/:sessionId', storyController.getJournal);
 
 // Multi-Slot Save / Load Routes
 router.get('/saves', saveLoadController.getSaveSlots);
