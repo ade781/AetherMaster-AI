@@ -1,24 +1,37 @@
-const { Character, Campaign, GameSession, StoryNode, Location, NPC, Item, Quest, QuestObjective, WorldFact, StoryChoice, StorySnapshot } = require('../models');
+const {
+  Character,
+  Campaign,
+  GameSession,
+  StoryNode,
+  Location,
+  NPC,
+  Item,
+  Quest,
+  QuestObjective,
+  WorldFact,
+  StoryChoice,
+  StorySnapshot
+} = require('../models');
 const { sequelize } = require('../config/database');
 const geminiService = require('../services/geminiService');
 const combatEngine = require('../engine/combatEngine');
+const gameStateEngine = require('../engine/gameStateEngine');
+const itemMaster = require('../engine/itemMaster');
+const questEngine = require('../engine/questEngine');
+const worldLedgerService = require('../engine/worldLedgerService');
 const logger = require('../utils/logger');
 const { getEffectiveStats } = require('../utils/statEngine');
-const { ItemRepository, NPCRepository, LocationRepository, CampaignRepository, QuestRepository, WorldFactRepository, StoryNodeRepository, SnapshotRepository } = require('../repositories');
-
-// Safely attempt to require Agent 1 engine modules (if already exported via ../engine/index.js)
-let agent1Engine = null;
-try {
-  agent1Engine = require('../engine');
-} catch (e) {
-  // Graceful fallback if Agent 1 is executing concurrently
-  agent1Engine = null;
-}
-
-const gameStateEngine = agent1Engine?.gameStateEngine || null;
-const itemMaster = agent1Engine?.itemMaster || null;
-const questEngine = agent1Engine?.questEngine || null;
-const worldLedgerService = agent1Engine?.worldLedgerService || null;
+const {
+  ItemRepository,
+  NPCRepository,
+  LocationRepository,
+  CampaignRepository,
+  QuestRepository,
+  WorldFactRepository,
+  StoryNodeRepository,
+  SnapshotRepository,
+  StoryChoiceRepository
+} = require('../repositories');
 
 function safeArray(val) {
   if (Array.isArray(val)) return val;
@@ -44,71 +57,16 @@ function safeObject(val) {
   return {};
 }
 
-/**
- * Standard Item Catalog fallback (mirrors Agent 1 Item Master)
- */
-const DEFAULT_ITEM_CATALOG = {
-  item_01_potion_heal: {
-    id: 'item_01_potion_heal',
-    name: 'Potion of Healing',
-    category: 'consumable',
-    effect: { hp: 25, mana: 0 },
-    icon: 'item_01_potion_heal'
-  },
-  item_01_health_potion: {
-    id: 'item_01_health_potion',
-    name: 'Potion of Healing',
-    category: 'consumable',
-    effect: { hp: 25, mana: 0 },
-    icon: 'potion_heal'
-  },
-  item_02_mana_potion: {
-    id: 'item_02_mana_potion',
-    name: 'Potion of Mana',
-    category: 'consumable',
-    effect: { hp: 0, mana: 25 },
-    icon: 'item_02_mana_potion'
-  },
-  item_03_elixir: {
-    id: 'item_03_elixir',
-    name: 'Elixir of Vitality',
-    category: 'consumable',
-    effect: { hp: 50, mana: 30 },
-    icon: 'item_03_elixir'
-  },
-  item_04_ration: {
-    id: 'item_04_ration',
-    name: 'Ration Pack',
-    category: 'consumable',
-    effect: { hp: 10, mana: 0 },
-    icon: 'item_04_ration'
-  }
-};
-
-/**
- * Normalizes item ID and looks up master item data
- */
-function resolveItemData(itemIdOrName) {
-  if (itemMaster?.getItem) {
-    const item = itemMaster.getItem(itemIdOrName);
-    if (item) return item;
-  }
-  const cleanId = String(itemIdOrName || '').toLowerCase().trim();
-  if (DEFAULT_ITEM_CATALOG[cleanId]) return DEFAULT_ITEM_CATALOG[cleanId];
-  return Object.values(DEFAULT_ITEM_CATALOG).find(i =>
-    i.id.toLowerCase() === cleanId || i.name.toLowerCase() === cleanId
-  ) || null;
-}
-
 function resolveChoice(currentNode, choiceId, customText, tone) {
   const choiceList = safeArray(currentNode?.choices);
-  const matched = choiceList.find(c => c && (c.id === choiceId || c.text === choiceId));
+  const matched = choiceList.find(c => c && (c.id === choiceId || c.choiceKey === choiceId || c.text === choiceId));
   if (matched) return matched;
 
   const text = customText || (typeof choiceId === 'string' && choiceId !== 'custom' ? choiceId : 'Melangkah maju dengan waspada');
 
   return {
     id: choiceId || 'custom',
+    choiceKey: choiceId || 'custom',
     text,
     tone: tone || 'kreatif'
   };
@@ -117,7 +75,7 @@ function resolveChoice(currentNode, choiceId, customText, tone) {
 async function getRecentStoryHistory(sessionId, currentSceneId, limit = 4) {
   try {
     const nodes = await StoryNode.findAll({
-      where: { sessionId },
+      where: { sessionId, status: 'ACTIVE' },
       attributes: ['id', 'parentNodeId', 'chapterTitle', 'location', 'speaker', 'characterId', 'mood', 'dialogueText', 'createdAt'],
       order: [['createdAt', 'ASC']]
     });
@@ -136,145 +94,44 @@ async function getRecentStoryHistory(sessionId, currentSceneId, limit = 4) {
 }
 
 /**
- * Creates comprehensive game state snapshot for atomic rewind & save slots.
- */
-function createGameStateSnapshot(character, session, currentNode) {
-  if (gameStateEngine?.createSnapshot) {
-    return gameStateEngine.createSnapshot(character, session, currentNode);
-  }
-  return {
-    hp: character.hp,
-    maxHp: character.maxHp,
-    mana: character.mana,
-    maxMana: character.maxMana,
-    gold: character.gold,
-    inventory: safeArray(character.inventory).map(item => ({ ...item })),
-    equippedItems: safeArray(character.equippedItems),
-    statusEffects: safeArray(character.statusEffects),
-    worldLedger: safeObject(session.worldLedger),
-    missionLog: safeObject(session.missionLog),
-    combatState: session.combatState ? { ...session.combatState } : null,
-    turnCount: session.turnCount,
-    isGameOver: Boolean(session.isGameOver)
-  };
-}
-
-/**
- * Advance story state using centralized GameStateEngine with atomic transaction
+ * Advance story state using centralized GameStateEngine and Game Event pipeline with atomic transaction.
  */
 async function advanceStoryState({ session, character, currentNode, chosenChoice, nextScene, transaction }) {
   const stateUpdates = nextScene.stateUpdates || {};
+  const activeBranchId = session.activeBranchId || 'main';
 
-  // 1. Resolve State Mutators deterministically
-  let validatedUpdates;
-  if (gameStateEngine?.resolveAction) {
-    const result = gameStateEngine.resolveAction(session, character, currentNode, chosenChoice, stateUpdates);
-    validatedUpdates = result.validatedUpdates;
-  } else {
-    // Pure server-side deterministic resolution fallback
-    const rawHpChange = Number(stateUpdates.proposedHpChange ?? stateUpdates.hpChange ?? 0);
-    const rawManaChange = Number(stateUpdates.proposedManaChange ?? stateUpdates.manaChange ?? 0);
-    const rawGoldChange = Number(stateUpdates.proposedGoldChange ?? stateUpdates.goldChange ?? 0);
+  // 1. Resolve State Mutators strictly via GameStateEngine
+  const resolvedResult = gameStateEngine.resolveAction(
+    session,
+    character,
+    currentNode,
+    {
+      choiceId: chosenChoice?.id || chosenChoice?.choiceKey,
+      text: chosenChoice?.text,
+      tone: chosenChoice?.tone
+    },
+    stateUpdates
+  );
 
-    // Hazard protection: Check dangerous lethal keywords if LLM gave 0 damage
-    const lethalWords = ['lahar', 'magma', 'kawah', 'racun maut', 'jurang', 'bunuh diri'];
-    const defensiveWords = ['hindar', 'menghindar', 'jauh', 'menjauh', 'waspada', 'hati-hati', 'lindung', 'bertahan'];
-    const actTextLower = (chosenChoice?.text || '').toLowerCase();
-    const isDefensive = defensiveWords.some(dw => actTextLower.includes(dw));
-    let adjustedHpChange = rawHpChange;
-    if (!isDefensive && lethalWords.some(w => actTextLower.includes(w)) && rawHpChange >= 0) {
-      adjustedHpChange = -25;
-    }
+  const validatedUpdates = resolvedResult.validatedUpdates;
+  const updatedCharState = resolvedResult.updatedCharacterState;
+  const updatedSessionState = resolvedResult.updatedSessionState;
 
-    validatedUpdates = {
-      hpChange: adjustedHpChange,
-      manaChange: rawManaChange,
-      goldChange: rawGoldChange,
-      receivedItem: stateUpdates.receivedItem || (stateUpdates.receivedItemId ? resolveItemData(stateUpdates.receivedItemId) : null),
-      consumedItem: stateUpdates.consumedItem || stateUpdates.consumedItemId || chosenChoice?.requiredItem || null
-    };
-  }
-
-  // 2. Apply clamped vitals
-  character.hp = Math.max(0, Math.min(character.maxHp, character.hp + (validatedUpdates.hpChange || 0)));
-  character.mana = Math.max(0, Math.min(character.maxMana, character.mana + (validatedUpdates.manaChange || 0)));
-  character.gold = Math.max(0, character.gold + (validatedUpdates.goldChange || 0));
-
-  // 3. Process inventory mutations
-  let currentInv = safeArray(character.inventory);
-  if (validatedUpdates.consumedItem) {
-    const target = String(validatedUpdates.consumedItem).toLowerCase();
-    const idx = currentInv.findIndex(i =>
-      i && (
-        String(i.id).toLowerCase() === target ||
-        String(i.name).toLowerCase() === target ||
-        String(i.name).toLowerCase().includes(target)
-      )
-    );
-    if (idx !== -1) {
-      currentInv.splice(idx, 1);
-    }
-  }
-
-  if (validatedUpdates.receivedItem) {
-    const itemToAdd = typeof validatedUpdates.receivedItem === 'object'
-      ? validatedUpdates.receivedItem
-      : resolveItemData(validatedUpdates.receivedItem);
-
-    if (itemToAdd) {
-      if (currentInv.length < 6) {
-        currentInv.push(itemToAdd);
-      } else {
-        const dropNote = `Tas inventaris penuh (maks 6). ${itemToAdd.name || 'Barang baru'} tidak dapat disimpan!`;
-        nextScene.consequenceNote = nextScene.consequenceNote ? `${nextScene.consequenceNote} (${dropNote})` : dropNote;
-      }
-    }
-  }
-  character.inventory = currentInv;
+  // Apply clamped stats to character model
+  character.hp = updatedCharState.hp;
+  character.mana = updatedCharState.mana;
+  character.gold = updatedCharState.gold;
+  character.inventory = updatedCharState.inventory;
   await character.save({ transaction });
 
-  // 4. Update World Ledger
-  let ledger = safeObject(session.worldLedger);
-  if (worldLedgerService?.addFact && stateUpdates.factDiscovered) {
-    ledger = worldLedgerService.addFact(ledger, {
-      id: `fact_${Date.now()}`,
-      type: 'DISCOVERY',
-      target: stateUpdates.factDiscovered,
-      turn: session.turnCount + 1,
-      timestamp: new Date().toISOString()
-    });
-  } else {
-    if (!ledger.questFlags || typeof ledger.questFlags !== 'object') ledger.questFlags = {};
-    if (!ledger.reputation || typeof ledger.reputation !== 'object') ledger.reputation = {};
-    if (stateUpdates.addLedgerFact || stateUpdates.factDiscovered) {
-      ledger.questFlags[`turn_${session.turnCount + 1}`] = stateUpdates.addLedgerFact || stateUpdates.factDiscovered;
-    }
-    if (stateUpdates.reputationChange && typeof stateUpdates.reputationChange === 'object') {
-      for (const [faction, delta] of Object.entries(stateUpdates.reputationChange)) {
-        ledger.reputation[faction] = (ledger.reputation[faction] || 0) + Number(delta);
-      }
-    }
-  }
-  session.worldLedger = ledger;
+  // Update session attributes
   session.turnCount += 1;
+  session.worldLedger = updatedSessionState.worldLedger;
+  session.missionLog = updatedSessionState.missionLog;
+  session.questState = updatedSessionState.missionLog?.questState || updatedSessionState.missionLog || session.questState;
+  session.isGameOver = resolvedResult.isGameOver;
 
-  // 5. Evaluate Quest & Ending Conditions (NO hardcoded turnCount >= 11 forced victory!)
-  let isQuestComplete = false;
-  if (questEngine?.evaluateObjectives) {
-    const evalResult = questEngine.evaluateObjectives(session, session.Campaign, ledger, { chosenChoice });
-    isQuestComplete = evalResult.isCompleted || false;
-  } else {
-    // Only complete if explicit quest flag or finale choice taken
-    isQuestComplete = Boolean(ledger.questFlags?.main_quest_completed || chosenChoice?.id === 'finish_game');
-  }
-
-  if (character.hp <= 0) {
-    session.isGameOver = true;
-  } else if (isQuestComplete || chosenChoice?.id === 'finish_game') {
-    session.isGameOver = true;
-  }
-
-  // 6. Resolve background ID
+  // 2. Resolve background ID safely with campaign validation
   const campaignBg = session.Campaign?.defaultBackgroundId;
   const currentBg = currentNode?.backgroundId;
   const candidateBg = nextScene?.backgroundId;
@@ -283,64 +140,62 @@ async function advanceStoryState({ session, character, currentNode, chosenChoice
     resolvedBg = currentBg || campaignBg || 'bg_01_tavern';
   }
 
-  // 7. Resolve locationId and speakerId from repositories
+  // 3. Resolve and strictly validate locationId and speakerId from database
   let locationId = null;
   let speakerId = null;
   try {
-    const loc = await LocationRepository.findByBackgroundId(resolvedBg);
-    locationId = loc?.id || null;
-    const npc = await NPCRepository.findById(nextScene.characterId);
-    speakerId = npc?.id || null;
+    const locByBg = await LocationRepository.findByBackgroundId(resolvedBg);
+    if (locByBg && (!locByBg.campaignId || locByBg.campaignId === session.campaignId)) {
+      locationId = locByBg.id;
+    } else {
+      const locById = await LocationRepository.findById(nextScene.locationId);
+      if (locById && (!locById.campaignId || locById.campaignId === session.campaignId)) {
+        locationId = locById.id;
+      }
+    }
+
+    const candidateNpcId = nextScene.characterId || nextScene.speakerId;
+    if (candidateNpcId) {
+      const npc = await NPCRepository.findById(candidateNpcId);
+      if (npc && (!npc.campaignId || npc.campaignId === session.campaignId)) {
+        speakerId = npc.id;
+      }
+    }
   } catch (e) {}
 
-  // 8. Create next node with full snapshot and relational fields
-  const snapshot = createGameStateSnapshot(character, session, currentNode);
+  // 4. Create comprehensive snapshot via GameStateEngine
+  const snapshotData = gameStateEngine.createSnapshot(character, session, currentNode);
 
-  const newNode = await StoryNode.create({
-    sessionId: session.id,
-    parentNodeId: currentNode.id,
-    chapterTitle: nextScene.chapterTitle || `Babak ${session.turnCount}: Petualangan Berlanjut`,
-    location: nextScene.location || 'Aetheria',
-    locationId,
-    backgroundId: resolvedBg,
-    speaker: nextScene.speaker || 'Dungeon Master',
-    speakerId,
-    characterId: nextScene.characterId || null,
-    turnNumber: session.turnCount,
-    mood: nextScene.mood || 'neutral',
-    dialogueText: nextScene.dialogue,
-    consequenceNote: nextScene.consequenceNote,
-    choices: safeArray(nextScene.choices),
-    combatEncounter: nextScene.combatEncounter || null,
-    characterSnapshot: snapshot,
-    gameStateSnapshot: snapshot
-  }, { transaction });
-
-  // 9. Persist StoryChoice relational records
+  // 5. Create new StoryNode on active branch
   const choicesArr = safeArray(nextScene.choices);
-  for (let i = 0; i < choicesArr.length; i++) {
-    const c = choicesArr[i];
-    await StoryChoice.create({
-      storyNodeId: newNode.id,
-      choiceKey: c.id || `c_${i + 1}`,
-      text: c.text,
-      actionType: c.actionType || 'INVESTIGATE',
-      tone: c.tone || 'cautious',
-      sequence: i + 1
-    }, { transaction }).catch(() => {});
-  }
+  const newNode = await StoryNodeRepository.createNode(
+    {
+      sessionId: session.id,
+      parentNodeId: currentNode.id,
+      branchId: activeBranchId,
+      status: 'ACTIVE',
+      chapterTitle: nextScene.chapterTitle || `Babak ${session.turnCount}: Petualangan Berlanjut`,
+      location: nextScene.location || 'Aetheria',
+      locationId,
+      backgroundId: resolvedBg,
+      speaker: nextScene.speaker || 'Dungeon Master',
+      speakerId,
+      characterId: speakerId,
+      turnNumber: session.turnCount,
+      mood: nextScene.mood || 'neutral',
+      dialogueText: nextScene.dialogue,
+      consequenceNote: nextScene.consequenceNote,
+      choices: choicesArr,
+      combatEncounter: nextScene.combatEncounter || null,
+      characterSnapshot: snapshotData,
+      gameStateSnapshot: snapshotData
+    },
+    choicesArr,
+    snapshotData,
+    transaction
+  );
 
-  // 10. Persist StorySnapshot relational record
-  await StorySnapshot.create({
-    storyNodeId: newNode.id,
-    characterState: snapshot,
-    inventoryState: snapshot.inventory || [],
-    questState: snapshot.missionLog || {},
-    worldState: snapshot.worldLedger || {},
-    ledgerState: snapshot.worldLedger || {}
-  }, { transaction }).catch(() => {});
-
-  // 11. Persist WorldFact if fact discovered
+  // 6. Record WorldFacts in database (history source of truth)
   if (stateUpdates.factDiscovered || stateUpdates.addLedgerFact) {
     const factText = stateUpdates.factDiscovered || stateUpdates.addLedgerFact;
     await WorldFactRepository.addFact({
@@ -351,6 +206,21 @@ async function advanceStoryState({ session, character, currentNode, chosenChoice
       factType: 'DISCOVERY',
       fact: factText,
       turn: session.turnCount,
+      branchId: activeBranchId,
+      sourceNodeId: newNode.id
+    }, transaction);
+  }
+
+  for (const addedItem of (validatedUpdates.addedItems || [])) {
+    await WorldFactRepository.addFact({
+      sessionId: session.id,
+      campaignId: session.campaignId,
+      subjectType: 'ITEM',
+      subjectId: addedItem.id,
+      factType: 'ITEM_ACQUISITION',
+      fact: `Memperoleh item: ${addedItem.name}`,
+      turn: session.turnCount,
+      branchId: activeBranchId,
       sourceNodeId: newNode.id
     }, transaction);
   }
@@ -383,32 +253,29 @@ exports.startCampaign = async (req, res) => {
     }
 
     const classPresets = {
-      warrior: { hp: 35, maxHp: 35, mana: 15, maxMana: 15, str: 16, dex: 12, con: 15, int: 9, wis: 10, cha: 11, avatar: 'char_hero_01_paladin' },
-      rogue: { hp: 28, maxHp: 28, mana: 18, maxMana: 18, str: 10, dex: 16, con: 12, int: 13, wis: 12, cha: 14, avatar: 'char_hero_05_rogue' },
-      mage: { hp: 24, maxHp: 24, mana: 35, maxMana: 35, str: 8, dex: 13, con: 11, int: 17, wis: 14, cha: 10, avatar: 'char_hero_03_wizard' },
-      cleric: { hp: 30, maxHp: 30, mana: 25, maxMana: 25, str: 13, dex: 10, con: 14, int: 10, wis: 16, cha: 13, avatar: 'char_hero_06_cleric' },
-      ranger: { hp: 28, maxHp: 28, mana: 20, maxMana: 20, str: 11, dex: 17, con: 13, int: 12, wis: 15, cha: 10, avatar: 'char_hero_02_ranger' },
-      warlock: { hp: 26, maxHp: 26, mana: 30, maxMana: 30, str: 9, dex: 14, con: 12, int: 14, wis: 11, cha: 17, avatar: 'char_hero_07_warlock' },
-      barbarian: { hp: 38, maxHp: 38, mana: 10, maxMana: 10, str: 17, dex: 13, con: 16, int: 8, wis: 11, cha: 9, avatar: 'char_hero_04_dwarf' },
-      dragonborn: { hp: 36, maxHp: 36, mana: 12, maxMana: 12, str: 17, dex: 11, con: 15, int: 10, wis: 10, cha: 13, avatar: 'char_hero_08_dragonborn' },
-      bard: { hp: 26, maxHp: 26, mana: 24, maxMana: 24, str: 10, dex: 14, con: 12, int: 12, wis: 12, cha: 17, avatar: 'char_hero_09_bard' }
+      warrior: { hp: 35, maxHp: 35, mana: 10, maxMana: 10, str: 16, dex: 12, int: 8, wis: 10, cha: 10, con: 16, avatar: 'char_hero_01_paladin' },
+      paladin: { hp: 35, maxHp: 35, mana: 15, maxMana: 15, str: 15, dex: 10, int: 10, wis: 14, cha: 14, con: 14, avatar: 'char_hero_01_paladin' },
+      rogue: { hp: 28, maxHp: 28, mana: 15, maxMana: 15, str: 10, dex: 16, int: 12, wis: 12, cha: 14, con: 12, avatar: 'char_hero_02_ranger' },
+      ranger: { hp: 30, maxHp: 30, mana: 15, maxMana: 15, str: 12, dex: 16, int: 10, wis: 14, cha: 10, con: 14, avatar: 'char_hero_02_ranger' },
+      mage: { hp: 22, maxHp: 22, mana: 35, maxMana: 35, str: 8, dex: 12, int: 16, wis: 14, cha: 12, con: 10, avatar: 'char_hero_03_mage' },
+      wizard: { hp: 22, maxHp: 22, mana: 35, maxMana: 35, str: 8, dex: 12, int: 16, wis: 14, cha: 12, con: 10, avatar: 'char_hero_03_mage' },
+      cleric: { hp: 30, maxHp: 30, mana: 25, maxMana: 25, str: 12, dex: 10, int: 10, wis: 16, cha: 12, con: 14, avatar: 'char_hero_01_paladin' },
+      bard: { hp: 26, maxHp: 26, mana: 25, maxMana: 25, str: 10, dex: 14, int: 12, wis: 10, cha: 16, con: 12, avatar: 'char_hero_02_ranger' },
+      warlock: { hp: 26, maxHp: 26, mana: 30, maxMana: 30, str: 8, dex: 12, int: 14, wis: 12, cha: 16, con: 12, avatar: 'char_hero_03_mage' }
     };
 
     const chosenClass = (characterData?.characterClass || 'warrior').toLowerCase();
     const preset = classPresets[chosenClass] || classPresets.warrior;
 
-    const initialInventory = [
-      {
-        id: 'item_01_potion_heal',
-        name: 'Potion of Healing',
-        category: 'consumable',
-        effect: 'Memulihkan 25 HP',
-        icon: 'item_01_potion_heal'
-      }
-    ];
+    // Canonical inventory reference
+    const initialInventory = [{ itemId: 'item_01_potion_heal', quantity: 1 }];
 
-    if (characterData?.starterItem) {
-      initialInventory.push(characterData.starterItem);
+    if (characterData?.starterItemId || characterData?.starterItem) {
+      const starterId = characterData.starterItemId || (typeof characterData.starterItem === 'object' ? characterData.starterItem.id : characterData.starterItem);
+      const validItem = await ItemRepository.findById(starterId);
+      if (validItem) {
+        initialInventory.push({ itemId: validItem.id, quantity: 1 });
+      }
     }
 
     const character = await Character.create({
@@ -434,10 +301,16 @@ exports.startCampaign = async (req, res) => {
       statusEffects: []
     }, { transaction });
 
+    // Initialize deterministic quest state from Database
+    const initialMission = questEngine.initializeMissionLog(campaign);
+
     const session = await GameSession.create({
       campaignId: campaign.id,
       characterId: character.id,
       turnCount: 1,
+      activeBranchId: 'main',
+      questState: initialMission.questState || {},
+      missionLog: initialMission,
       worldLedger: {
         questFlags: { started: true },
         reputation: {}
@@ -445,19 +318,14 @@ exports.startCampaign = async (req, res) => {
       isGameOver: false
     }, { transaction });
 
+    // Generate opening narrative scene
     const openingScene = await geminiService.generateOpeningScene(campaign, character);
 
-    session.missionLog = openingScene.missionLog || {
-      title: `Jurnal Misi: ${campaign.title}`,
-      prologue: `${campaign.premise || 'Sebuah krisis menuntut penyelidikan mendalam.'}\n\nKehadiran ${character.name} sang ${character.characterClass} diharapkan dapat menuntaskan persoalan ini sebelum dampaknya meluas.`,
-      targetGoal: `Selesaikan investigasi dan netralkan sumber krisis.`
-    };
-
-    if (openingScene.stateUpdates?.receivedItem) {
-      const inv = safeArray(character.inventory);
-      if (inv.length < 6) {
-        inv.push(openingScene.stateUpdates.receivedItem);
-        character.inventory = inv;
+    // Validate if opening scene gave a registered item
+    if (openingScene.stateUpdates?.receivedItemId) {
+      const validItem = await ItemRepository.findById(openingScene.stateUpdates.receivedItemId);
+      if (validItem) {
+        itemMaster.addItem(character, validItem.id, 1);
         await character.save({ transaction });
       }
     }
@@ -465,8 +333,6 @@ exports.startCampaign = async (req, res) => {
     const startingBgId = (openingScene.backgroundId && openingScene.backgroundId !== 'bg_01_tavern')
       ? openingScene.backgroundId
       : (campaign.defaultBackgroundId || 'bg_01_tavern');
-
-    const initialSnapshot = createGameStateSnapshot(character, session, null);
 
     // Resolve locationId and speakerId
     let startLocId = null;
@@ -478,49 +344,35 @@ exports.startCampaign = async (req, res) => {
       startSpeakerId = npc?.id || null;
     } catch (e) {}
 
-    const rootNode = await StoryNode.create({
-      sessionId: session.id,
-      parentNodeId: null,
-      chapterTitle: openingScene.chapterTitle || 'Babak I: Panggilan Takdir',
-      location: openingScene.location || 'Aetheria',
-      locationId: startLocId,
-      backgroundId: startingBgId,
-      speaker: openingScene.speaker || 'Dungeon Master',
-      speakerId: startSpeakerId,
-      characterId: openingScene.characterId || null,
-      turnNumber: 1,
-      mood: openingScene.mood || 'neutral',
-      dialogueText: openingScene.dialogue,
-      consequenceNote: openingScene.consequenceNote,
-      choices: safeArray(openingScene.choices),
-      combatEncounter: openingScene.combatEncounter || null,
-      characterSnapshot: initialSnapshot,
-      gameStateSnapshot: initialSnapshot
-    }, { transaction });
+    const initialSnapshot = gameStateEngine.createSnapshot(character, session, null);
 
-    // Persist opening choices
     const openingChoices = safeArray(openingScene.choices);
-    for (let i = 0; i < openingChoices.length; i++) {
-      const c = openingChoices[i];
-      await StoryChoice.create({
-        storyNodeId: rootNode.id,
-        choiceKey: c.id || `c_${i + 1}`,
-        text: c.text,
-        actionType: c.actionType || 'INVESTIGATE',
-        tone: c.tone || 'cautious',
-        sequence: i + 1
-      }, { transaction }).catch(() => {});
-    }
-
-    // Persist opening snapshot
-    await StorySnapshot.create({
-      storyNodeId: rootNode.id,
-      characterState: initialSnapshot,
-      inventoryState: initialSnapshot.inventory || [],
-      questState: session.missionLog || {},
-      worldState: session.worldLedger || {},
-      ledgerState: session.worldLedger || {}
-    }, { transaction }).catch(() => {});
+    const rootNode = await StoryNodeRepository.createNode(
+      {
+        sessionId: session.id,
+        parentNodeId: null,
+        branchId: 'main',
+        status: 'ACTIVE',
+        chapterTitle: openingScene.chapterTitle || 'Babak I: Panggilan Takdir',
+        location: openingScene.location || 'Aetheria',
+        locationId: startLocId,
+        backgroundId: startingBgId,
+        speaker: openingScene.speaker || 'Dungeon Master',
+        speakerId: startSpeakerId,
+        characterId: startSpeakerId,
+        turnNumber: 1,
+        mood: openingScene.mood || 'neutral',
+        dialogueText: openingScene.dialogue,
+        consequenceNote: openingScene.consequenceNote,
+        choices: openingChoices,
+        combatEncounter: openingScene.combatEncounter || null,
+        characterSnapshot: initialSnapshot,
+        gameStateSnapshot: initialSnapshot
+      },
+      openingChoices,
+      initialSnapshot,
+      transaction
+    );
 
     // Persist initial world fact
     await WorldFactRepository.addFact({
@@ -531,12 +383,15 @@ exports.startCampaign = async (req, res) => {
       factType: 'CAMPAIGN_START',
       fact: `Memulai petualangan di ${campaign.title}.`,
       turn: 1,
+      branchId: 'main',
       sourceNodeId: rootNode.id
     }, transaction);
 
     session.currentSceneId = rootNode.id;
     await session.save({ transaction });
     await transaction.commit();
+
+    const hydratedInv = await ItemRepository.hydrateInventory(character.inventory);
 
     logger.info('Game session started successfully', {
       sessionId: session.id,
@@ -548,7 +403,10 @@ exports.startCampaign = async (req, res) => {
       success: true,
       data: {
         session,
-        character,
+        character: {
+          ...character.toJSON(),
+          inventory: hydratedInv
+        },
         campaign,
         currentNode: rootNode
       }
@@ -557,86 +415,6 @@ exports.startCampaign = async (req, res) => {
     await transaction.rollback();
     logger.error('startCampaign Error', err);
     res.status(500).json({ success: false, error: 'Internal server error saat memulai kampanye.' });
-  }
-};
-
-exports.useItem = async (req, res) => {
-  const transaction = await sequelize.transaction();
-  try {
-    const { sessionId, itemId } = req.body;
-    if (!sessionId || !itemId) {
-      await transaction.rollback();
-      return res.status(400).json({ success: false, error: 'sessionId dan itemId wajib disertakan.' });
-    }
-
-    const session = await GameSession.findByPk(sessionId, {
-      include: [Character],
-      transaction
-    });
-    if (!session || !session.Character) {
-      await transaction.rollback();
-      return res.status(404).json({ success: false, error: 'Sesi atau karakter tidak ditemukan.' });
-    }
-
-    const character = session.Character;
-    const inv = safeArray(character.inventory);
-    const itemIdx = inv.findIndex(i => i && (i.id === itemId || i.name === itemId));
-
-    if (itemIdx === -1) {
-      await transaction.rollback();
-      return res.status(400).json({ success: false, error: 'Item tidak ditemukan di dalam inventaris.' });
-    }
-
-    const item = inv[itemIdx];
-    const itemData = resolveItemData(item.id || item.name) || item;
-
-    // Apply consumable effect
-    let healHp = 0;
-    let healMana = 0;
-    let msg = '';
-
-    if (itemMaster?.applyItem) {
-      const effectResult = itemMaster.applyItem(character, itemData.id);
-      healHp = effectResult.hpRestored || 0;
-      healMana = effectResult.manaRestored || 0;
-      msg = effectResult.message;
-    } else {
-      if (itemData.effect?.hp !== undefined || itemData.effect?.mana !== undefined) {
-        healHp = Number(itemData.effect.hp || 0);
-        healMana = Number(itemData.effect.mana || 0);
-      } else {
-        // Fallback default heal
-        healHp = 25;
-      }
-      character.hp = Math.min(character.maxHp, character.hp + healHp);
-      character.mana = Math.min(character.maxMana, character.mana + healMana);
-      msg = `Memulihkan ${healHp ? `${healHp} HP` : ''}${healHp && healMana ? ' & ' : ''}${healMana ? `${healMana} Mana` : ''} dari ${item.name}!`;
-    }
-
-    // Remove consumed item
-    inv.splice(itemIdx, 1);
-    character.inventory = inv;
-    await character.save({ transaction });
-    await transaction.commit();
-
-    logger.info('Player used item', {
-      sessionId,
-      characterId: character.id,
-      itemId,
-      healHp,
-      healMana,
-      currentHp: character.hp
-    });
-
-    return res.json({
-      success: true,
-      message: msg,
-      data: { character }
-    });
-  } catch (err) {
-    await transaction.rollback();
-    logger.error('useItem Error', err);
-    res.status(500).json({ success: false, error: 'Internal server error saat menggunakan item.' });
   }
 };
 
@@ -658,7 +436,10 @@ exports.submitAction = async (req, res) => {
       return res.status(404).json({ success: false, error: 'Sesi permainan tidak ditemukan.' });
     }
 
-    const currentNode = await StoryNode.findByPk(session.currentSceneId, { transaction });
+    const currentNode = await StoryNode.findByPk(session.currentSceneId, {
+      include: [{ model: StoryChoice, as: 'choiceList' }],
+      transaction
+    });
     if (!currentNode) {
       await transaction.rollback();
       return res.status(404).json({ success: false, error: 'Node cerita aktif tidak ditemukan.' });
@@ -667,16 +448,59 @@ exports.submitAction = async (req, res) => {
     const character = session.Character;
     const hpBefore = character.hp;
 
-    // Direct game resolution if finish_game is explicitly selected
+    // Approach B Branching: If player is taking a new choice from a node that already had children, mark old future branch ABANDONED
+    const existingChildren = await StoryNode.findAll({
+      where: {
+        sessionId: session.id,
+        parentNodeId: currentNode.id,
+        status: 'ACTIVE'
+      },
+      transaction
+    });
+
+    if (existingChildren.length > 0) {
+      await StoryNodeRepository.abandonFutureNodes(session.id, currentNode, transaction);
+      const branchCount = await StoryNode.count({
+        where: { sessionId: session.id },
+        distinct: true,
+        col: 'branchId',
+        transaction
+      });
+      session.activeBranchId = `branch_${branchCount + 1}`;
+      await session.save({ transaction });
+    }
+
+    // Direct game resolution check: Block premature finish_game unless quest objectives are completed
     if (choiceId === 'finish_game') {
+      const evalEnding = questEngine.evaluateObjectives(
+        session,
+        session.Campaign,
+        session.worldLedger,
+        { choiceId: 'finish_game', currentNode }
+      );
+
+      if (!evalEnding.canTriggerEnding) {
+        await transaction.rollback();
+        return res.status(400).json({
+          success: false,
+          error: 'Kamu belum dapat menyelesaikan petualangan karena objektif misi utama belum tuntas.'
+        });
+      }
+
       session.isGameOver = true;
       await session.save({ transaction });
       await transaction.commit();
+
+      const hydratedInv = await ItemRepository.hydrateInventory(character.inventory);
+
       return res.json({
         success: true,
         data: {
           session,
-          character,
+          character: {
+            ...character.toJSON(),
+            inventory: hydratedInv
+          },
           currentNode,
           checkResult: null
         }
@@ -686,14 +510,15 @@ exports.submitAction = async (req, res) => {
     const chosenChoice = resolveChoice(currentNode, choiceId, customText, tone);
     const recentHistory = await getRecentStoryHistory(session.id, currentNode.id, 4);
 
-    // Call narrative generation
+    // Call narrative generation with validated world context
     const nextScene = await geminiService.generateNextScene({
       session,
       character,
       previousNode: currentNode,
       actionTaken: chosenChoice,
       recentHistory,
-      worldLedger: session.worldLedger
+      worldLedger: session.worldLedger,
+      questState: session.questState || session.missionLog
     });
 
     const newNode = await advanceStoryState({
@@ -707,7 +532,8 @@ exports.submitAction = async (req, res) => {
 
     await transaction.commit();
 
-    // Structured logging of turn
+    const hydratedInv = await ItemRepository.hydrateInventory(character.inventory);
+
     logger.logPlayerTurn({
       turn: session.turnCount,
       sessionId: session.id,
@@ -722,7 +548,10 @@ exports.submitAction = async (req, res) => {
       success: true,
       data: {
         session,
-        character,
+        character: {
+          ...character.toJSON(),
+          inventory: hydratedInv
+        },
         currentNode: newNode,
         checkResult: null
       }
@@ -734,10 +563,155 @@ exports.submitAction = async (req, res) => {
   }
 };
 
+exports.actionStream = async (req, res) => {
+  const sessionId = req.body?.sessionId || req.query?.sessionId;
+  const choiceId = req.body?.choiceId || req.query?.choiceId;
+  const customText = req.body?.customText || req.query?.customText;
+
+  if (!sessionId) {
+    return res.status(400).json({ success: false, error: 'sessionId wajib disertakan.' });
+  }
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders?.();
+
+  const transaction = await sequelize.transaction();
+  try {
+    const session = await GameSession.findByPk(sessionId, {
+      include: [Character, Campaign],
+      transaction
+    });
+    if (!session) {
+      await transaction.rollback();
+      res.write(`data: ${JSON.stringify({ error: 'Sesi tidak ditemukan' })}\n\n`);
+      return res.end();
+    }
+
+    const currentNode = await StoryNode.findByPk(session.currentSceneId, {
+      include: [{ model: StoryChoice, as: 'choiceList' }],
+      transaction
+    });
+    if (!currentNode) {
+      await transaction.rollback();
+      res.write(`data: ${JSON.stringify({ error: 'Node cerita aktif tidak ditemukan' })}\n\n`);
+      return res.end();
+    }
+
+    const character = session.Character;
+
+    // Check branching
+    const existingChildren = await StoryNode.findAll({
+      where: {
+        sessionId: session.id,
+        parentNodeId: currentNode.id,
+        status: 'ACTIVE'
+      },
+      transaction
+    });
+    if (existingChildren.length > 0) {
+      await StoryNodeRepository.abandonFutureNodes(session.id, currentNode, transaction);
+      const branchCount = await StoryNode.count({
+        where: { sessionId: session.id },
+        distinct: true,
+        col: 'branchId',
+        transaction
+      });
+      session.activeBranchId = `branch_${branchCount + 1}`;
+      await session.save({ transaction });
+    }
+
+    if (choiceId === 'finish_game') {
+      const evalEnding = questEngine.evaluateObjectives(
+        session,
+        session.Campaign,
+        session.worldLedger,
+        { choiceId: 'finish_game', currentNode }
+      );
+
+      if (!evalEnding.canTriggerEnding) {
+        await transaction.rollback();
+        res.write(`data: ${JSON.stringify({ error: 'Objektif misi utama belum tuntas.' })}\n\n`);
+        return res.end();
+      }
+
+      session.isGameOver = true;
+      await session.save({ transaction });
+      await transaction.commit();
+
+      const hydratedInv = await ItemRepository.hydrateInventory(character.inventory);
+
+      res.write(`data: ${JSON.stringify({
+        type: 'done',
+        data: {
+          session,
+          character: {
+            ...character.toJSON(),
+            inventory: hydratedInv
+          },
+          currentNode,
+          checkResult: null
+        }
+      })}\n\n`);
+      return res.end();
+    }
+
+    const chosenChoice = resolveChoice(currentNode, choiceId, customText, 'kreatif');
+    const recentHistory = await getRecentStoryHistory(session.id, currentNode.id, 4);
+
+    const nextScene = await geminiService.generateNextScene({
+      session,
+      character,
+      previousNode: currentNode,
+      actionTaken: chosenChoice,
+      recentHistory,
+      worldLedger: session.worldLedger,
+      questState: session.questState || session.missionLog
+    });
+
+    const words = (nextScene.dialogue || '').split(' ');
+    for (let i = 0; i < words.length; i++) {
+      res.write(`data: ${JSON.stringify({ type: 'chunk', text: (i === 0 ? '' : ' ') + words[i] })}\n\n`);
+    }
+
+    const newNode = await advanceStoryState({
+      session,
+      character,
+      currentNode,
+      chosenChoice,
+      nextScene,
+      transaction
+    });
+
+    await transaction.commit();
+
+    const hydratedInv = await ItemRepository.hydrateInventory(character.inventory);
+
+    res.write(`data: ${JSON.stringify({
+      type: 'done',
+      data: {
+        session,
+        character: {
+          ...character.toJSON(),
+          inventory: hydratedInv
+        },
+        currentNode: newNode,
+        checkResult: null
+      }
+    })}\n\n`);
+    res.end();
+  } catch (err) {
+    await transaction.rollback();
+    logger.error('actionStream Error', err);
+    res.write(`data: ${JSON.stringify({ type: 'error', error: 'Internal server error saat streaming narasi.' })}\n\n`);
+    res.end();
+  }
+};
+
 /**
  * Server-Side Tactical Combat Action Endpoint
- * Strictly rejects phantom encounters (HTTP 400).
- * Calculates turns, damage, accuracy, and life cycles entirely on server.
+ * UNCHANGED: Respects strict combat engine freeze rules.
  */
 exports.combatAction = async (req, res) => {
   const transaction = await sequelize.transaction();
@@ -793,7 +767,6 @@ exports.combatAction = async (req, res) => {
       session.isGameOver = true;
     }
 
-    // If victory achieved, clean active combatEncounter on current node to avoid replay
     if (combatResult.isVictory && currentNode) {
       currentNode.combatEncounter = null;
       await currentNode.save({ transaction });
@@ -803,7 +776,6 @@ exports.combatAction = async (req, res) => {
     await session.save({ transaction });
     await transaction.commit();
 
-    // Structured logging
     logger.logCombatAction({
       sessionId: session.id,
       round: combatResult.combatState?.round || 1,
@@ -816,12 +788,17 @@ exports.combatAction = async (req, res) => {
       status: combatResult.isVictory ? 'VICTORY' : (combatResult.isGameOver ? 'DEFEAT' : 'ACTIVE')
     });
 
+    const hydratedInv = await ItemRepository.hydrateInventory(character.inventory);
+
     return res.json({
       success: true,
       message: combatResult.actionLog,
       data: {
         session,
-        character,
+        character: {
+          ...character.toJSON(),
+          inventory: hydratedInv
+        },
         combatState: combatResult.combatState,
         isGameOver: Boolean(session.isGameOver),
         isVictory: Boolean(combatResult.isVictory),
@@ -833,6 +810,99 @@ exports.combatAction = async (req, res) => {
     await transaction.rollback();
     logger.error('combatAction Error', err);
     res.status(500).json({ success: false, error: 'Internal server error saat memproses pertarungan.' });
+  }
+};
+
+/**
+ * Use Item through GameStateEngine, Event Pipeline, and Snapshot creation
+ */
+exports.useItem = async (req, res) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const { sessionId, itemId } = req.body;
+    if (!sessionId || !itemId) {
+      await transaction.rollback();
+      return res.status(400).json({ success: false, error: 'sessionId dan itemId wajib disertakan.' });
+    }
+
+    const session = await GameSession.findByPk(sessionId, {
+      include: [Character, Campaign],
+      transaction
+    });
+    if (!session || !session.Character) {
+      await transaction.rollback();
+      return res.status(404).json({ success: false, error: 'Sesi atau karakter tidak ditemukan.' });
+    }
+
+    const currentNode = await StoryNode.findByPk(session.currentSceneId, { transaction });
+    const character = session.Character;
+
+    // Execute through GameStateEngine deterministic action pipeline
+    const actionResult = gameStateEngine.resolveAction(
+      session,
+      character,
+      currentNode,
+      { actionType: 'USE_ITEM', itemId }
+    );
+
+    if (!actionResult.validatedUpdates.removedItems || actionResult.validatedUpdates.removedItems.length === 0) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        error: `Item "${itemId}" tidak dapat digunakan atau tidak ditemukan di inventaris.`
+      });
+    }
+
+    // Save mutations atomically
+    await character.save({ transaction });
+    await session.save({ transaction });
+
+    // Record WorldFact for item usage linked to active branch
+    const consumedItem = actionResult.validatedUpdates.removedItems[0];
+    await WorldFactRepository.addFact({
+      sessionId: session.id,
+      campaignId: session.campaignId,
+      subjectType: 'ITEM',
+      subjectId: consumedItem.id,
+      factType: 'USE_ITEM',
+      fact: `Menggunakan ${consumedItem.name || itemId}.`,
+      turn: session.turnCount,
+      branchId: session.activeBranchId || 'main',
+      sourceNodeId: currentNode?.id || null
+    }, transaction);
+
+    // Update official StorySnapshot
+    if (currentNode?.id) {
+      const snapData = gameStateEngine.createSnapshot(character, session, currentNode);
+      await StorySnapshot.upsert({
+        storyNodeId: currentNode.id,
+        characterState: snapData.characterState,
+        inventoryState: snapData.inventoryState,
+        questState: snapData.questState,
+        worldState: snapData.worldState,
+        ledgerState: snapData.ledgerState
+      }, { transaction });
+    }
+
+    await transaction.commit();
+
+    const hydratedInv = await ItemRepository.hydrateInventory(character.inventory);
+
+    return res.json({
+      success: true,
+      message: `Berhasil menggunakan ${consumedItem.name || 'item'}.`,
+      data: {
+        character: {
+          ...character.toJSON(),
+          inventory: hydratedInv
+        },
+        session
+      }
+    });
+  } catch (err) {
+    await transaction.rollback();
+    logger.error('useItem Error', err);
+    res.status(500).json({ success: false, error: 'Internal server error saat menggunakan item.' });
   }
 };
 
@@ -856,6 +926,10 @@ exports.rewindToNode = async (req, res) => {
 
     const targetNode = await StoryNode.findOne({
       where: { id: targetNodeId, sessionId },
+      include: [
+        { model: StoryChoice, as: 'choiceList' },
+        { model: StorySnapshot, as: 'snapshot' }
+      ],
       transaction
     });
     if (!targetNode) {
@@ -863,45 +937,31 @@ exports.rewindToNode = async (req, res) => {
       return res.status(404).json({ success: false, error: 'Node target tidak valid untuk sesi ini.' });
     }
 
-    session.currentSceneId = targetNode.id;
-    session.isGameOver = false;
+    // Atomic restoration via GameStateEngine using official StorySnapshot
+    await gameStateEngine.restoreSnapshot(targetNode, session, session.Character, transaction);
 
-    // Use gameStateEngine.restoreSnapshot if available
-    if (gameStateEngine?.restoreSnapshot) {
-      await gameStateEngine.restoreSnapshot(targetNode, session, session.Character, transaction);
-    } else {
-      // Snapshot restoration from gameStateSnapshot or characterSnapshot
-      const snap = targetNode.gameStateSnapshot || targetNode.characterSnapshot;
-      if (snap && session.Character) {
-        session.turnCount = snap.turnCount || session.turnCount;
-        if (snap.hp !== undefined) session.Character.hp = snap.hp;
-        if (snap.maxHp !== undefined) session.Character.maxHp = snap.maxHp;
-        if (snap.mana !== undefined) session.Character.mana = snap.mana;
-        if (snap.maxMana !== undefined) session.Character.maxMana = snap.maxMana;
-        if (snap.gold !== undefined) session.Character.gold = snap.gold;
-        if (snap.inventory) session.Character.inventory = safeArray(snap.inventory);
-        if (snap.worldLedger) session.worldLedger = snap.worldLedger;
-        if (snap.combatState !== undefined) session.combatState = snap.combatState;
-
-        await session.Character.save({ transaction });
-      }
-    }
-
+    await session.Character.save({ transaction });
     await session.save({ transaction });
     await transaction.commit();
+
+    const hydratedInv = await ItemRepository.hydrateInventory(session.Character.inventory);
 
     logger.info('Session rewound successfully', {
       sessionId,
       targetNodeId,
       turnCount: session.turnCount,
-      restoredHp: session.Character?.hp
+      restoredHp: session.Character?.hp,
+      activeBranchId: session.activeBranchId
     });
 
     res.json({
       success: true,
       data: {
         session,
-        character: session.Character,
+        character: {
+          ...session.Character.toJSON(),
+          inventory: hydratedInv
+        },
         currentNode: targetNode
       }
     });
@@ -915,10 +975,7 @@ exports.rewindToNode = async (req, res) => {
 exports.getStoryTree = async (req, res) => {
   try {
     const { sessionId } = req.params;
-    const nodes = await StoryNode.findAll({
-      where: { sessionId },
-      order: [['createdAt', 'ASC']]
-    });
+    const nodes = await StoryNodeRepository.findStoryTree(sessionId);
     res.json({ success: true, data: nodes });
   } catch (err) {
     logger.error('getStoryTree Error', err);
@@ -934,7 +991,12 @@ exports.getBacklog = async (req, res) => {
       return res.status(404).json({ success: false, error: 'Sesi tidak ditemukan.' });
     }
 
-    const nodes = await StoryNode.findAll({ where: { sessionId } });
+    // Backlog follows the active branch path to root
+    const nodes = await StoryNode.findAll({
+      where: { sessionId },
+      include: [{ model: StoryChoice, as: 'choiceList' }]
+    });
+
     const nodeMap = new Map(nodes.map(n => [n.id, n]));
     const chain = [];
     let curr = nodeMap.get(session.currentSceneId);
@@ -950,98 +1012,6 @@ exports.getBacklog = async (req, res) => {
   }
 };
 
-exports.actionStream = async (req, res) => {
-  const sessionId = req.body?.sessionId || req.query?.sessionId;
-  const choiceId = req.body?.choiceId || req.query?.choiceId;
-  const customText = req.body?.customText || req.query?.customText;
-
-  if (!sessionId) {
-    return res.status(400).json({ success: false, error: 'sessionId wajib disertakan.' });
-  }
-
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.flushHeaders?.();
-
-  const transaction = await sequelize.transaction();
-  try {
-    const session = await GameSession.findByPk(sessionId, {
-      include: [Character, Campaign],
-      transaction
-    });
-    if (!session) {
-      await transaction.rollback();
-      res.write(`data: ${JSON.stringify({ error: 'Sesi tidak ditemukan' })}\n\n`);
-      return res.end();
-    }
-
-    const currentNode = await StoryNode.findByPk(session.currentSceneId, { transaction });
-    if (!currentNode) {
-      await transaction.rollback();
-      res.write(`data: ${JSON.stringify({ error: 'Node cerita aktif tidak ditemukan' })}\n\n`);
-      return res.end();
-    }
-
-    const character = session.Character;
-
-    if (choiceId === 'finish_game') {
-      session.isGameOver = true;
-      await session.save({ transaction });
-      await transaction.commit();
-      res.write(`data: ${JSON.stringify({
-        type: 'done',
-        data: { session, character, currentNode, checkResult: null }
-      })}\n\n`);
-      return res.end();
-    }
-
-    const chosenChoice = resolveChoice(currentNode, choiceId, customText, 'kreatif');
-    const recentHistory = await getRecentStoryHistory(session.id, currentNode.id, 4);
-
-    const nextScene = await geminiService.generateNextScene({
-      session,
-      character,
-      previousNode: currentNode,
-      actionTaken: chosenChoice,
-      recentHistory,
-      worldLedger: session.worldLedger
-    });
-
-    const words = (nextScene.dialogue || '').split(' ');
-    for (let i = 0; i < words.length; i++) {
-      res.write(`data: ${JSON.stringify({ type: 'chunk', text: (i === 0 ? '' : ' ') + words[i] })}\n\n`);
-    }
-
-    const newNode = await advanceStoryState({
-      session,
-      character,
-      currentNode,
-      chosenChoice,
-      nextScene,
-      transaction
-    });
-
-    await transaction.commit();
-
-    res.write(`data: ${JSON.stringify({
-      type: 'done',
-      data: {
-        session,
-        character,
-        currentNode: newNode,
-        checkResult: null
-      }
-    })}\n\n`);
-    res.end();
-  } catch (err) {
-    await transaction.rollback();
-    logger.error('actionStream Error', err);
-    res.write(`data: ${JSON.stringify({ type: 'error', error: 'Internal server error saat streaming narasi.' })}\n\n`);
-    res.end();
-  }
-};
-
 exports.getGameSummary = async (req, res) => {
   try {
     const { sessionId } = req.params;
@@ -1052,27 +1022,11 @@ exports.getGameSummary = async (req, res) => {
       return res.status(404).json({ success: false, error: 'Sesi tidak ditemukan.' });
     }
 
-    const allNodes = await StoryNode.findAll({
-      where: { sessionId },
-      order: [['createdAt', 'ASC']],
-      attributes: ['id', 'parentNodeId', 'chapterTitle', 'location', 'speaker', 'mood', 'consequenceNote', 'createdAt']
-    });
-
-    const nodeMap = new Map(allNodes.map(n => [n.id, n]));
-    const chain = [];
-    let curr = nodeMap.get(session.currentSceneId);
-    while (curr) {
-      chain.unshift(curr);
-      curr = curr.parentNodeId ? nodeMap.get(curr.parentNodeId) : null;
-    }
-    const finalNodes = chain.length > 0 ? chain : allNodes;
+    const finalNodes = await StoryNodeRepository.findActiveTimeline(sessionId, session.activeBranchId);
 
     const character = session.Character;
     const campaign = session.Campaign;
-    const ledgerFacts = Object.entries(session.worldLedger?.questFlags || {}).map(([turn, fact]) => ({
-      turn,
-      fact
-    }));
+    const activeWorldFacts = await WorldFactRepository.findActiveBranchFacts(sessionId, session.activeBranchId);
 
     res.json({
       success: true,
@@ -1081,7 +1035,7 @@ exports.getGameSummary = async (req, res) => {
         characterName: character?.name || 'Pahlawan',
         characterClass: character?.characterClass || 'Petualang',
         totalStages: finalNodes.length,
-        isVictory: character ? character.hp > 0 : false,
+        isVictory: character ? character.hp > 0 && session.isGameOver : false,
         finalHp: character?.hp || 0,
         maxHp: character?.maxHp || 30,
         finalGold: character?.gold || 0,
@@ -1093,7 +1047,7 @@ exports.getGameSummary = async (req, res) => {
           speaker: n.speaker,
           consequence: n.consequenceNote || 'Perjalanan berlanjut ke wilayah berikutnya.'
         })),
-        milestones: ledgerFacts
+        milestones: activeWorldFacts.map(f => ({ turn: f.turn, fact: f.fact }))
       }
     });
   } catch (err) {
@@ -1145,6 +1099,9 @@ exports.getQuests = async (req, res) => {
   }
 };
 
+/**
+ * Journal strictly reads from Active Branch timeline and Active World Facts
+ */
 exports.getJournal = async (req, res) => {
   try {
     const { sessionId } = req.params;
@@ -1155,16 +1112,17 @@ exports.getJournal = async (req, res) => {
       return res.status(404).json({ success: false, error: 'Sesi tidak ditemukan.' });
     }
 
-    const worldFacts = await WorldFactRepository.findBySession(sessionId, 50);
+    const activeBranchId = session.activeBranchId || 'main';
 
-    const nodes = await StoryNode.findAll({
-      where: { sessionId },
-      order: [['createdAt', 'ASC']]
-    });
+    // 1. Facts from Active Branch only
+    const worldFacts = await WorldFactRepository.findActiveBranchFacts(sessionId, activeBranchId);
+
+    // 2. Nodes from Active Branch only
+    const activeNodes = await StoryNodeRepository.findActiveTimeline(sessionId, activeBranchId);
 
     const visitedLocationNames = new Set();
     const visitedLocations = [];
-    for (const node of nodes) {
+    for (const node of activeNodes) {
       if (node.location && !visitedLocationNames.has(node.location)) {
         visitedLocationNames.add(node.location);
         visitedLocations.push({
@@ -1177,7 +1135,7 @@ exports.getJournal = async (req, res) => {
 
     const metNpcNames = new Set();
     const metNpcs = [];
-    for (const node of nodes) {
+    for (const node of activeNodes) {
       if (node.speaker && node.speaker !== 'Narator' && node.speaker !== 'DM' && !metNpcNames.has(node.speaker)) {
         metNpcNames.add(node.speaker);
         metNpcs.push({
@@ -1189,14 +1147,22 @@ exports.getJournal = async (req, res) => {
     }
 
     const campaignQuests = session.campaignId ? await QuestRepository.findByCampaign(session.campaignId) : [];
+    const hydratedInv = session.Character?.inventory
+      ? await ItemRepository.hydrateInventory(session.Character.inventory)
+      : [];
 
     res.json({
       success: true,
       data: {
         sessionId,
         campaign: session.Campaign,
-        character: session.Character,
+        character: {
+          ...session.Character?.toJSON(),
+          inventory: hydratedInv
+        },
         missionLog: session.missionLog,
+        questState: session.questState,
+        activeBranchId,
         visitedLocations,
         metNpcs,
         worldFacts,

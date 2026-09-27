@@ -161,25 +161,34 @@ export default function QuestModal({ isOpen, onClose, campaignId, session, chara
                     <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                       Objektif Penyelesaian:
                     </div>
-                    {objectives.map((obj, oIdx) => (
-                      <div
-                        key={obj.id || oIdx}
-                        className="flex items-start gap-2.5 text-xs text-slate-300 bg-black/30 p-2.5 rounded-xl border border-white/5"
-                      >
-                        {obj.status === 'completed' ? (
-                          <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-                        ) : obj.status === 'active' ? (
-                          <Clock className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5 animate-pulse" />
-                        ) : (
-                          <Circle className="w-4 h-4 text-slate-600 flex-shrink-0 mt-0.5" />
-                        )}
-                        <div className="flex-1">
-                          <p className={`text-xs ${obj.status === 'completed' ? 'line-through text-slate-500' : 'text-slate-200'}`}>
-                            {obj.description}
-                          </p>
+                    {objectives.map((obj, oIdx) => {
+                      const runtimeObj = session?.questState?.objectives?.[obj.id] ||
+                        (Array.isArray(session?.missionLog?.objectives) ? session.missionLog.objectives.find(o => o.id === obj.id) : null);
+                      const isCompleted = Boolean(runtimeObj?.completed);
+                      const currentCount = runtimeObj?.currentCount ?? (isCompleted ? obj.requiredCount : 0);
+                      const requiredCount = obj.requiredCount || 1;
+
+                      return (
+                        <div
+                          key={obj.id || oIdx}
+                          className="flex items-start gap-2.5 text-xs text-slate-300 bg-black/30 p-2.5 rounded-xl border border-white/5"
+                        >
+                          {isCompleted ? (
+                            <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                          ) : (
+                            <Clock className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+                          )}
+                          <div className="flex-1">
+                            <p className={`text-xs ${isCompleted ? 'line-through text-slate-500' : 'text-slate-200'}`}>
+                              {obj.description}
+                            </p>
+                            <span className="text-[10px] font-mono text-slate-500 mt-0.5 block">
+                              Progres: {currentCount} / {requiredCount} {isCompleted ? '• Tuntas' : '• Dalam Proses'}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
