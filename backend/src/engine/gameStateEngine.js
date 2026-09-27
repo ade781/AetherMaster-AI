@@ -19,11 +19,11 @@ const questEngine = require('./questEngine');
  * @returns {object} { validatedUpdates, updatedCharacterState, updatedSessionState, isGameOver, gameOverReason }
  */
 function resolveAction(session, character, currentNode, actionIntent = {}, aiStateUpdates = {}) {
-  const currentHp = Number(character?.hp ?? 30);
+  let currentHp = Number(character?.hp ?? 30);
   const maxHp = Number(character?.maxHp ?? 30);
-  const currentMana = Number(character?.mana ?? 20);
+  let currentMana = Number(character?.mana ?? 20);
   const maxMana = Number(character?.maxMana ?? 20);
-  const currentGold = Number(character?.gold ?? 0);
+  let currentGold = Number(character?.gold ?? 0);
   let currentInventory = Array.isArray(character?.inventory) ? [...character.inventory] : [];
   let currentWorldLedger = worldLedgerService.normalizeLedger(session?.worldLedger);
 
@@ -42,6 +42,9 @@ function resolveAction(session, character, currentNode, actionIntent = {}, aiSta
     if (consumeRes.success) {
       removedItems.push(consumeRes.consumedItem);
       currentInventory = consumeRes.updatedCharacter.inventory;
+      currentHp = consumeRes.updatedCharacter.hp;
+      currentMana = consumeRes.updatedCharacter.mana;
+      currentGold = consumeRes.updatedCharacter.gold;
       // Record consumption fact in world ledger
       worldLedgerService.addFact(currentWorldLedger, {
         type: 'ITEM_CONSUMED',
@@ -165,54 +168,79 @@ function resolveAction(session, character, currentNode, actionIntent = {}, aiSta
 }
 
 /**
- * Creates a comprehensive snapshot of game state to store in StoryNode.
+ * Creates a comprehensive snapshot of game state to store in official StorySnapshot.
  *
  * @param {object} character - Character instance or state
  * @param {object} session - GameSession instance or state
  * @param {object} currentNode - Current StoryNode
- * @returns {object} Complete snapshot
+ * @returns {object} Complete snapshot object
  */
 function createSnapshot(character, session, currentNode = null) {
   if (!character || !session) return null;
 
+  const charHp = Number(character.hp ?? 30);
+  const charMaxHp = Number(character.maxHp ?? 30);
+  const charMana = Number(character.mana ?? 20);
+  const charMaxMana = Number(character.maxMana ?? 20);
+  const charGold = Number(character.gold ?? 0);
+  const charLevel = Number(character.level ?? 1);
+
+  const inventory = Array.isArray(character.inventory)
+    ? character.inventory.map(item => {
+        if (!item) return null;
+        if (typeof item === 'string') return { itemId: item, quantity: 1 };
+        return {
+          itemId: item.itemId || item.id,
+          quantity: Number(item.quantity ?? 1)
+        };
+      }).filter(Boolean)
+    : [];
+
+  const normLedger = worldLedgerService.normalizeLedger(session.worldLedger);
+
   return {
-    hp: Number(character.hp ?? 30),
-    maxHp: Number(character.maxHp ?? 30),
-    mana: Number(character.mana ?? 20),
-    maxMana: Number(character.maxMana ?? 20),
-    gold: Number(character.gold ?? 0),
-    level: Number(character.level ?? 1),
-    inventory: Array.isArray(character.inventory)
-      ? JSON.parse(JSON.stringify(character.inventory))
-      : [],
-    equippedItems: Array.isArray(character.equippedItems)
-      ? JSON.parse(JSON.stringify(character.equippedItems))
-      : [],
-    statusEffects: Array.isArray(character.statusEffects)
-      ? JSON.parse(JSON.stringify(character.statusEffects))
-      : [],
-    worldLedger: JSON.parse(JSON.stringify(worldLedgerService.normalizeLedger(session.worldLedger))),
-    missionLog: session.missionLog
-      ? JSON.parse(JSON.stringify(session.missionLog))
-      : null,
-    combatState: session.combatState
-      ? JSON.parse(JSON.stringify(session.combatState))
-      : null,
+    // Flat attributes for legacy compatibility
+    hp: charHp,
+    maxHp: charMaxHp,
+    mana: charMana,
+    maxMana: charMaxMana,
+    gold: charGold,
+    level: charLevel,
+    inventory,
+    equippedItems: Array.isArray(character.equippedItems) ? JSON.parse(JSON.stringify(character.equippedItems)) : [],
+    statusEffects: Array.isArray(character.statusEffects) ? JSON.parse(JSON.stringify(character.statusEffects)) : [],
+    worldLedger: JSON.parse(JSON.stringify(normLedger)),
+    missionLog: session.missionLog ? JSON.parse(JSON.stringify(session.missionLog)) : null,
+    questState: session.questState ? JSON.parse(JSON.stringify(session.questState)) : (session.missionLog || {}),
+    combatState: session.combatState ? JSON.parse(JSON.stringify(session.combatState)) : null,
     turnCount: Number(session.turnCount ?? 1),
     isGameOver: Boolean(session.isGameOver ?? false),
+    branchId: currentNode?.branchId || session.activeBranchId || 'main',
     nodeId: currentNode?.id || null,
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+
+    // Structured fields for official StorySnapshot model
+    characterState: {
+      hp: charHp,
+      maxHp: charMaxHp,
+      mana: charMana,
+      maxMana: charMaxMana,
+      gold: charGold,
+      level: charLevel,
+      equippedItems: Array.isArray(character.equippedItems) ? character.equippedItems : [],
+      statusEffects: Array.isArray(character.statusEffects) ? character.statusEffects : []
+    },
+    inventoryState: inventory,
+    worldState: {
+      flags: normLedger.flags || {},
+      reputation: normLedger.reputation || {}
+    },
+    ledgerState: normLedger
   };
 }
 
 /**
- * Atomically restores character and session state from a StoryNode snapshot.
- *
- * IMPORTANT RULES:
- * - Rejects if targetNode does not belong to the session.
- * - Restores HP exactly as recorded in snapshot; NEVER blindly restores to 50%.
- * - Restores inventory, worldLedger, missionLog, combatState, and isGameOver.
- * - Supports database transaction when passed.
+ * Atomically restores character and session state from official StorySnapshot.
  *
  * @param {object} targetNode - Target StoryNode to rewind to
  * @param {object} session - Active GameSession
@@ -226,26 +254,64 @@ async function restoreSnapshot(targetNode, session, character, transaction = nul
   }
 
   // Security check: Verify target node belongs to active session
-  if (targetNode.sessionId !== session.id) {
+  if (targetNode.sessionId && session.id && targetNode.sessionId !== session.id) {
     throw new Error('Node target bukan milik sesi aktif.');
   }
 
-  // Retrieve snapshot (prefer gameStateSnapshot, fallback to characterSnapshot for legacy nodes)
-  const snap = targetNode.gameStateSnapshot || targetNode.characterSnapshot;
+  // Retrieve official StorySnapshot first
+  let snap = null;
+  if (targetNode.snapshot) {
+    const s = targetNode.snapshot;
+    snap = {
+      ...(s.characterState || {}),
+      inventory: s.inventoryState || s.characterState?.inventory || [],
+      missionLog: s.questState,
+      questState: s.questState,
+      worldLedger: s.ledgerState || s.worldState,
+      turnCount: s.characterState?.turnCount || s.ledgerState?.turnCount || targetNode.turnNumber
+    };
+  } else if (targetNode.id) {
+    try {
+      const { StorySnapshot } = require('../models');
+      const dbSnap = await StorySnapshot.findOne({
+        where: { storyNodeId: targetNode.id },
+        ...(transaction ? { transaction } : {})
+      });
+      if (dbSnap) {
+        snap = {
+          ...(dbSnap.characterState || {}),
+          inventory: dbSnap.inventoryState || dbSnap.characterState?.inventory || [],
+          missionLog: dbSnap.questState,
+          questState: dbSnap.questState,
+          worldLedger: dbSnap.ledgerState || dbSnap.worldState,
+          turnCount: dbSnap.characterState?.turnCount || dbSnap.ledgerState?.turnCount || targetNode.turnNumber
+        };
+      }
+    } catch (e) {}
+  }
+
+  // Fallback to embedded snapshot columns for legacy nodes or in-memory unit tests
+  if (!snap) {
+    snap = targetNode.gameStateSnapshot || targetNode.characterSnapshot;
+  }
+
   if (!snap) {
     throw new Error('Node target tidak memiliki data snapshot untuk dipulihkan.');
   }
 
   // 1. Restore Character State exactly from snapshot
-  character.hp = snap.hp !== undefined ? snap.hp : character.hp;
-  character.maxHp = snap.maxHp !== undefined ? snap.maxHp : character.maxHp;
-  character.mana = snap.mana !== undefined ? snap.mana : character.mana;
-  character.maxMana = snap.maxMana !== undefined ? snap.maxMana : character.maxMana;
-  character.gold = snap.gold !== undefined ? snap.gold : character.gold;
-  character.level = snap.level !== undefined ? snap.level : character.level;
-  character.inventory = Array.isArray(snap.inventory)
-    ? JSON.parse(JSON.stringify(snap.inventory))
+  character.hp = snap.hp !== undefined ? snap.hp : (snap.characterState?.hp !== undefined ? snap.characterState.hp : character.hp);
+  character.maxHp = snap.maxHp !== undefined ? snap.maxHp : (snap.characterState?.maxHp !== undefined ? snap.characterState.maxHp : character.maxHp);
+  character.mana = snap.mana !== undefined ? snap.mana : (snap.characterState?.mana !== undefined ? snap.characterState.mana : character.mana);
+  character.maxMana = snap.maxMana !== undefined ? snap.maxMana : (snap.characterState?.maxMana !== undefined ? snap.characterState.maxMana : character.maxMana);
+  character.gold = snap.gold !== undefined ? snap.gold : (snap.characterState?.gold !== undefined ? snap.characterState.gold : character.gold);
+  character.level = snap.level !== undefined ? snap.level : (snap.characterState?.level !== undefined ? snap.characterState.level : character.level);
+
+  const rawInv = snap.inventory || snap.inventoryState || character.inventory;
+  character.inventory = Array.isArray(rawInv)
+    ? JSON.parse(JSON.stringify(rawInv))
     : character.inventory;
+
   character.equippedItems = Array.isArray(snap.equippedItems)
     ? JSON.parse(JSON.stringify(snap.equippedItems))
     : (character.equippedItems || []);
@@ -255,24 +321,38 @@ async function restoreSnapshot(targetNode, session, character, transaction = nul
 
   // 2. Restore Session State exactly from snapshot
   session.currentSceneId = targetNode.id;
-  session.turnCount = snap.turnCount !== undefined ? snap.turnCount : (session.turnCount || 1);
-  session.worldLedger = snap.worldLedger
-    ? JSON.parse(JSON.stringify(worldLedgerService.normalizeLedger(snap.worldLedger)))
+  session.turnCount = snap.turnCount !== undefined ? snap.turnCount : (targetNode.turnNumber || session.turnCount || 1);
+  session.activeBranchId = targetNode.branchId || session.activeBranchId || 'main';
+
+  const rawLedger = snap.worldLedger || snap.ledgerState || snap.worldState;
+  session.worldLedger = rawLedger
+    ? JSON.parse(JSON.stringify(worldLedgerService.normalizeLedger(rawLedger)))
     : worldLedgerService.normalizeLedger(session.worldLedger);
+
   session.missionLog = snap.missionLog
     ? JSON.parse(JSON.stringify(snap.missionLog))
     : session.missionLog;
+
+  session.questState = snap.questState
+    ? JSON.parse(JSON.stringify(snap.questState))
+    : (session.missionLog || session.questState || {});
+
   session.combatState = snap.combatState !== undefined
     ? (snap.combatState ? JSON.parse(JSON.stringify(snap.combatState)) : null)
     : null;
+
   session.isGameOver = snap.isGameOver !== undefined
     ? snap.isGameOver
     : (character.hp <= 0);
 
-  // Save changes atomically (with transaction if provided)
+  // Save changes atomically if instance methods are present
   const saveOptions = transaction ? { transaction } : {};
-  await character.save(saveOptions);
-  await session.save(saveOptions);
+  if (typeof character.save === 'function') {
+    await character.save(saveOptions);
+  }
+  if (typeof session.save === 'function') {
+    await session.save(saveOptions);
+  }
 
   return {
     success: true,

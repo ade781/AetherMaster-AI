@@ -1,338 +1,51 @@
 /**
  * Item Master Catalog & Engine
  * Single Source of Truth for Item Definitions, Effects, and Mutations.
+ * Synchronized with Database Item records.
  */
 
-const ITEM_CATALOG = {
-  item_01_potion_heal: {
-    id: 'item_01_potion_heal',
-    name: 'Potion of Healing',
-    category: 'consumable',
-    effect: {
-      hp: 25,
-      mana: 0,
-      gold: 0,
-      description: 'Memulihkan 25 HP seketika'
-    },
-    icon: 'item_01_potion_heal',
-    consumable: true,
-    sellPrice: 15,
-    buyPrice: 30
-  },
-  item_02_potion_mana: {
-    id: 'item_02_potion_mana',
-    name: 'Celestial Mana Elixir',
-    category: 'consumable',
-    effect: {
-      hp: 0,
-      mana: 25,
-      gold: 0,
-      description: 'Memulihkan 25 Mana seketika'
-    },
-    icon: 'item_02_potion_mana',
-    consumable: true,
-    sellPrice: 20,
-    buyPrice: 40
-  },
-  item_03_grimoire: {
-    id: 'item_03_grimoire',
-    name: 'Ancient Grimoire',
-    category: 'relic',
-    effect: {
-      maxManaBonus: 15,
-      description: '+15 Max Mana dan wawasan magis kuno'
-    },
-    icon: 'item_03_grimoire',
-    consumable: false,
-    sellPrice: 100,
-    buyPrice: 200
-  },
-  item_04_silver_dagger: {
-    id: 'item_04_silver_dagger',
-    name: 'Silver Dagger',
-    category: 'weapon',
-    effect: {
-      attackBonus: 3,
-      description: 'Belati perak berdaya tembus tinggi terhadap makhluk kegelapan'
-    },
-    icon: 'item_04_silver_dagger',
-    consumable: false,
-    sellPrice: 40,
-    buyPrice: 80
-  },
-  item_05_cursed_amulet: {
-    id: 'item_05_cursed_amulet',
-    name: 'Blessed Talisman',
-    category: 'amulet',
-    effect: {
-      wardBonus: 2,
-      description: 'Jimat perlindungan dari kutukan dan pengaruh sihir kelam'
-    },
-    icon: 'item_05_cursed_amulet',
-    consumable: false,
-    sellPrice: 50,
-    buyPrice: 100
-  },
-  item_06_skeleton_key: {
-    id: 'item_06_skeleton_key',
-    name: 'Skeleton Key',
-    category: 'key',
-    effect: {
-      keyType: 'crypt',
-      description: 'Kunci berukir tengkorak yang dapat membuka pintu makam kuno'
-    },
-    icon: 'item_06_skeleton_key',
-    consumable: false,
-    sellPrice: 60,
-    buyPrice: 120
-  },
-  item_07_golden_compass: {
-    id: 'item_07_golden_compass',
-    name: 'Golden Compass',
-    category: 'tool',
-    effect: {
-      wisBonus: 2,
-      description: '+2 Wawasan (WIS) saat menjelajahi wilayah tak dikenal'
-    },
-    icon: 'item_07_golden_compass',
-    consumable: false,
-    sellPrice: 75,
-    buyPrice: 150
-  },
-  item_08_dragon_shield: {
-    id: 'item_08_dragon_shield',
-    name: 'Dragon Shield',
-    category: 'shield',
-    effect: {
-      acBonus: 2,
-      description: '+2 Armor Class (Pertahanan)'
-    },
-    icon: 'item_08_dragon_shield',
-    consumable: false,
-    sellPrice: 80,
-    buyPrice: 160
-  },
-  item_09_gold_pouch: {
-    id: 'item_09_gold_pouch',
-    name: 'Kantong Emas Saudagar',
-    category: 'consumable',
-    effect: {
-      hp: 0,
-      mana: 0,
-      gold: 50,
-      description: 'Berisi 50 keping emas murni'
-    },
-    icon: 'item_09_gold_pouch',
-    consumable: true,
-    sellPrice: 50,
-    buyPrice: 50
-  },
-  item_10_elixir_vitality: {
-    id: 'item_10_elixir_vitality',
-    name: 'Elixir of Vitality',
-    category: 'consumable',
-    effect: {
-      hp: 50,
-      mana: 30,
-      gold: 0,
-      description: 'Memulihkan 50 HP dan 30 Mana'
-    },
-    icon: 'item_10_elixir_vitality',
-    consumable: true,
-    sellPrice: 45,
-    buyPrice: 90
-  },
-  item_11_flame_sword: {
-    id: 'item_11_flame_sword',
-    name: 'Flame Sword',
-    category: 'weapon',
-    effect: {
-      attackBonus: 5,
-      element: 'fire',
-      description: '+5 Serangan Api dan memancarkan cahaya di kegelapan'
-    },
-    icon: 'item_11_flame_sword',
-    consumable: false,
-    sellPrice: 120,
-    buyPrice: 240
-  },
-  item_12_teleport_scroll: {
-    id: 'item_12_teleport_scroll',
-    name: 'Gulungan Teleportasi',
-    category: 'scroll',
-    effect: {
-      escapeSuccess: true,
-      description: 'Memindahkan pengguna seketika ke tempat aman terdekat'
-    },
-    icon: 'item_12_teleport_scroll',
-    consumable: true,
-    sellPrice: 35,
-    buyPrice: 70
-  },
-  item_13_shadow_ring: {
-    id: 'item_13_shadow_ring',
-    name: 'Shadow Ring',
-    category: 'accessory',
-    effect: {
-      stealthBonus: 3,
-      description: 'Memberikan kemampuan menyatu dengan bayang-bayang'
-    },
-    icon: 'item_13_shadow_ring',
-    consumable: false,
-    sellPrice: 70,
-    buyPrice: 140
-  },
-  item_14_holy_water: {
-    id: 'item_14_holy_water',
-    name: 'Air Suci Penyelamat',
-    category: 'consumable',
-    effect: {
-      hp: 15,
-      mana: 15,
-      undeadPurge: 20,
-      description: 'Memulihkan 15 HP & 15 Mana, atau membakar makhluk tak mati'
-    },
-    icon: 'item_14_holy_water',
-    consumable: true,
-    sellPrice: 25,
-    buyPrice: 50
-  },
-  item_15_lockpick_set: {
-    id: 'item_15_lockpick_set',
-    name: 'Peralatan Pembobol Kunci',
-    category: 'tool',
-    effect: {
-      dexBonus: 2,
-      description: 'Peralatan presisi untuk membuka peti dan pintu terkunci'
-    },
-    icon: 'item_15_lockpick_set',
-    consumable: false,
-    sellPrice: 30,
-    buyPrice: 60
-  },
-  item_16_crown_kings: {
-    id: 'item_16_crown_kings',
-    name: 'Mahkota Raja Yang Gugur',
-    category: 'relic',
-    effect: {
-      chaBonus: 3,
-      description: 'Relik purba yang memancarkan aura wibawa kepemimpinan'
-    },
-    icon: 'item_16_crown_kings',
-    consumable: false,
-    sellPrice: 250,
-    buyPrice: 500
-  },
-  item_17_dragon_horn: {
-    id: 'item_17_dragon_horn',
-    name: 'Dragon War Horn',
-    category: 'instrument',
-    effect: {
-      rallyAllies: true,
-      description: 'Memanggil gema arwah sekutu tempur dan meningkatkan moril'
-    },
-    icon: 'item_17_dragon_horn',
-    consumable: false,
-    sellPrice: 150,
-    buyPrice: 300
-  },
-  item_18_meat_ration: {
-    id: 'item_18_meat_ration',
-    name: 'Ransum Daging Pengelana',
-    category: 'consumable',
-    effect: {
-      hp: 10,
-      mana: 0,
-      gold: 0,
-      description: 'Memulihkan 10 HP melalui nutrisi pengelana'
-    },
-    icon: 'item_18_meat_ration',
-    consumable: true,
-    sellPrice: 5,
-    buyPrice: 10
-  },
-  item_bone_dagger: {
-    id: 'item_bone_dagger',
-    name: 'Belati Tulang Purba',
-    category: 'weapon',
-    effect: {
-      attackBonus: 2,
-      description: 'Senjata darurat yang diasah dari tulang raksasa'
-    },
-    icon: 'item_bone_dagger',
-    consumable: false,
-    sellPrice: 15,
-    buyPrice: 30
-  },
-  item_rapier: {
-    id: 'item_rapier',
-    name: 'Fine Duelist Rapier',
-    category: 'weapon',
-    effect: {
-      attackBonus: 4,
-      dexBonus: 1,
-      description: 'Pedang tipis dan fleksibel untuk serangan presisi'
-    },
-    icon: 'item_rapier',
-    consumable: false,
-    sellPrice: 70,
-    buyPrice: 140
-  },
-  item_sea_trident: {
-    id: 'item_sea_trident',
-    name: "Sea King's Trident",
-    category: 'weapon',
-    effect: {
-      attackBonus: 6,
-      element: 'water',
-      description: 'Senjata pusaka yang dapat mengendalikan aliran ombak'
-    },
-    icon: 'item_sea_trident',
-    consumable: false,
-    sellPrice: 180,
-    buyPrice: 360
-  },
-  item_treasure_map: {
-    id: 'item_treasure_map',
-    name: 'Peta Harta Karun Usang',
-    category: 'quest',
-    effect: {
-      revealsLocation: true,
-      description: 'Menunjukkan tanda silang rahasia di kedalaman katakombe'
-    },
-    icon: 'item_treasure_map',
-    consumable: false,
-    sellPrice: 50,
-    buyPrice: 100
-  },
-  item_trophy_aether: {
-    id: 'item_trophy_aether',
-    name: 'Piala Kampiun Aether',
-    category: 'quest',
-    effect: {
-      prestige: 100,
-      description: 'Bukti supremasi petualang terhebat di benua Aether'
-    },
-    icon: 'item_04_silver_dagger',
-    consumable: false,
-    sellPrice: 500,
-    buyPrice: 1000
-  }
-};
+const { itemsData } = require('../models/seeders/worldDataSeeder');
 
-/**
- * ID and Name Aliases Mapping
- * Ensures consistency across legacy versions and different naming conventions.
- */
+// Populate canonical catalog from master seeded data
+const ITEM_CATALOG = {};
+for (const item of itemsData) {
+  ITEM_CATALOG[item.id] = {
+    id: item.id,
+    name: item.name,
+    category: item.category,
+    description: item.description,
+    rarity: item.rarity,
+    icon: item.icon,
+    maxStack: item.maxStack || 10,
+    consumable: item.isConsumable ?? (item.category === 'consumable' || item.category === 'Obat'),
+    isConsumable: item.isConsumable ?? (item.category === 'consumable' || item.category === 'Obat'),
+    isUsable: item.isUsable ?? true,
+    effectType: item.effectType,
+    effectValue: item.effectValue,
+    effect: {
+      hp: item.metadata?.hp || (item.effectType === 'HEAL_HP' ? item.effectValue : 0),
+      mana: item.metadata?.mana || (item.effectType === 'RESTORE_MANA' ? item.effectValue : 0),
+      gold: item.metadata?.gold || (item.effectType === 'ADD_GOLD' ? item.effectValue : 0),
+      description: item.description || ''
+    },
+    metadata: item.metadata || {}
+  };
+}
+
+// Aliases mapping for common colloquial or legacy item names
 const ITEM_ALIASES = {
   // Potion heal variations
   'item_01_health_potion': 'item_01_potion_heal',
+  'potion_heal': 'item_01_potion_heal',
+  'health_potion': 'item_01_potion_heal',
   'potion of healing': 'item_01_potion_heal',
   'ramuan pemulih': 'item_01_potion_heal',
   'potion': 'item_01_potion_heal',
   'health potion': 'item_01_potion_heal',
 
   // Potion mana variations
+  'item_02_mana_potion': 'item_02_potion_mana',
+  'mana_potion': 'item_02_potion_mana',
   'celestial mana elixir': 'item_02_potion_mana',
   'mana elixir': 'item_02_potion_mana',
   'ramuan mana': 'item_02_potion_mana',
@@ -357,7 +70,7 @@ const ITEM_ALIASES = {
 };
 
 /**
- * Normalizes any item ID or name into canonical catalog ID.
+ * Normalizes any item ID or name into canonical item ID.
  * @param {string} idOrName
  * @returns {string}
  */
@@ -381,13 +94,13 @@ function normalizeItemId(idOrName) {
 }
 
 /**
- * Retrieves item definition from catalog.
+ * Retrieves item definition from canonical catalog.
  * @param {string|object} itemInput
  * @returns {object|null} Cloned item definition or null
  */
 function getItem(itemInput) {
   if (!itemInput) return null;
-  const id = typeof itemInput === 'object' ? (itemInput.id || itemInput.name) : itemInput;
+  const id = typeof itemInput === 'object' ? (itemInput.itemId || itemInput.id || itemInput.name) : itemInput;
   const canonicalId = normalizeItemId(id);
   const def = ITEM_CATALOG[canonicalId];
   if (!def) return null;
@@ -402,11 +115,13 @@ function getItem(itemInput) {
 function isConsumable(itemInput) {
   const item = getItem(itemInput);
   if (!item) return false;
-  return item.consumable === true || item.category === 'consumable';
+  return item.consumable === true || item.isConsumable === true || item.category === 'consumable' || item.category === 'Obat';
 }
 
 /**
  * Verifies if character has the requested item in inventory.
+ * Supports both canonical `{ itemId, quantity }` and legacy `{ id, name }`.
+ *
  * @param {object} character
  * @param {string} itemIdOrName
  * @returns {number} Index in inventory, or -1 if not found
@@ -418,8 +133,11 @@ function findItemIndex(character, itemIdOrName) {
 
   return character.inventory.findIndex(invItem => {
     if (!invItem) return false;
-    const invId = invItem.id ? normalizeItemId(invItem.id) : '';
-    if (invId && invId === canonicalId) return true;
+    const invId = invItem.itemId || invItem.id;
+    if (invId) {
+      const normalizedInvId = normalizeItemId(invId);
+      if (normalizedInvId === canonicalId) return true;
+    }
     if (invItem.name && invItem.name.toLowerCase() === targetLower) return true;
     return false;
   });
@@ -447,7 +165,7 @@ function applyItem(character, itemIdOrName) {
   }
 
   const invItem = character.inventory[itemIdx];
-  const itemDef = getItem(invItem.id || invItem.name) || invItem;
+  const itemDef = getItem(invItem.itemId || invItem.id || invItem.name) || invItem;
 
   if (!isConsumable(itemDef)) {
     return {
@@ -462,9 +180,9 @@ function applyItem(character, itemIdOrName) {
   const maxMana = Number(character.maxMana ?? 20);
   const currentGold = Number(character.gold ?? 0);
 
-  const hpEffect = Number(itemDef.effect?.hp ?? 0);
-  const manaEffect = Number(itemDef.effect?.mana ?? 0);
-  const goldEffect = Number(itemDef.effect?.gold ?? 0);
+  const hpEffect = Number(itemDef.effect?.hp ?? (itemDef.effectType === 'HEAL_HP' ? itemDef.effectValue : 0));
+  const manaEffect = Number(itemDef.effect?.mana ?? (itemDef.effectType === 'RESTORE_MANA' ? itemDef.effectValue : 0));
+  const goldEffect = Number(itemDef.effect?.gold ?? (itemDef.effectType === 'ADD_GOLD' ? itemDef.effectValue : 0));
 
   const newHp = Math.min(maxHp, Math.max(0, currentHp + hpEffect));
   const newMana = Math.min(maxMana, Math.max(0, currentMana + manaEffect));
@@ -474,9 +192,19 @@ function applyItem(character, itemIdOrName) {
   const manaRestored = newMana - currentMana;
   const goldGained = newGold - currentGold;
 
-  // Remove one instance of consumed item from inventory
+  // Inventory update: decrement quantity if canonical or remove if quantity reaches 0
   const updatedInventory = [...character.inventory];
-  updatedInventory.splice(itemIdx, 1);
+  const currentQty = Number(invItem.quantity ?? 1);
+
+  if (currentQty > 1) {
+    updatedInventory[itemIdx] = {
+      ...invItem,
+      itemId: invItem.itemId || invItem.id,
+      quantity: currentQty - 1
+    };
+  } else {
+    updatedInventory.splice(itemIdx, 1);
+  }
 
   const updatedCharacter = {
     ...character,
@@ -493,7 +221,7 @@ function applyItem(character, itemIdOrName) {
   if (goldGained > 0) messageParts.push(`+${goldGained} Gold`);
 
   const effectSummary = messageParts.length > 0 ? ` (${messageParts.join(', ')})` : '';
-  const message = `Menggunakan ${itemDef.name}${effectSummary}.`;
+  const message = `Menggunakan ${itemDef.name || 'item'}${effectSummary}.`;
 
   return {
     success: true,
@@ -508,25 +236,50 @@ function applyItem(character, itemIdOrName) {
 
 /**
  * Adds an item to a character's inventory deterministically.
+ * Enforces database registration. Rejects any unknown or fabricated items!
+ * Stores inventory in canonical reference format: [{ itemId, quantity }].
+ *
  * @param {object} character
  * @param {string|object} itemInput
- * @returns {object} { success, updatedCharacter, addedItem }
+ * @param {number} count - Quantity to add
+ * @returns {object} { success, updatedCharacter, addedItem, error }
  */
-function addItem(character, itemInput) {
+function addItem(character, itemInput, count = 1) {
   if (!character) return { success: false, error: 'Character data is required.' };
-  const itemDef = getItem(itemInput) || (typeof itemInput === 'object' ? itemInput : null);
+
+  const id = typeof itemInput === 'object' ? (itemInput.itemId || itemInput.id || itemInput.name) : itemInput;
+  const itemDef = getItem(id);
+
   if (!itemDef) {
-    return { success: false, error: `Definisi item tidak valid untuk "${itemInput}".` };
+    return {
+      success: false,
+      error: `Definisi item "${id}" tidak terdaftar di database. Item ditolak.`
+    };
   }
 
+  const qtyToAdd = Math.max(1, parseInt(count, 10) || 1);
   const currentInventory = Array.isArray(character.inventory) ? [...character.inventory] : [];
-  currentInventory.push({
-    id: itemDef.id,
-    name: itemDef.name,
-    category: itemDef.category,
-    effect: typeof itemDef.effect === 'object' ? (itemDef.effect.description || JSON.stringify(itemDef.effect)) : String(itemDef.effect || ''),
-    icon: itemDef.icon || itemDef.id
+
+  // Check if item already exists in inventory
+  const existingIdx = currentInventory.findIndex(i => {
+    if (!i) return false;
+    const invId = normalizeItemId(i.itemId || i.id);
+    return invId === itemDef.id;
   });
+
+  if (existingIdx !== -1) {
+    const existing = currentInventory[existingIdx];
+    const prevQty = Number(existing.quantity ?? 1);
+    currentInventory[existingIdx] = {
+      itemId: itemDef.id,
+      quantity: prevQty + qtyToAdd
+    };
+  } else {
+    currentInventory.push({
+      itemId: itemDef.id,
+      quantity: qtyToAdd
+    });
+  }
 
   const updatedCharacter = {
     ...character,

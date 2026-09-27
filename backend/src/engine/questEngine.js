@@ -1,159 +1,117 @@
 /**
  * Quest & Objective Engine
  * Deterministic Quest State, Objectives Progression, and State-Based Endings.
+ * Single Source of Truth: Database Quest & QuestObjective definitions.
  * Eliminates artificial turnCount endings (turnCount >= 11/12).
  */
 
-const { getFlag, hasFact } = require('./worldLedgerService');
+const { getFlag } = require('./worldLedgerService');
+const { EVENT_TYPES, createGameEvent, processGameEvents } = require('./gameEvents');
+const { questsData } = require('../models/seeders/worldDataSeeder');
 
 /**
- * Master Objectives Catalog for Campaigns.
- * Each campaign has a multi-phase quest line with required objectives.
- */
-const CAMPAIGN_OBJECTIVES = {
-  whispering_tavern: [
-    {
-      id: 'obj_tavern_investigate',
-      description: 'Selidiki sumber ketukan misterius di ruang bawah tanah kedai',
-      required: true,
-      hint: 'Bicaralah dengan Eldrin atau periksa tumpukan tong anggur'
-    },
-    {
-      id: 'obj_tavern_find_catacomb',
-      description: 'Temukan jalan masuk rahasia menuju katakombe kuno di balik dinding',
-      required: true,
-      hint: 'Gunakan kunci tengkorak atau pecahkan teka-teki tuas tong'
-    },
-    {
-      id: 'obj_tavern_resolve_threat',
-      description: 'Netralkan sumber ancaman katakombe dan amankan kedai Whispering Tavern',
-      required: true,
-      isFinale: true,
-      hint: 'Hadapi entitas penjaga katakombe atau segel retakan kuno'
-    }
-  ],
-  crypt_of_crimson: [
-    {
-      id: 'obj_crypt_enter',
-      description: 'Masuk melewati barikade gerbang Makam Merah Darah',
-      required: true
-    },
-    {
-      id: 'obj_crypt_stop_patrol',
-      description: 'Hentikan patroli kerangka dan temukan ruang altar utama',
-      required: true
-    },
-    {
-      id: 'obj_crypt_disrupt_ritual',
-      description: 'Gagalkan ritual Kultus Kematian Merah dan segel peti sarkofagus',
-      required: true,
-      isFinale: true
-    }
-  ],
-  abyssal_citadel: [
-    {
-      id: 'obj_citadel_infiltrate',
-      description: 'Masuk ke dalam kubah udara Reruntuhan Samudra Sunken Citadel',
-      required: true
-    },
-    {
-      id: 'obj_citadel_disable_beacon',
-      description: 'Nonaktifkan anomali pemancar energi psionik di aula pualam',
-      required: true
-    },
-    {
-      id: 'obj_citadel_gate_seal',
-      description: 'Kunci gerbang palung purba dari pemuja kedalaman',
-      required: true,
-      isFinale: true
-    }
-  ],
-  vampire_castle_shadows: [
-    {
-      id: 'obj_castle_breach',
-      description: 'Tembus gerbang luar Kastil Bloodmere menuju aula utama',
-      required: true
-    },
-    {
-      id: 'obj_castle_rescue',
-      description: 'Temukan dan bebaskan pemuda desa yang ditawan di ruang bawah',
-      required: true
-    },
-    {
-      id: 'obj_castle_confront_lord',
-      description: 'Konfrontasi Lord Cassian dan akhiri cengkeraman teror Kastil Bloodmere',
-      required: true,
-      isFinale: true
-    }
-  ]
-};
-
-/**
- * Retrieves default objectives for a given campaign.
- * If campaign is not found in master catalog, generates a robust 3-stage objective chain.
+ * Retrieves master quest definitions for a given campaign from database / canonical seeders.
+ * Replaces legacy CAMPAIGN_OBJECTIVES.
  *
  * @param {string|object} campaign
- * @returns {Array<object>}
+ * @returns {Array<object>} Objectives for the campaign's main quest
  */
 function getCampaignObjectives(campaign) {
   const campaignId = typeof campaign === 'object' ? campaign?.id : campaign;
-  if (campaignId && CAMPAIGN_OBJECTIVES[campaignId]) {
-    return JSON.parse(JSON.stringify(CAMPAIGN_OBJECTIVES[campaignId]));
+  const quest = questsData.find(q => q.campaignId === campaignId && q.type === 'main') || questsData.find(q => q.campaignId === campaignId);
+
+  if (quest && Array.isArray(quest.objectives)) {
+    return JSON.parse(JSON.stringify(quest.objectives)).map(obj => ({
+      id: obj.id,
+      description: obj.description,
+      required: !obj.isOptional,
+      objectiveType: obj.objectiveType,
+      targetId: obj.targetId,
+      requiredCount: obj.requiredCount || 1,
+      isFinale: obj.sequence === quest.objectives.length
+    }));
   }
 
+  // Graceful fallback for dynamic custom campaigns
   const title = typeof campaign === 'object' ? (campaign?.title || 'Petualangan') : 'Misi Utama';
-
   return [
     {
       id: 'obj_stage_1_investigate',
       description: `Selidiki petunjuk awal mengenai ${title}`,
-      required: true
+      required: true,
+      objectiveType: 'INVESTIGATE',
+      requiredCount: 1
     },
     {
       id: 'obj_stage_2_advance',
       description: 'Atasi rintangan inti dan temukan sumber konflik utama',
-      required: true
+      required: true,
+      objectiveType: 'EXPLORE',
+      requiredCount: 1
     },
     {
       id: 'obj_stage_3_climax',
       description: `Tuntaskan konfrontasi akhir dan selesaikan misi ${title}`,
       required: true,
-      isFinale: true
+      isFinale: true,
+      objectiveType: 'DEFEAT',
+      requiredCount: 1
     }
   ];
 }
 
 /**
- * Initializes a new missionLog for a game session.
+ * Initializes a new missionLog and runtime questState for a game session.
  *
  * @param {object} campaign
  * @returns {object}
  */
 function initializeMissionLog(campaign) {
+  const campaignId = typeof campaign === 'object' ? campaign?.id : campaign;
+  const quest = questsData.find(q => q.campaignId === campaignId && q.type === 'main') || questsData[0];
   const objectives = getCampaignObjectives(campaign);
   const activeObj = objectives[0];
 
+  const objStateMap = {};
+  for (const obj of objectives) {
+    objStateMap[obj.id] = {
+      currentCount: 0,
+      requiredCount: obj.requiredCount || 1,
+      completed: false,
+      completedAtTurn: null
+    };
+  }
+
   return {
-    title: campaign?.title || 'Misi Petualangan',
+    questId: quest?.id || 'quest_main',
+    title: quest?.title || campaign?.title || 'Misi Petualangan',
     objective: activeObj ? activeObj.description : 'Jelajahi dunia dan selesaikan tantangan',
     status: 'active', // 'active' | 'completed' | 'failed'
     currentObjectiveIndex: 0,
     mainQuestCompleted: false,
-    objectives: objectives.map((obj, idx) => ({
+    objectives: objectives.map((obj) => ({
       ...obj,
       completed: false,
       completedAtTurn: null
-    }))
+    })),
+    questState: {
+      activeQuestId: quest?.id || 'quest_main',
+      objectives: objStateMap,
+      completedQuestIds: [],
+      isMainQuestCompleted: false
+    }
   };
 }
 
 /**
- * Evaluates quest and objective progression based on world facts, flags, and actions.
+ * Evaluates quest and objective progression deterministically based on Game Events.
+ * Strictly prevents AI narrative output from directly forcing quest completion.
+ * Prevents finish_game from bypassing incomplete objectives.
  *
  * @param {object} session - GameSession instance or plain session data
  * @param {object} campaign - Campaign data
  * @param {object} worldLedger - Structured world ledger
- * @param {object} actionContext - { actionText, choiceId, aiUpdates, currentNode }
+ * @param {object} actionContext - { actionText, choiceId, aiUpdates, currentNode, actionIntent }
  * @returns {object} { missionLog, mainQuestCompleted, canTriggerEnding, endingReason, objectiveAdvanced }
  */
 function evaluateObjectives(session, campaign, worldLedger, actionContext = {}) {
@@ -169,40 +127,104 @@ function evaluateObjectives(session, campaign, worldLedger, actionContext = {}) 
   let objectiveAdvanced = false;
   const currentIdx = missionLog.currentObjectiveIndex || 0;
   const currentObj = missionLog.objectives[currentIdx];
+  const turn = Number(session?.turnCount ?? 1);
 
-  // Check if AI explicitly marked mission completed or provided a new mission objective
-  const aiMission = actionContext.aiUpdates?.missionLog;
-  if (aiMission && typeof aiMission === 'object') {
-    if (aiMission.status === 'completed' && currentObj) {
-      currentObj.completed = true;
-      currentObj.completedAtTurn = session.turnCount || 1;
+  // 1. Synthesize verified Game Events from action context
+  const synthesizedEvents = [];
+  const choiceId = actionContext.choiceId || '';
+  const actionText = String(actionContext.actionText || '').toLowerCase();
+  const currentNode = actionContext.currentNode;
+  const updates = actionContext.aiUpdates || {};
+
+  if (choiceId || actionText) {
+    synthesizedEvents.push(createGameEvent(EVENT_TYPES.ACTION_COMMITTED, {
+      turn,
+      description: actionText,
+      data: { choiceId }
+    }));
+  }
+
+  // Location event
+  const locationTarget = currentNode?.locationId || currentNode?.location;
+  if (locationTarget) {
+    synthesizedEvents.push(createGameEvent(EVENT_TYPES.LOCATION_ENTERED, {
+      targetId: locationTarget,
+      turn
+    }));
+  }
+
+  // Speaker / NPC interaction event
+  const speakerTarget = currentNode?.speakerId || currentNode?.speaker;
+  if (speakerTarget) {
+    synthesizedEvents.push(createGameEvent(EVENT_TYPES.NPC_INTERACTED, {
+      targetId: speakerTarget,
+      turn
+    }));
+  }
+
+  // Item events
+  if (updates.receivedItemId) {
+    synthesizedEvents.push(createGameEvent(EVENT_TYPES.ITEM_ACQUIRED, {
+      targetId: updates.receivedItemId,
+      turn
+    }));
+  }
+  if (updates.consumedItemId) {
+    synthesizedEvents.push(createGameEvent(EVENT_TYPES.ITEM_USED, {
+      targetId: updates.consumedItemId,
+      turn
+    }));
+  }
+
+  // Fact discovery event
+  if (updates.factDiscovered || updates.addLedgerFact) {
+    synthesizedEvents.push(createGameEvent(EVENT_TYPES.CLUE_DISCOVERED, {
+      description: updates.factDiscovered || updates.addLedgerFact,
+      turn
+    }));
+  }
+
+  // Combat victory event
+  if (session?.combatState?.isVictory || actionContext.isVictory) {
+    synthesizedEvents.push(createGameEvent(EVENT_TYPES.THREAT_RESOLVED, {
+      targetId: session?.combatState?.enemy?.id || locationTarget,
+      turn
+    }));
+  }
+
+  // 2. Process synthesized Game Events against active campaign quests
+  const campaignId = typeof campaign === 'object' ? campaign?.id : campaign;
+  const campaignQuests = questsData.filter(q => !campaignId || q.campaignId === campaignId);
+
+  const eventResult = processGameEvents(
+    synthesizedEvents,
+    missionLog.questState || {},
+    campaignQuests
+  );
+
+  // Sync event completions back into missionLog.objectives
+  for (const comp of eventResult.completedObjectives) {
+    const matched = missionLog.objectives.find(o => o.id === comp.objectiveId);
+    if (matched && !matched.completed) {
+      matched.completed = true;
+      matched.completedAtTurn = turn;
       objectiveAdvanced = true;
     }
   }
 
-  // Check choice or action intent for explicit ending/progression
-  const choiceId = actionContext.choiceId || '';
-  if (choiceId === 'finish_game' || choiceId === 'choice_ending_complete') {
-    if (currentObj) {
-      currentObj.completed = true;
-      currentObj.completedAtTurn = session.turnCount || 1;
-    }
-  }
-
-  // Check world ledger flags for objective fulfillment
+  // 3. Fallback check: World Ledger flags (for compatibility with legacy scripted tests/events)
   if (currentObj && !currentObj.completed) {
     const objId = currentObj.id;
     if (getFlag(worldLedger, `${objId}_completed`) || getFlag(worldLedger, `${objId}_done`)) {
       currentObj.completed = true;
-      currentObj.completedAtTurn = session.turnCount || 1;
+      currentObj.completedAtTurn = turn;
       objectiveAdvanced = true;
     }
   }
 
-  // Advance to next uncompleted objective
-  let nextIdx = missionLog.objectives.findIndex(o => !o.completed);
+  // 4. Update objective indexing and completion state
+  const nextIdx = missionLog.objectives.findIndex(o => !o.completed);
   if (nextIdx === -1) {
-    // All objectives completed!
     missionLog.currentObjectiveIndex = missionLog.objectives.length - 1;
     missionLog.mainQuestCompleted = true;
     missionLog.status = 'completed';
@@ -214,8 +236,8 @@ function evaluateObjectives(session, campaign, worldLedger, actionContext = {}) 
     missionLog.objective = missionLog.objectives[nextIdx].description;
   }
 
-  // Check if victory condition is satisfied
-  // Rule: Turn count ALONE does not grant victory!
+  // 5. Ending Validation:
+  // finish_game cannot trigger unless all required objectives are completed!
   const allRequiredDone = missionLog.objectives
     .filter(o => o.required)
     .every(o => o.completed);
@@ -250,7 +272,8 @@ function isGameOverCondition(character, session, missionEvaluation) {
     };
   }
 
-  if (missionEvaluation?.mainQuestCompleted === true) {
+  // Victory occurs ONLY if all required objectives were completed!
+  if (missionEvaluation?.mainQuestCompleted === true && missionEvaluation?.canTriggerEnding === true) {
     return {
       isGameOver: true,
       gameOverReason: 'VICTORY'
@@ -294,7 +317,6 @@ function completeObjective(missionLog, objectiveId, turn = 1) {
 }
 
 module.exports = {
-  CAMPAIGN_OBJECTIVES,
   getCampaignObjectives,
   initializeMissionLog,
   evaluateObjectives,
