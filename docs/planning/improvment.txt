@@ -1,0 +1,931 @@
+
+PLAN PERBAIKAN, PENINGKATAN, DAN DATABASE REFACTOR
+
+SCOPE
+-----
+Rencana ini adalah lanjutan dari improvement sebelumnya. Fokusnya bukan mengulang pekerjaan yang sudah benar, tetapi mengaudit implementasi saat ini lalu melakukan perbaikan yang masih diperlukan.
+
+Fokus:
+1. Audit UI yang sudah diimplementasikan.
+2. Audit seluruh data hardcoded di server.
+3. Memindahkan data dunia seperti Item, NPC, Campaign, Location, Quest, dan World Fact ke database.
+4. Melakukan perombakan database secara menyeluruh dan terstruktur.
+5. Menjadikan database sebagai sumber data dunia.
+6. Menjadikan Game State Engine sebagai sumber kebenaran state permainan.
+7. Menjadikan Gemini sebagai narrative engine, bukan sumber kebenaran game state.
+8. Memastikan UI membaca state dari backend.
+9. Memperbaiki save/load, story timeline, dan rewind.
+10. Mempertahankan gameplay yang sudah ada.
+11. COMBAT SEPENUHNYA DI LUAR SCOPE.
+
+============================================================
+PHASE 0 - FULL REPOSITORY AUDIT
+============================================================
+
+Audit seluruh repository sebelum melakukan perubahan besar.
+
+Periksa:
+- frontend
+- backend
+- controllers
+- services
+- models Sequelize
+- migrations
+- seeders
+- GeminiService
+- GeminiClient
+- promptBuilder
+- intentResolver
+- fallbackGenerator
+- sceneSchema
+- game state logic
+- inventory
+- quest/mission
+- world ledger
+- save/load
+- rewind
+- seluruh komponen UI
+
+Cari seluruh data hardcoded:
+- NPC_NAME_LOOKUP
+- KNOWN_ITEMS
+- resolveItemById
+- NPC
+- Item
+- Campaign
+- Location
+- Background
+- Quest
+- Reward
+- Character
+- Lore
+- World Fact
+
+Buat:
+docs/DATA_ARCHITECTURE_AUDIT.md
+
+Isi:
+- data yang ditemukan
+- lokasi penyimpanan saat ini
+- model/tabel terkait
+- hardcoded atau database
+- target penyimpanan
+- dependency yang harus diubah
+- risiko migration
+
+Jangan melakukan rewrite besar sebelum audit selesai.
+
+============================================================
+PHASE 1 - UI AUDIT
+============================================================
+
+Audit UI yang SUDAH dibuat.
+
+Jangan menganggap planning UI sebelumnya belum dikerjakan.
+
+Periksa:
+- main game screen
+- scene
+- dialogue
+- choices
+- character HUD
+- inventory
+- quest
+- journal
+- timeline/rewind
+- navigation
+- responsive layout
+- loading
+- error
+- empty state
+- animation
+- mobile layout
+
+Kelompokkan setiap bagian menjadi:
+- KEEP
+- IMPROVE
+- REFACTOR
+- MISSING
+
+Tujuan phase ini adalah mengetahui apa yang masih kurang, bukan membuat ulang UI yang sudah baik.
+
+============================================================
+PHASE 2 - DATABASE REDESIGN
+============================================================
+
+Lakukan redesign database secara menyeluruh.
+
+Jangan hanya menambahkan Item dan NPC.
+
+Target minimal:
+
+Campaign
+--------
+id
+title
+description
+premise
+defaultBackgroundId
+status
+createdAt
+updatedAt
+
+Location
+--------
+id
+campaignId
+name
+description
+backgroundId
+parentLocationId
+locationType
+metadata
+createdAt
+updatedAt
+
+NPC
+---
+id
+campaignId
+name
+title
+description
+characterType
+portraitId
+defaultLocationId
+personality
+background
+isActive
+createdAt
+updatedAt
+
+Item
+----
+id
+name
+description
+category
+rarity
+icon
+maxStack
+isConsumable
+isUsable
+effectType
+effectValue
+metadata
+createdAt
+updatedAt
+
+Quest
+-----
+id
+campaignId
+title
+description
+type
+status
+priority
+targetLocationId
+createdAt
+updatedAt
+
+QuestObjective
+--------------
+id
+questId
+description
+objectiveType
+targetId
+requiredCount
+sequence
+
+WorldFact
+---------
+id
+sessionId
+campaignId
+subjectType
+subjectId
+factType
+fact
+importance
+sourceNodeId
+createdAt
+
+StoryNode
+---------
+id
+sessionId
+parentNodeId
+campaignId
+locationId
+speakerId
+backgroundId
+chapterTitle
+dialogue
+mood
+turnNumber
+createdAt
+
+StoryChoice
+-----------
+id
+storyNodeId
+choiceKey
+text
+actionType
+tone
+requiredItemId
+sequence
+
+StorySnapshot
+-------------
+id
+storyNodeId
+characterState
+inventoryState
+questState
+worldState
+ledgerState
+createdAt
+
+Catatan:
+- Struktur final harus menyesuaikan model Sequelize yang sudah ada.
+- Jangan membuat tabel redundant.
+- Gunakan foreign key jika data memang relational.
+- Gunakan JSON hanya untuk metadata atau snapshot yang memang cocok.
+- Tentukan cascade/restrict behavior dengan jelas.
+
+============================================================
+PHASE 3 - DATABASE MIGRATION
+============================================================
+
+Jangan langsung menghapus struktur lama.
+
+Urutan:
+
+Existing DB
+    ->
+Create New Tables
+    ->
+Migrate Existing Data
+    ->
+Validate
+    ->
+Switch Application
+    ->
+Remove Legacy Code
+    ->
+Remove Obsolete Structures
+
+Pastikan:
+- tidak ada data hilang
+- ID penting tetap konsisten
+- foreign key valid
+- data lama dapat dipetakan
+- duplicate data ditangani
+- migration dapat diuji pada database development
+
+Setelah tervalidasi:
+- hapus hardcoded data yang sudah dipindahkan
+- hapus lookup dictionary lama
+- hapus helper legacy yang tidak diperlukan
+
+============================================================
+PHASE 4 - DATA ACCESS / REPOSITORY LAYER
+============================================================
+
+Jika sesuai dengan arsitektur project, buat repository/data-access layer.
+
+Target:
+- CampaignRepository
+- LocationRepository
+- NPCRepository
+- ItemRepository
+- QuestRepository
+- WorldFactRepository
+- StoryNodeRepository
+- SnapshotRepository
+
+Flow:
+
+Controller
+    ->
+Game Service
+    ->
+Repository
+    ->
+Database
+
+Tujuan:
+- query terpusat
+- dependency jelas
+- testing lebih mudah
+- query tidak tersebar di controller
+- campaign baru mudah dikembangkan
+
+============================================================
+PHASE 5 - GAME STATE ENGINE
+============================================================
+
+Buat/refactor Game State Engine sebagai sumber kebenaran.
+
+Engine menangani:
+- HP
+- Mana
+- Gold
+- Inventory
+- Item consumption
+- Quest state
+- World facts
+- Reputation jika digunakan
+- Story progression
+- Location state
+- Save state
+- Rewind state
+
+Gemini tidak boleh langsung mengubah database.
+
+Flow:
+
+Gemini Proposal
+    ->
+Validation
+    ->
+Game State Engine
+    ->
+Database
+
+Contoh:
+AI mengusulkan receivedItemId.
+
+Engine harus:
+1. mencari item di database
+2. memastikan item valid
+3. memeriksa apakah reward valid
+4. mengubah inventory
+5. menyimpan state
+
+Valid JSON tidak berarti valid game state.
+
+============================================================
+PHASE 6 - ITEM SYSTEM
+============================================================
+
+Pindahkan Item dari source code ke database.
+
+Hilangkan heuristic seperti:
+- item.id.includes('potion')
+- item.id.includes('elixir')
+- item.id.includes('ration')
+
+Gunakan field:
+- category
+- effectType
+- effectValue
+- isConsumable
+- isUsable
+
+Pastikan:
+- ID konsisten
+- tidak ada duplicate item
+- quantity benar
+- use item tervalidasi
+- item yang tidak dimiliki tidak dapat digunakan
+
+UI membaca Item dari database melalui backend.
+
+============================================================
+PHASE 7 - NPC SYSTEM
+============================================================
+
+Pindahkan NPC dari source code ke database.
+
+Hapus pola seperti NPC_NAME_LOOKUP jika sudah digantikan database.
+
+NPC memiliki:
+- identity
+- name
+- title
+- description
+- personality
+- location
+- campaign relationship
+- portrait/reference jika digunakan
+
+Gemini hanya menerima NPC yang tersedia pada context campaign/session.
+
+============================================================
+PHASE 8 - CAMPAIGN, LOCATION, DAN WORLD DATA
+============================================================
+
+Semua data dunia utama harus data-driven.
+
+Campaign:
+- title
+- premise
+- description
+
+Location:
+- name
+- description
+- background
+- parent/area
+- campaign
+
+NPC:
+- location
+- campaign
+
+Item:
+- campaign availability jika diperlukan
+
+Lore/World Fact:
+- campaign/session relationship
+
+Target:
+Campaign baru dapat dibuat tanpa mengedit core JavaScript hanya untuk menambahkan NPC, Item, Location, atau lore.
+
+============================================================
+PHASE 9 - QUEST SYSTEM
+============================================================
+
+Pindahkan Quest dan Objective penting ke database.
+
+Quest memiliki:
+- status
+- objective
+- progress
+- completion
+- relationship dengan campaign/location/NPC/item jika diperlukan
+
+Game State Engine menentukan perubahan quest.
+
+Gemini hanya mengusulkan atau menarasikan perkembangan quest.
+
+UI hanya menampilkan state quest dari backend.
+
+============================================================
+PHASE 10 - WORLD LEDGER
+============================================================
+
+Refactor worldLedger menjadi data terstruktur.
+
+Jangan bergantung hanya pada array string.
+
+WorldFact harus dapat mengidentifikasi:
+- subject
+- fact type
+- fact
+- importance
+- source story node
+- session/campaign
+
+Contoh:
+subjectType = NPC
+subjectId = npc_eldrin
+factType = relationship
+fact = Eldrin distrusts the player.
+
+World facts harus ikut dipertimbangkan saat rewind.
+
+============================================================
+PHASE 11 - STORY NODE DAN TIMELINE
+============================================================
+
+Pastikan StoryNode memiliki:
+- parent
+- session
+- campaign
+- location
+- speaker
+- background
+- chapter
+- dialogue
+- turn
+- timestamp
+
+StoryChoice disimpan secara konsisten.
+
+Story tree digunakan untuk:
+- history
+- backlog
+- timeline
+- rewind
+- debugging
+
+============================================================
+PHASE 12 - REWIND DAN SNAPSHOT
+============================================================
+
+Perbaiki rewind agar mengembalikan seluruh state yang relevan.
+
+Pertimbangkan:
+- character
+- HP
+- mana
+- gold
+- inventory
+- quest
+- world facts
+- reputation jika digunakan
+- location
+- story state
+
+Jangan hanya mengembalikan character fields.
+
+Jangan auto-revive character hanya karena rewind tanpa aturan game yang jelas.
+
+Flow:
+
+Current Node
+    ->
+Select Previous Node
+    ->
+Load Snapshot
+    ->
+Restore Game State
+    ->
+Update Session
+    ->
+Render UI
+
+============================================================
+PHASE 13 - GEMINI INTEGRATION
+============================================================
+
+Pertahankan refactor AI yang sudah benar.
+
+GeminiClient menangani:
+- API call
+- timeout
+- retry
+- error classification
+- model fallback
+- structured response
+
+GeminiService menangani:
+- narrative generation
+- context assembly
+- intent integration
+
+Context Gemini harus berasal dari database/game state.
+
+Context minimal:
+- current location
+- available NPC
+- relevant items
+- active quest
+- world facts
+- recent story
+- character state
+
+Jangan hardcode world data di prompt atau fallback.
+
+============================================================
+PHASE 14 - AI OUTPUT VALIDATION
+============================================================
+
+Pertahankan schema validation.
+
+Pisahkan secara konseptual:
+
+Narrative Output
+----------------
+chapterTitle
+location
+speaker
+dialogue
+mood
+choices
+
+State Proposal
+--------------
+hpChange
+manaChange
+goldChange
+receivedItemId
+consumedItemId
+questUpdates
+worldFacts
+
+State Proposal harus divalidasi oleh Game State Engine.
+
+AI tidak boleh dianggap benar hanya karena output JSON valid.
+
+============================================================
+PHASE 15 - FALLBACK GENERATOR
+============================================================
+
+Refactor fallback agar data-driven.
+
+Fallback boleh menggunakan template narrative.
+
+Namun:
+- NPC dari database
+- Item dari database
+- Location dari database
+- Quest dari database
+- World facts dari database
+
+Fallback tidak boleh membuat dunia baru secara diam-diam.
+
+Fallback tetap harus mampu menghasilkan scene valid saat Gemini tidak tersedia.
+
+============================================================
+PHASE 16 - UI DATA INTEGRATION
+============================================================
+
+Setelah database dan game state stabil, audit integrasi UI.
+
+Pastikan:
+
+Character HUD
+- membaca backend state
+
+Inventory
+- membaca Item database
+- quantity benar
+- description benar
+
+Quest
+- membaca Quest database
+- objective/status benar
+
+Journal
+- membaca NPC, Location, WorldFact
+
+Timeline
+- membaca StoryNode
+
+Scene
+- membaca location/background/speaker dari data valid
+
+UI bukan sumber kebenaran game state.
+
+============================================================
+PHASE 17 - UI IMPROVEMENT
+============================================================
+
+Perbaiki hanya bagian yang audit menunjukkan belum sesuai.
+
+P0:
+- Main game layout
+- Scene/dialogue hierarchy
+- Choice UI
+- Character HUD
+- Responsive layout
+
+P1:
+- Inventory
+- Quest
+- Journal
+- Rewind timeline
+
+P2:
+- Loading
+- Error
+- Empty state
+- Animation
+- Micro interaction
+
+P3:
+- Visual polish
+- Texture
+- Glow
+- Decorative elements
+
+============================================================
+PHASE 18 - RESPONSIVE UI
+============================================================
+
+Test minimal:
+- 360px
+- 390px
+- 768px
+- 1024px
+- 1280px
+- 1440px
+
+Pastikan:
+- tidak ada horizontal overflow
+- dialog terbaca
+- choice mudah ditekan
+- inventory tidak rusak
+- modal tidak keluar layar
+- sidebar berubah menjadi mobile panel/bottom sheet jika diperlukan
+
+============================================================
+PHASE 19 - LOADING, ERROR, EMPTY STATE
+============================================================
+
+Tambahkan/perbaiki:
+
+AI loading:
+"Generating the next scene..."
+
+Error:
+"The story could not continue. Your current progress has been preserved."
+
+Empty state:
+- Inventory kosong
+- Quest kosong
+- Journal kosong
+- Timeline kosong
+
+Disable action saat request berlangsung untuk mencegah duplicate request.
+
+============================================================
+PHASE 20 - TESTING
+============================================================
+
+Database:
+- Campaign CRUD
+- Location CRUD
+- NPC CRUD
+- Item CRUD
+- Quest CRUD
+- WorldFact CRUD
+- relationship validation
+
+Game:
+- start campaign
+- scene generation
+- choice
+- custom action
+- inventory
+- quest
+- ledger
+- save
+- load
+- rewind
+
+AI:
+- valid response
+- malformed response
+- schema error
+- timeout
+- rate limit
+- unavailable API
+- fallback
+
+UI:
+- desktop
+- tablet
+- mobile
+- loading
+- error
+- empty state
+
+Regression:
+- existing gameplay tetap berjalan
+- existing save/load tetap digunakan jika memungkinkan
+- tidak ada data hilang setelah migration
+
+============================================================
+PHASE 21 - COMBAT: OUT OF SCOPE
+============================================================
+
+COMBAT TIDAK BOLEH DIROMBAK.
+
+Jangan mengubah:
+- combat UI
+- combat layout
+- combat logic
+- damage calculation
+- enemy behavior
+- combat API
+- combat state
+- combat flow
+- combatEncounter
+- combat component
+
+Jika database migration secara teknis menyentuh dependency combat:
+- perubahan seminimal mungkin
+- behavior tidak boleh berubah
+- lakukan regression test
+
+Combat dianggap feature yang sudah ada dan harus dipertahankan.
+
+============================================================
+PHASE 22 - CLEANUP
+============================================================
+
+Setelah migration berhasil, hapus legacy yang benar-benar sudah tidak digunakan:
+- hardcoded NPC lookup
+- hardcoded Item lookup
+- obsolete item resolver
+- obsolete campaign data
+- duplicate data
+- legacy state handler
+- unused schema
+- unused helper
+- obsolete UI state
+
+Sebelum menghapus, lakukan repository-wide search untuk memastikan tidak ada dependency.
+
+============================================================
+IMPLEMENTATION ORDER
+============================================================
+
+1. Full repository audit
+2. UI audit
+3. Database schema design
+4. Database migration
+5. Data access/repository layer
+6. Game State Engine
+7. Item system
+8. NPC system
+9. Campaign + Location
+10. Quest system
+11. World Ledger
+12. Story Node + Timeline
+13. Snapshot + Rewind
+14. Gemini integration
+15. AI output validation
+16. Fallback refactor
+17. UI data integration
+18. UI improvement
+19. Responsive
+20. Loading/error/empty states
+21. Testing
+22. Legacy cleanup
+
+============================================================
+AGENT RULES
+============================================================
+
+1. Audit before modifying.
+2. Jangan mengulang fitur yang sudah benar.
+3. Jangan melakukan rewrite frontend/backend secara membabi buta.
+4. Database menjadi sumber data dunia.
+5. Game State Engine menjadi sumber kebenaran game state.
+6. Gemini menjadi narrative engine.
+7. UI bukan sumber kebenaran game state.
+8. Jangan hardcode NPC, Item, Location, Campaign, Quest, atau world data baru jika seharusnya berasal dari database.
+9. Jangan membuat tabel redundant.
+10. Jangan menghapus data lama sebelum migration tervalidasi.
+11. Jangan mengubah behavior combat.
+12. Jangan membuat fitur baru yang tidak diperlukan hanya untuk memperbesar scope.
+13. Pertahankan API contract jika memungkinkan.
+14. Jika API contract berubah, update frontend dan backend secara konsisten.
+15. Gunakan transaction untuk operasi yang mengubah beberapa state sekaligus.
+16. Migration harus dapat diuji pada database development.
+17. Setiap perubahan besar harus dapat dijelaskan dan diuji.
+18. Project masih lokal, sehingga security/auth/CORS bukan prioritas utama dalam planning ini.
+19. Fokus utama: correctness, consistency, maintainability, data-driven architecture, gameplay stability, dan UI quality.
+20. Jangan menyentuh combat.
+
+============================================================
+DEFINITION OF DONE
+============================================================
+
+Database:
+[ ] NPC penting berasal dari database.
+[ ] Item penting berasal dari database.
+[ ] Campaign berasal dari database.
+[ ] Location berasal dari database.
+[ ] Quest berasal dari database.
+[ ] World facts tersimpan terstruktur.
+[ ] Story history tersimpan konsisten.
+[ ] Migration berhasil tanpa kehilangan data.
+[ ] Tidak ada duplicate source of truth.
+
+Game State:
+[ ] Game State Engine menjadi sumber kebenaran.
+[ ] AI tidak mengubah state secara langsung.
+[ ] Item reward tervalidasi.
+[ ] Item consumption tervalidasi.
+[ ] Quest update tervalidasi.
+[ ] World fact tervalidasi.
+[ ] Save/load konsisten.
+[ ] Rewind mengembalikan state yang relevan.
+
+AI:
+[ ] Structured output tetap digunakan.
+[ ] Schema validation tetap berjalan.
+[ ] Context berasal dari database/game state.
+[ ] Fallback menggunakan data database.
+[ ] Tidak ada hardcoded world lookup yang tidak diperlukan.
+
+UI:
+[ ] UI menggunakan data backend.
+[ ] Character HUD konsisten.
+[ ] Inventory konsisten dengan database.
+[ ] Quest konsisten dengan database.
+[ ] Journal konsisten dengan world data.
+[ ] Timeline konsisten dengan story nodes.
+[ ] Responsive.
+[ ] Loading/error/empty states tersedia.
+
+Combat:
+[ ] Combat tidak diubah.
+[ ] Combat regression test tetap lulus.
+
+Final:
+[ ] Existing gameplay tetap berjalan.
+[ ] Tidak ada data penting yang masih tersebar sebagai hardcoded server data.
+[ ] Arsitektur menjadi data-driven.
+[ ] Campaign baru dapat dikembangkan tanpa mengubah core source code untuk setiap NPC/Item/Location baru.
+[ ] Database, backend, AI, dan UI menggunakan sumber data yang konsisten.
+"""

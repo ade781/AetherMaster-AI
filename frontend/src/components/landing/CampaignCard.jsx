@@ -11,8 +11,17 @@ export default function CampaignCard({
   if (!campaign) return null;
 
   const getCoverSrc = () => {
-    if (campaign.defaultBackgroundId) return `/assets/backgrounds/${campaign.defaultBackgroundId}.png`;
-    if (campaign.coverImage) return campaign.coverImage;
+    if (campaign.coverImage) {
+      if (campaign.coverImage.startsWith('http') || campaign.coverImage.startsWith('/') || campaign.coverImage.startsWith('data:')) {
+        return campaign.coverImage;
+      }
+    }
+    if (campaign.defaultBackgroundId) {
+      if (campaign.defaultBackgroundId.startsWith('http') || campaign.defaultBackgroundId.startsWith('/')) {
+        return campaign.defaultBackgroundId;
+      }
+      return `/assets/backgrounds/${campaign.defaultBackgroundId}.png`;
+    }
     return '/assets/backgrounds/bg_01_tavern.png';
   };
 

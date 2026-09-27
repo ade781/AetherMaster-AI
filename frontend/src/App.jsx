@@ -48,7 +48,8 @@ function MainGame() {
     handleFleeCombat,
     handleUseItem,
     handleRewind,
-    handleLoadSession
+    handleLoadSession,
+    handleExitSession
   } = useGameStore();
 
   // Toast Notification
@@ -133,6 +134,7 @@ function MainGame() {
           onOpenJournal={() => setIsJournalOpen(true)}
           onOpenQuest={() => setIsQuestOpen(true)}
           onToggleInventory={() => setIsInventoryOpen(prev => !prev)}
+          onExitSession={handleExitSession}
           isLoading={isLoading}
           hudComponent={
             <CharacterHUD
@@ -189,11 +191,7 @@ function MainGame() {
         session={session}
         onRewind={() => setIsStoryTreeOpen(true)}
         onLoadGame={() => setIsSaveLoadOpen(true)}
-        onRestart={() => {
-          setSession(null);
-          setCharacter(null);
-          setCurrentNode(null);
-        }}
+        onRestart={handleExitSession}
       />
     </div>
   );

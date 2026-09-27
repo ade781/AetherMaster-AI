@@ -19,7 +19,7 @@ const Location = sequelize.define('Location', {
     allowNull: true
   },
   backgroundId: {
-    type: DataTypes.STRING,
+    type: DataTypes.TEXT,
     allowNull: false,
     defaultValue: 'bg_01_tavern'
   },

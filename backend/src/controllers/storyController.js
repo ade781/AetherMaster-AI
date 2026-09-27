@@ -182,6 +182,14 @@ async function advanceStoryState({ session, character, currentNode, chosenChoice
       speakerId,
       characterId: speakerId,
       turnNumber: session.turnCount,
+      chosenActionText: chosenChoice?.text || null,
+      chosenChoiceId: chosenChoice?.id || chosenChoice?.choiceKey || null,
+      userActionInput: {
+        choiceId: chosenChoice?.id || chosenChoice?.choiceKey,
+        text: chosenChoice?.text,
+        tone: chosenChoice?.tone,
+        turnNumber: session.turnCount
+      },
       mood: nextScene.mood || 'neutral',
       dialogueText: nextScene.dialogue,
       consequenceNote: nextScene.consequenceNote,
@@ -195,7 +203,24 @@ async function advanceStoryState({ session, character, currentNode, chosenChoice
     transaction
   );
 
-  // 6. Record WorldFacts in database (history source of truth)
+  // 6. Record player action explicitly into WorldFacts table (immutable history)
+  if (chosenChoice?.text) {
+    try {
+      await WorldFactRepository.addFact({
+        sessionId: session.id,
+        campaignId: session.campaignId,
+        subjectType: 'PLAYER_ACTION',
+        subjectId: chosenChoice.id || 'choice',
+        factType: 'ACTION_TAKEN',
+        fact: `Babak ${session.turnCount}: Melakukan aksi "${chosenChoice.text}" (${chosenChoice.tone || 'cautious'}).`,
+        turn: session.turnCount,
+        branchId: activeBranchId,
+        sourceNodeId: newNode.id
+      }, transaction);
+    } catch (e) {}
+  }
+
+  // 7. Record WorldFacts in database (history source of truth)
   if (stateUpdates.factDiscovered || stateUpdates.addLedgerFact) {
     const factText = stateUpdates.factDiscovered || stateUpdates.addLedgerFact;
     await WorldFactRepository.addFact({
@@ -1175,3 +1200,64 @@ exports.getJournal = async (req, res) => {
     res.status(500).json({ success: false, error: 'Gagal mengambil data jurnal.' });
   }
 };
+
+exports.getSession = async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    if (!sessionId) {
+      return res.status(400).json({ success: false, error: 'sessionId wajib disertakan.' });
+    }
+
+    const session = await GameSession.findByPk(sessionId, {
+      include: [Character, Campaign]
+    });
+    if (!session) {
+      return res.status(404).json({ success: false, error: 'Sesi permainan tidak ditemukan.' });
+    }
+
+    const character = session.Character;
+    const currentNode = await StoryNode.findByPk(session.currentSceneId, {
+      include: [{ model: StoryChoice, as: 'choiceList' }]
+    });
+
+    if (!currentNode) {
+      return res.status(404).json({ success: false, error: 'Node cerita aktif tidak ditemukan.' });
+    }
+
+    const hydratedInv = character?.inventory
+      ? await ItemRepository.hydrateInventory(character.inventory)
+      : [];
+
+    let choices = safeArray(currentNode.choices);
+    if ((!choices || choices.length === 0) && currentNode.choiceList?.length > 0) {
+      choices = currentNode.choiceList.map(c => ({
+        id: c.choiceKey,
+        choiceKey: c.choiceKey,
+        text: c.text,
+        actionType: c.actionType,
+        tone: c.tone
+      }));
+    }
+
+    res.json({
+      success: true,
+      data: {
+        session,
+        character: {
+          ...character.toJSON(),
+          inventory: hydratedInv
+        },
+        currentNode: {
+          ...currentNode.toJSON(),
+          choices
+        },
+        campaign: session.Campaign,
+        combatState: session.combatState || null
+      }
+    });
+  } catch (err) {
+    logger.error('getSession Error', err);
+    res.status(500).json({ success: false, error: 'Internal server error saat memuat sesi aktif.' });
+  }
+};
+

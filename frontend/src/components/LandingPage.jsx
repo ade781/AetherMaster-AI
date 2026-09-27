@@ -145,6 +145,7 @@ export default function LandingPage({
         onStartAdventure={() => scrollToSection('campaigns')}
         onOpenRules={() => setActiveModal('rules')}
         showToast={showToast}
+        campaignCount={campaigns.length}
       />
 
       {/* 2. Dynamic Campaign Grid Component (Populated from DB) */}

@@ -34,6 +34,7 @@ router.get('/npcs', storyController.getNpcs);
 router.get('/locations', storyController.getLocations);
 router.get('/quests/:campaignId', storyController.getQuests);
 router.get('/journal/:sessionId', storyController.getJournal);
+router.get('/session/:sessionId', storyController.getSession);
 
 // Multi-Slot Save / Load Routes
 router.get('/saves', saveLoadController.getSaveSlots);

@@ -2,7 +2,7 @@ import React from 'react';
 import { Play, Scroll } from 'lucide-react';
 import audio from '../../services/audioService';
 
-export default function HeroBanner({ onStartAdventure, onOpenRules, showToast }) {
+export default function HeroBanner({ onStartAdventure, onOpenRules, showToast, campaignCount = 0 }) {
   return (
     <section className="relative min-h-[90vh] md:min-h-screen w-full flex flex-col justify-between overflow-hidden">
       {/* Background Image with Cinematic Scrim and Vignette */}
@@ -16,10 +16,18 @@ export default function HeroBanner({ onStartAdventure, onOpenRules, showToast })
 
       {/* Center Hero Content */}
       <div className="relative z-10 max-w-4xl mx-auto px-6 text-center my-auto pt-24 md:pt-28 pb-12 flex flex-col items-center">
-        {/* Feature Badge */}
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/80 border border-amber-500/40 text-amber-400 text-xs font-mono font-semibold tracking-wider shadow-lg mb-4 backdrop-blur-md">
-          <span>⚔️</span>
-          <span>D&amp;D 5E Virtual Tabletop Engine</span>
+        {/* Feature Badges */}
+        <div className="flex items-center justify-center gap-2.5 mb-4 flex-wrap">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/80 border border-amber-500/40 text-amber-400 text-xs font-mono font-semibold tracking-wider shadow-lg backdrop-blur-md">
+            <span>⚔️</span>
+            <span>D&amp;D 5E VTT Engine</span>
+          </div>
+          {campaignCount > 0 && (
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/15 border border-amber-400/40 text-amber-300 text-xs font-mono font-semibold tracking-wider shadow-lg backdrop-blur-md">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>{campaignCount} Modul Petualangan Tersedia</span>
+            </div>
+          )}
         </div>
 
         {/* Main Display Headline */}

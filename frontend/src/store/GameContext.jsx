@@ -31,7 +31,7 @@ export function GameProvider({ children }) {
     setTimeout(() => setToast(null), 3500);
   }, []);
 
-  // Fetch campaigns on mount
+  // Fetch campaigns and restore session if available on mount
   useEffect(() => {
     fetch(`${API_BASE}/campaigns`)
       .then(res => res.json())
@@ -42,6 +42,38 @@ export function GameProvider({ children }) {
       })
       .catch(err => console.error('Gagal mengambil kampanye:', err))
       .finally(() => setInitLoading(false));
+
+    const savedSessionId = localStorage.getItem('aethermaster_active_session_id');
+    if (savedSessionId) {
+      fetch(`${API_BASE}/session/${savedSessionId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.data) {
+            setSession(data.data.session);
+            setCharacter(data.data.character);
+            setCurrentNode(data.data.currentNode);
+            setCombatState(data.data.combatState || data.data.session?.combatState || null);
+            if (data.data.campaign) {
+              setSelectedCampaign(data.data.campaign);
+            }
+          } else {
+            localStorage.removeItem('aethermaster_active_session_id');
+          }
+        })
+        .catch(err => {
+          console.warn('Gagal memulihkan sesi aktif:', err);
+        });
+    }
+  }, []);
+
+  // Exit active session and return to Landing Page
+  const handleExitSession = useCallback(() => {
+    localStorage.removeItem('aethermaster_active_session_id');
+    setSession(null);
+    setCharacter(null);
+    setCurrentNode(null);
+    setCombatState(null);
+    setSelectedCampaign(null);
   }, []);
 
   // Start campaign selection
@@ -65,6 +97,9 @@ export function GameProvider({ children }) {
       });
       const data = await res.json();
       if (data.success) {
+        if (data.data.session?.id) {
+          localStorage.setItem('aethermaster_active_session_id', data.data.session.id);
+        }
         setSession(data.data.session);
         setCharacter(data.data.character);
         setCurrentNode(data.data.currentNode);
@@ -227,10 +262,16 @@ export function GameProvider({ children }) {
 
   // Load session
   const handleLoadSession = useCallback((loadedData) => {
+    if (loadedData.session?.id) {
+      localStorage.setItem('aethermaster_active_session_id', loadedData.session.id);
+    }
     setSession(loadedData.session);
     setCharacter(loadedData.character);
     setCurrentNode(loadedData.currentNode);
     setCombatState(loadedData.session?.combatState || null);
+    if (loadedData.campaign) {
+      setSelectedCampaign(loadedData.campaign);
+    }
     setIsSaveLoadOpen(false);
   }, []);
 
@@ -331,7 +372,8 @@ export function GameProvider({ children }) {
     handleFleeCombat,
     handleUseItem,
     handleRewind,
-    handleLoadSession
+    handleLoadSession,
+    handleExitSession
   };
 
   return (

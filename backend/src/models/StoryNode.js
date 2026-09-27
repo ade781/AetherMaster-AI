@@ -36,8 +36,20 @@ const StoryNode = sequelize.define('StoryNode', {
     allowNull: true
   },
   backgroundId: {
-    type: DataTypes.STRING,
+    type: DataTypes.TEXT,
     defaultValue: 'bg_01_tavern'
+  },
+  chosenActionText: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+  chosenChoiceId: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  userActionInput: {
+    type: DataTypes.JSON,
+    allowNull: true
   },
   speaker: {
     type: DataTypes.STRING,

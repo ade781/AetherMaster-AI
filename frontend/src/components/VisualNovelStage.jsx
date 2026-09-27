@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Volume2, VolumeX, Mic, MicOff, BookOpen, GitFork, Save,
-  Sparkles, Send, Compass, Target, Music, Check
+  Sparkles, Send, Compass, Target, Music, Check, LogOut
 } from 'lucide-react';
 import audio from '../services/audioService';
 import FantasyAvatar from './common/FantasyAvatar';
@@ -127,6 +127,7 @@ export default function VisualNovelStage({
   onOpenJournal,
   onOpenQuest,
   onToggleInventory,
+  onExitSession,
   isLoading,
   hudComponent
 }) {
@@ -259,11 +260,23 @@ export default function VisualNovelStage({
   };
 
   const getBackgroundSrc = (bgId) => {
+    // 1. Direct database background URL from node or location
+    if (bgId && (bgId.startsWith('http') || bgId.startsWith('data:') || bgId.startsWith('/assets/'))) {
+      return bgId;
+    }
+
+    // 2. Direct database cover image from campaign if valid URL
+    if (campaign?.coverImage && (campaign.coverImage.startsWith('http') || campaign.coverImage.startsWith('data:'))) {
+      if (!bgId || bgId === 'bg_01_tavern' || bgId === campaign.defaultBackgroundId) {
+        return campaign.coverImage;
+      }
+    }
+
     let resolved = bgId;
     if (!resolved || (resolved === 'bg_01_tavern' && campaign?.defaultBackgroundId && campaign.defaultBackgroundId !== 'bg_01_tavern')) {
       resolved = campaign?.defaultBackgroundId || 'bg_01_tavern';
     }
-    if (resolved.startsWith('/') || resolved.startsWith('http')) return resolved;
+    if (resolved.startsWith('/') || resolved.startsWith('http') || resolved.startsWith('data:')) return resolved;
 
     const clean = resolved.replace(/\.png$/i, '');
     const mapped = BACKGROUND_MAP[clean] || Object.values(BACKGROUND_MAP).find(v => v.includes(clean) || clean.includes(v)) || clean;
@@ -272,7 +285,7 @@ export default function VisualNovelStage({
 
   const getPortraitSrc = (charId) => {
     if (!charId) return null;
-    if (charId.startsWith('/') || charId.startsWith('http')) return charId;
+    if (charId.startsWith('/') || charId.startsWith('http') || charId.startsWith('data:')) return charId;
     const clean = charId.replace(/\.png$/i, '');
     const mapped = PORTRAIT_MAP[clean] || Object.values(PORTRAIT_MAP).find(v => v === clean || v.includes(clean) || clean.includes(v)) || clean;
     return `/assets/portraits/${mapped}.png`;
@@ -305,11 +318,15 @@ export default function VisualNovelStage({
             alt="Adventure Scene"
             className="w-full h-full object-cover object-center filter brightness-[0.7] contrast-[1.05] transition-all duration-700 scale-[1.02]"
             onError={(e) => {
-              const fallbackId = campaign?.defaultBackgroundId || 'bg_01_tavern';
-              const fallbackMapped = BACKGROUND_MAP[fallbackId] || fallbackId;
-              const target = `/assets/backgrounds/${fallbackMapped}.png`;
-              if (!e.target.src.endsWith(target)) {
-                e.target.src = target;
+              if (campaign?.coverImage && !e.target.src.includes(campaign.coverImage)) {
+                e.target.src = campaign.coverImage;
+              } else {
+                const fallbackId = campaign?.defaultBackgroundId || 'bg_01_tavern';
+                const fallbackMapped = BACKGROUND_MAP[fallbackId] || fallbackId;
+                const target = `/assets/backgrounds/${fallbackMapped}.png`;
+                if (!e.target.src.endsWith(target)) {
+                  e.target.src = target;
+                }
               }
             }}
           />
@@ -437,6 +454,19 @@ export default function VisualNovelStage({
             >
               <Save className="w-3.5 h-3.5 text-emerald-400" />
               <span className="hidden sm:inline">Simpan</span>
+            </button>
+            <button
+              onClick={() => {
+                audio.playClick();
+                if (window.confirm('Kembali ke menu utama? Progres petualanganmu tetap tersimpan otomatis.')) {
+                  onExitSession?.();
+                }
+              }}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium text-rose-300 hover:text-rose-200 hover:bg-rose-500/10 transition-all min-h-[40px]"
+              title="Kembali ke Menu Utama"
+            >
+              <LogOut className="w-3.5 h-3.5 text-rose-400" />
+              <span className="hidden sm:inline">Keluar</span>
             </button>
           </div>
         </div>

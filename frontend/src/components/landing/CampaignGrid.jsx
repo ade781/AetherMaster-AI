@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { Search, Compass, RefreshCw, Play } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Search, Compass, RefreshCw, Play, Shuffle } from 'lucide-react';
 import CampaignCard from './CampaignCard';
 import audio from '../../services/audioService';
 
@@ -11,6 +11,24 @@ export default function CampaignGrid({
   const [selectedCampaignId, setSelectedCampaignId] = useState(null);
   const [selectedGenre, setSelectedGenre] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Randomize initial selection on mount or when campaigns load
+  useEffect(() => {
+    if (campaigns && campaigns.length > 0 && !selectedCampaignId) {
+      const randomIndex = Math.floor(Math.random() * campaigns.length);
+      setSelectedCampaignId(campaigns[randomIndex].id);
+    }
+  }, [campaigns, selectedCampaignId]);
+
+  // Shuffle to another random campaign
+  const handleShuffleCampaign = () => {
+    if (!campaigns || campaigns.length === 0) return;
+    audio.playClick();
+    const otherCampaigns = campaigns.filter(c => c.id !== activeCampaign?.id);
+    const pool = otherCampaigns.length > 0 ? otherCampaigns : campaigns;
+    const randomIndex = Math.floor(Math.random() * pool.length);
+    setSelectedCampaignId(pool[randomIndex].id);
+  };
 
   // Extract unique genres dynamically or fallback to preset list
   const genres = useMemo(() => {
@@ -52,13 +70,13 @@ export default function CampaignGrid({
           <div className="space-y-2 max-w-xl">
             <span className="text-xs uppercase font-semibold tracking-widest text-amber-400 flex items-center gap-2">
               <Compass className="w-4 h-4 text-amber-400" />
-              Arsip Kampanye Petualangan D&amp;D 5E
+              Arsip Kampanye Petualangan D&amp;D 5E ({campaigns.length} Misi Tersedia)
             </span>
             <h2 className="font-cinzel text-3xl md:text-4xl font-bold text-white tracking-tight">
               Pilih Dunia &amp; Tentukan Takdir
             </h2>
             <p className="text-xs md:text-sm text-slate-400 font-light leading-relaxed">
-              Jelajahi dunia petualangan naratif dari basis data. Pilih modul untuk melihat berkas intelijen taktis.
+              Tersedia <span className="text-amber-400 font-semibold">{campaigns.length} modul petualangan</span> dari basis data. Pilih atau acak modul untuk melihat berkas intelijen taktis.
             </p>
           </div>
 
@@ -100,7 +118,7 @@ export default function CampaignGrid({
             {/* Visual Cover (5 cols) */}
             <div className="lg:col-span-5 relative h-64 lg:h-auto min-h-[220px] overflow-hidden bg-slate-950">
               <img
-                src={(activeCampaign.defaultBackgroundId ? `/assets/backgrounds/${activeCampaign.defaultBackgroundId}.png` : activeCampaign.coverImage) || '/assets/backgrounds/bg_01_tavern.png'}
+                src={activeCampaign.coverImage || (activeCampaign.defaultBackgroundId ? `/assets/backgrounds/${activeCampaign.defaultBackgroundId}.png` : '/assets/backgrounds/bg_01_tavern.png')}
                 alt={activeCampaign.title}
                 className="w-full h-full object-cover"
                 onError={(e) => {
@@ -122,9 +140,19 @@ export default function CampaignGrid({
             {/* Intel Details (7 cols) */}
             <div className="lg:col-span-7 p-6 md:p-8 flex flex-col justify-between gap-6">
               <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-xl">{activeCampaign.icon || '⚔️'}</span>
-                  <span className="text-xs font-mono text-amber-400">Modul Terpilih</span>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">{activeCampaign.icon || '⚔️'}</span>
+                    <span className="text-xs font-mono text-amber-400">Modul Terpilih (Acak)</span>
+                  </div>
+                  <button
+                    onClick={handleShuffleCampaign}
+                    className="px-3 py-1.5 rounded-full bg-slate-800 hover:bg-slate-700 border border-amber-500/30 text-amber-300 text-xs font-medium flex items-center gap-1.5 transition-all hover:scale-105 active:scale-95 shadow-sm"
+                    title="Pilih misi acak lain"
+                  >
+                    <Shuffle className="w-3.5 h-3.5" />
+                    <span>🎲 Acak Misi</span>
+                  </button>
                 </div>
                 <h3 className="font-cinzel text-2xl md:text-3xl font-bold text-white tracking-tight">
                   {activeCampaign.title}
