@@ -1,0 +1,192 @@
+AETHERMASTER
+AUDIT TERBARU, DAFTAR KESALAHAN LOGIKA, DAN RENCANA PERBAIKAN
+
+Repository:
+https://github.com/ade781/AetherMaster-AI
+
+============================================================
+TUJUAN REFACTOR
+===============
+
+Lakukan audit dan refactor menyeluruh terhadap AetherMaster dengan fokus pada:
+
+* konsistensi database
+* single source of truth
+* Game State Engine
+* Item
+* NPC
+* Location
+* Quest
+* Quest Objective
+* World Fact
+* Story Node
+* Story Choice
+* Story Snapshot
+* branching timeline
+* rewind
+* save/load
+* journal
+* inventory
+* Gemini integration
+* fallback system
+* validasi AI output
+* frontend state consistency
+* integration testing
+
+PRINSIP UTAMA:
+
+Database menjadi sumber data dunia.
+GameStateEngine menjadi sumber kebenaran game state.
+QuestEngine menjadi sumber kebenaran progression Quest.
+WorldFact menjadi sumber history dunia.
+StorySnapshot menjadi sumber restore state.
+Gemini menjadi narrative engine, bukan game-state authority.
+Frontend hanya merender state dari backend.
+
+COMBAT TIDAK TERMASUK DALAM REFACTOR INI.
+
+============================================================
+HASIL AUDIT
+===========
+
+1. ITEM DATABASE DAN ITEM MASTER MASIH MENJADI DUA SUMBER DATA
+Saat ini masih terdapat beberapa sumber definisi Item:
+* database Item
+* ItemRepository
+* itemMaster.js
+* ITEM_CATALOG
+* DEFAULT_ITEM_CATALOG
+* resolver Item legacy
+GameStateEngine masih bergantung pada itemMaster.
+Masalah:
+* database Item belum benar-benar menjadi single source of truth
+* perubahan Item di database belum tentu memengaruhi seluruh gameplay
+* definisi Item dapat berbeda antar sistem
+* ID Item dapat tidak konsisten
+* sistem lama dan sistem database berjalan bersamaan
+TARGET:
+Database Item harus menjadi satu-satunya sumber definisi Item.
+Arsitektur:
+Item Database -> ItemRepository -> GameStateEngine -> Game State
+
+2. AI MASIH DAPAT MEMBUAT ITEM YANG TIDAK ADA DI DATABASE
+addItem() masih dapat menerima object Item secara langsung jika lookup gagal.
+Opening scene juga masih dapat memasukkan receivedItem dari output AI ke inventory.
+Masalah:
+Gemini secara tidak langsung masih dapat membuat Item baru yang tidak terdaftar di database.
+TARGET:
+Gemini hanya boleh memberikan ID. Contoh: receivedItemId = "item_potion_small"
+Backend kemudian: receivedItemId -> ItemRepository -> validasi Item -> GameStateEngine -> Inventory
+Jika Item tidak ditemukan di database, Item harus ditolak.
+
+3. finish_game MASIH DAPAT MEMBYPASS GAME LOGIC
+Masih terdapat jalur: choiceId = "finish_game" -> session.isGameOver = true
+Masalah:
+Ending dapat dipicu tanpa memastikan objective Quest atau kondisi campaign terpenuhi.
+TARGET:
+Player Action -> Game Event -> Quest Engine -> Objective Validation -> Ending Validation -> Game Over
+Jika campaign memang mengizinkan ending langsung, tetap harus ada kondisi backend yang memvalidasinya.
+
+4. QUEST MASIH MEMILIKI MULTIPLE SOURCE OF TRUTH
+Quest saat ini tersebar pada: Quest database, QuestObjective database, CAMPAIGN_OBJECTIVES, missionLog, worldLedger.
+TARGET:
+Gunakan: Quest -> QuestObjective -> QuestEngine -> Session Runtime Progress
+CAMPAIGN_OBJECTIVES harus dihapus setelah seluruh data dimigrasikan ke database.
+
+5. AI MASIH DAPAT MEMPENGARUHI QUEST COMPLETION TERLALU LANGSUNG
+questEngine masih membaca update missionLog dari AI.
+TARGET:
+Player Action -> Game Event -> QuestEngine -> Objective Evaluation -> Quest Progress
+Gemini hanya boleh menghasilkan: narrative, dialogue, scene description, proposed event.
+Backend yang menentukan apakah event tersebut valid dan mengubah state.
+
+6. TERDAPAT DUA SISTEM SNAPSHOT
+Saat ini terdapat: StoryNode.gameStateSnapshot, StoryNode.characterSnapshot, StorySnapshot table.
+TARGET:
+StorySnapshot menjadi satu-satunya sistem snapshot resmi.
+Arsitektur: StoryNode -> StorySnapshot -> GameStateEngine.restoreSnapshot()
+
+7. WORLD LEDGER DAN WORLD FACT MASIH DUPLIKAT
+TARGET:
+WorldFact database menjadi sumber history dunia.
+worldLedger hanya boleh menjadi derived context/cache jika benar-benar dibutuhkan.
+
+8. REWIND BELUM MEMILIKI MODEL BRANCHING YANG TEGAS
+Gunakan pendekatan B: Future node menjadi abandoned branch.
+Contoh: A -> B -> C -> D. Rewind ke B, lalu player memilih baru: A -> B -> E -> F. Branch C-D menjadi ABANDONED.
+TARGET:
+Tambahkan konsep: branchId, activeBranchId, branch status (ACTIVE, ABANDONED), currentNodeId, parentNodeId.
+
+9. SAVE/LOAD BELUM MENANGANI SELURUH STORY GRAPH
+TARGET:
+Save harus mencakup: Session, Character, StoryNode, StoryChoice, StorySnapshot, WorldFact, Branch, ActiveBranch, CurrentNode.
+Seluruh operasi save/load harus dilakukan secara transactional.
+
+10. STORYCHOICE MASIH MEMILIKI DOUBLE STORAGE
+TARGET:
+StoryChoice table menjadi source of truth.
+StoryNode -> StoryChoiceRepository -> API -> Frontend.
+
+11. GEMINI BELUM SEPENUHNYA MENGGUNAKAN DATABASE WORLD CONTEXT
+TARGET:
+Buat satu Context Builder: buildGameContext(sessionId)
+Context: campaign, current location, nearby NPC, available locations, available items, inventory, active quest, objectives, world facts, character state, recent story, active branch.
+
+12. NPC HASIL AI BELUM DIVALIDASI SECARA KUAT
+TARGET:
+NPC ID -> NPCRepository -> Campaign Validation -> Location Validation -> Accept / Reject
+
+13. LOCATION RESOLUTION MASIH BISA AMBIGU
+TARGET:
+locationId menjadi identity utama. Jika backgroundId digunakan: campaignId + backgroundId harus digunakan sebagai kombinasi validasi.
+
+14. USE ITEM MASIH MEMILIKI JALUR STATE SENDIRI
+TARGET:
+USE_ITEM -> GameStateEngine -> Event -> State Update -> Snapshot -> Timeline.
+
+15. JOURNAL MASIH BERISIKO MEMBACA ABANDONED BRANCH
+TARGET:
+Journal hanya membaca: Active Branch -> Story Nodes -> World Facts -> Journal.
+
+16. QUEST UI DAN SESSION QUEST STATE BELUM SEPENUHNYA SATU SISTEM
+TARGET:
+Backend menyediakan runtime Quest state: Quest, Objective, Progress, Completion. Frontend hanya merender data tersebut.
+
+17. INVENTORY MENYIMPAN OBJECT ITEM, BUKAN REFERENCE
+TARGET:
+Inventory: [{ itemId: "item_potion_small", quantity: 2 }].
+Metadata Item selalu diambil dari Item database.
+
+18. LEGACY ITEM CATALOG MASIH ADA DI CONTROLLER
+TARGET:
+Setelah migration selesai: hapus DEFAULT_ITEM_CATALOG, hapus ITEM_CATALOG, hapus resolver legacy.
+
+19. sequelize.sync({ alter: true }) MASIH DIGUNAKAN
+Target: migration files / clean deterministic sync.
+
+20. TEST BELUM SEPENUHNYA MEMVERIFIKASI FLOW ASLI
+TARGET:
+Tambahkan integration test yang benar-benar menjalankan Controller -> Service -> GameStateEngine -> Repository -> Database.
+
+============================================================
+URUTAN EKSEKUSI (16 PHASES)
+============================================================
+PHASE 1 - CANONICAL DATA MODEL (docs/CANONICAL_DATA_MODEL.md)
+PHASE 2 - ITEM SINGLE SOURCE OF TRUTH (Database-only, inventory itemId + quantity, no ITEM_CATALOG)
+PHASE 3 - QUEST SINGLE SOURCE OF TRUTH (Database-only Quest & QuestObjective, no CAMPAIGN_OBJECTIVES)
+PHASE 4 - GAME EVENT SYSTEM (Internal events pipeline)
+PHASE 5 - SNAPSHOT REFACTOR (StorySnapshot official source of truth)
+PHASE 6 - WORLD FACT REFACTOR (WorldFact official world history)
+PHASE 7 - BRANCHING TIMELINE (branchId, activeBranchId, ACTIVE vs ABANDONED)
+PHASE 8 - SAVE/LOAD GRAPH (Transactional save/load for complete graph)
+PHASE 9 - STORYCHOICE REFACTOR (StoryChoice table official source of truth)
+PHASE 10 - GEMINI CONTEXT BUILDER (buildGameContext(sessionId))
+PHASE 11 - AI VALIDATION (Strict validation of all IDs)
+PHASE 12 - USE ITEM REFACTOR (Through GameStateEngine & event pipeline)
+PHASE 13 - JOURNAL REFACTOR (Active branch only)
+PHASE 14 - QUEST UI REFACTOR (Backend runtime state rendered by frontend)
+PHASE 15 - LEGACY CLEANUP (Clean removal of deprecated catalogs & helpers)
+PHASE 16 - INTEGRATION TESTING (Full real flow tests)
+============================================================
+COMBAT EXCLUSION: JANGAN UBAH COMBAT ENGINE, COMBAT UI, ATAU FORMULA COMBAT!
+============================================================
