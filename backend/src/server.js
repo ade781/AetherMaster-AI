@@ -62,8 +62,9 @@ const ensureDb = () => {
 
 // Middleware: ensure database is synced before handling requests
 app.use(async (req, res, next) => {
-  // Health checks don't strictly require waiting for DB if we just want ping
-  if (req.path === '/api/health' || req.path === '/health') {
+  // Public listing and health checks don't block if DB is still connecting/warming up
+  if (req.path === '/api/health' || req.path === '/health' || req.path === '/api/story/campaigns') {
+    ensureDb().catch(() => {});
     return next();
   }
   try {
@@ -71,7 +72,10 @@ app.use(async (req, res, next) => {
     next();
   } catch (err) {
     console.error('[DB Middleware Error]', err);
-    res.status(500).json({ success: false, error: 'Database connection failed: ' + err.message });
+    res.status(500).json({
+      success: false,
+      error: 'Database connection failed. Pastikan server basis data (MySQL di XAMPP atau PostgreSQL) telah aktif: ' + err.message
+    });
   }
 });
 

@@ -244,13 +244,18 @@ async function advanceStoryState({ session, character, currentNode, chosenChoice
   return newNode;
 }
 
+const { campaignsData } = require('../models/seeders/campaignSeeder');
+
 exports.getCampaigns = async (req, res) => {
   try {
     const campaigns = await Campaign.findAll({ order: [['id', 'ASC']] });
-    res.json({ success: true, data: campaigns });
+    if (campaigns && campaigns.length > 0) {
+      return res.json({ success: true, data: campaigns });
+    }
+    return res.json({ success: true, data: campaignsData });
   } catch (err) {
-    logger.error('Failed to get campaigns', err);
-    res.status(500).json({ success: false, error: 'Internal server error' });
+    logger.warn('[getCampaigns] Database error, falling back to static campaign data:', err.message);
+    return res.json({ success: true, data: campaignsData });
   }
 };
 
