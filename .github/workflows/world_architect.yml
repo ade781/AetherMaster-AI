@@ -1,9 +1,9 @@
 name: Antigravity World Architect & Nano Banana Story Generator
 
 on:
-  schedule:
-    - cron: '*/30 * * * *' # Berjalan otomatis di server GitHub setiap 30 menit
-  workflow_dispatch:       # Tombol pemicu manual di tab GitHub Actions
+  workflow_dispatch:       # Dipicu otomatis oleh cron-job.org (POST API) atau manual via Actions tab
+  # schedule:
+  #   - cron: '*/30 * * * *' # Dinonaktifkan: cron GitHub Actions sering delay 1-3 jam, digantikan cron-job.org
   push:
     branches: [main]       # Verifikasi & jalankan saat ada update ke main
 
