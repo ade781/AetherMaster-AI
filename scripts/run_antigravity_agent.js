@@ -47,38 +47,57 @@ if (!apiKey || apiKey === 'YOUR_GEMINI_API_KEY') {
 
 const client = new GoogleGenAI({ apiKey });
 
-// Genre dan inspirasi tematik untuk rotasi kampanye
+// 13 Ragam Genre & Inspirasi Tematik Orisinal untuk Rotasi Kampanye (Anti-Klise Kutukan)
 const THEMES = [
-  { genre: 'dark_fantasy', mood: 'Kelam, misterius, reruntuhan kuno yang bangkit kembali' },
-  { genre: 'gothic_horror', mood: 'Kastil berkabut, kutukan darah, arwah ksatria yang gelisah' },
-  { genre: 'eldritch_mystery', mood: 'Kedalaman laut, artefak purba, bisikan entitas kosmik' },
-  { genre: 'high_fantasy', mood: 'Menara kristal, sihir astral, pertempuran ordo penyihir' },
-  { genre: 'steampunk_fantasy', mood: 'Kota mekanik uap, brankas kuno, serikat alkemis pemberontak' },
-  { genre: 'subterranean_survival', mood: 'Gua kristal Underdark, monster jamur berpendar, tambang kurcaci' }
+  { genre: 'celestial_astral', mood: 'Kepulauan melayang di atas awan, pelaut kapal udara skyship, navigasi rasi bintang, perburuan pecahan komet ajaib' },
+  { genre: 'pirate_high_seas', mood: 'Pelayaran bahari di lautan badai, pulau karang tersembunyi, pasar penyelundup, armada bajak laut, legenda kraken laut dalam' },
+  { genre: 'desert_ancient_ruins', mood: 'Gurun pasir keemasan, oase rempah karavan nomaden, piramida raja pasir purba terkubur, badai pasir pembelok waktu' },
+  { genre: 'frost_expedition', mood: 'Puncak gunung salju abadi, benteng es ksatria musim dingin, ekspedisi binatang kutub mistis, aurora pembawa visi masa depan' },
+  { genre: 'steampunk_inventor', mood: 'Kota mekanik uap berdenyut, brankas jam raksasa, automaton pekerja cerdas, pencurian cetak biru alkimia rahasia' },
+  { genre: 'feywild_enchanted', mood: 'Hutan peri bercahaya magis, kanopi pohon raksasa, makhluk mitologi elven, kebun bunga waktu, teka-teki ratu fey' },
+  { genre: 'court_intrigue', mood: 'Pesta topeng istana megah, diplomasi bayangan, konspirasi tahta kerajaan, pesta dansa bangsawan, detektif pemecah skandal' },
+  { genre: 'dragon_conquest', mood: 'Kawah lahar gunung berapi, timbunan emas naga purba, klan penempa palu magma, turnamen ksatria penakluk wyvern' },
+  { genre: 'subterranean_crystal', mood: 'Gua kristal permata raksasa, tambang kurcaci kuno, koloni jamur bercahaya bioluminescent, golem permata terlelap' },
+  { genre: 'frontier_war_camp', mood: 'Benteng perbatasan hutan belantara, serikat pemburu bayaran, kemah perang klan terhormat, pertahanan pos terluar' },
+  { genre: 'high_fantasy', mood: 'Menara akademi sihir astral, perpustakaan mantra purba, turnamen duel mantra penyihir, artefak pembuka gerbang dimensi' },
+  { genre: 'eldritch_abyss', mood: 'Palung samudra purba yang misterius, kuil tenggelam atlantis, teka-teki teknologi peradaban bawah air yang hilang' },
+  { genre: 'gothic_horror', mood: 'Kastil megah aristokrat malam, katedral terbengkalai berselimut kabut, misteri ordo pemburu perak' }
 ];
 
 /**
- * 1. Generate Cerita & Kampanye Terstruktur menggunakan Gemini AI
+ * 1. Generate Cerita & Kampanye Terstruktur menggunakan Antigravity Agent / Gemini
  */
-async function generateStoryCampaign(themeIndex) {
-  const theme = THEMES[themeIndex % THEMES.length];
+async function generateStoryCampaign(theme) {
+  if (!theme || !theme.genre) {
+    theme = THEMES[Math.floor(Math.random() * THEMES.length)];
+  }
   writeLog(`📜 [World Architect] Merancang kampanye baru bertema: ${theme.genre} (${theme.mood})...`);
 
   const prompt = `Kamu adalah Antigravity World Architect untuk game RPG 'AetherMaster AI'.
-Buat 1 Kampanye cerita baru yang lengkap, orisinal, dan mendalam dalam bahasa Indonesia.
+Buat 1 Kampanye cerita baru yang lengkap, orisinal, kaya imajinasi, dan mendalam dalam bahasa Indonesia.
 Tema: ${theme.genre} (${theme.mood}).
+
+PANDUAN KREATIVITAS (SANGAT PENTING):
+1. JANGAN membuat cerita klise yang hanya berkutat pada "kutukan darah", "arwah penasaran", atau "makam bangkit". Jadikan cerita terasa segar dan unik!
+2. Bangun konflik cerita yang bervariasi sesuai tema:
+   - Eksplorasi & Petualangan: memetakan wilayah baru, memperbaiki mesin/artefak purba, menyelamatkan kru kapal.
+   - Detektif & Misteri: menyelidiki pencurian cetak biru ajaib, membongkar mata-mata faksi, memecahkan teka-teki kunci mekanik.
+   - Diplomasi & Budaya: menengahi sengketa dua klan, memenangkan turnamen persahabatan, festival tahunan mistis.
+   - Penyelamatan & Aksi: memburu binatang mitos langka, mempertahankan oase dari perampok gurun, ekspedisi ilmiah.
+3. Karakter NPC harus hidup dan punya kepribadian khas (cth: insinyur eksentrik cerewet, kapten kapal berjiwa humoris, arkeolog antusias, diplomat bermata elang).
+4. Buat dialog pembuka yang karismatik dan memikat pemain.
 
 PENTING: Keluarkan HANYA JSON valid murni tanpa markdown triple backticks. Format JSON:
 {
   "id": "slug_unik_huruf_kecil_underscore",
-  "title": "Judul Kampanye Epik",
-  "premise": "Latar belakang narasi 2-3 kalimat yang memikat dan memicu krisis.",
+  "title": "Judul Kampanye Kreatif dan Epik",
+  "premise": "Latar belakang narasi 2-3 kalimat yang memikat dan memicu petualangan.",
   "introDialogue": "Dialog pembuka 1-2 kalimat dari DM atau NPC yang menyapa petualang.",
   "genre": "${theme.genre}",
   "threatLevel": "Tier 1 (Level 1-3)" atau "Tier 2 (Level 3-5)",
   "recommendedClasses": ["warrior", "mage", "rogue"],
-  "primarySkill": "Nama Skill Utama (cth: Persepsi & Investigasi)",
-  "icon": "Emoji Ikon (cth: ⚔️, 🏰, 🔮, 🌲)",
+  "primarySkill": "Nama Skill Utama (cth: Persepsi & Investigasi / Alkimia / Negosiasi)",
+  "icon": "Emoji Ikon (cth: ⚔️, 🧭, ⚙️, 🌊, 🦅, 📜)",
   "factions": ["Nama Faksi A", "Nama Faksi B"],
   "location": {
     "name": "Nama Lokasi Utama",
@@ -87,7 +106,7 @@ PENTING: Keluarkan HANYA JSON valid murni tanpa markdown triple backticks. Forma
   },
   "npc": {
     "name": "Nama NPC Kunci",
-    "role": "Questgiver / Informant / Barkeep / Hermit",
+    "role": "Navigator / Insinyur / Arkeolog / Diplomat / Barkeep",
     "dialogue": "Dialog khas NPC saat pertama kali ditemui."
   },
   "quest": {
@@ -97,34 +116,53 @@ PENTING: Keluarkan HANYA JSON valid murni tanpa markdown triple backticks. Forma
     "rewardGold": 45,
     "objectives": [
       {
-        "description": "Langkah pertama (cth: Selidiki jejak kabut di gerbang)",
+        "description": "Langkah pertama (cth: Periksa peta navigasi atau selidiki instrumen)",
         "objectiveType": "INVESTIGATE",
         "requiredCount": 1
       },
       {
-        "description": "Langkah kedua (cth: Temukan kunci segel di ruang bawah)",
+        "description": "Langkah kedua (cth: Buka ruang penyimpanan atau kumpulkan kristal daya)",
         "objectiveType": "EXPLORE",
         "requiredCount": 1
       },
       {
-        "description": "Langkah ketiga (cth: Kalahkan penjaga atau selesaikan ritual)",
+        "description": "Langkah ketiga (cth: Negosiasikan kesepakatan atau kalahkan pemimpin lawan)",
         "objectiveType": "DEFEAT",
         "requiredCount": 1
       }
     ]
   },
-  "imagePrompt": "Detailed English prompt for cover art illustration of this scene (e.g. 'cinematic dark fantasy ruined gothic cathedral with glowing purple runes in fog, digital painting, artstation, 4k')"
+  "imagePrompt": "Detailed English prompt for cover art illustration of this scene (e.g. 'cinematic vibrant solarpunk airship flying over floating cloud islands, digital painting, artstation, 4k')"
 }`;
 
-  // Prioritaskan model dengan kuota segar, lalu tetap simpan 3.5, 3.1, dan 3.8 sebagai opsi fallback saat kuota harian reset
+  // 1. Prioritas Utama: Model Antigravity (Kategori Agents) via Google Interactions API (Kuota 100 RPD / 60 RPM)
+  if (client.interactions && typeof client.interactions.create === 'function') {
+    try {
+      writeLog('• Mencoba Antigravity Agent model (antigravity-preview-latest) via Interactions API...');
+      const response = await client.interactions.create({
+        model: 'antigravity-preview-latest',
+        input: prompt
+      });
+      const text = response.output_text;
+      if (text) {
+        const cleaned = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+        const parsed = JSON.parse(cleaned);
+        writeLog(`✓ [Antigravity Agent] Berhasil membuat kampanye: "${parsed.title}" (ID: ${parsed.id})`);
+        return parsed;
+      }
+    } catch (err) {
+      writeLog(`⚠️ Gagal pada model Antigravity Agent: ${err.message}`);
+    }
+  }
+
+  // 2. Fallback ke Text-out Models standar
   const candidateModels = [
-    'gemini-3.7-flash',
-    'gemini-3.6-flash',
-    'gemini-3-flash-preview',
     'gemini-flash-latest',
+    'gemini-flash-lite-latest',
+    'gemini-3.8-flash',
+    'gemini-3.7-flash',
     'gemini-3.5-flash-lite',
-    'gemini-3.1-flash-lite',
-    'gemini-3.8-flash'
+    'gemini-3.1-flash-lite'
   ];
 
   for (const model of candidateModels) {
@@ -206,51 +244,90 @@ async function saveToDatabase(storyData, coverImageUrl) {
 
   // Kumpulan latar belakang berkualitas tinggi (29 background D&D) per genre
   const genreBgPools = {
-    gothic_horror: [
-      'bg_05_vampire_castle',
-      'bg_15_haunted_graveyard',
-      'bg_11_throne_room',
-      'bg_23_dungeon_torture_chamber',
-      'bg_19_shadowfell_citadel',
-      'bg_25_abandoned_cathedral',
-      'bg_04_crimson_crypt',
+    celestial_astral: [
+      'bg_18_celestial_sanctum',
+      'bg_08_arcane_library',
+      'bg_24_feywild_glade'
+    ],
+    pirate_high_seas: [
+      'bg_20_pirate_ship_deck',
+      'bg_07_smuggler_cave',
+      'bg_03_sunken_citadel',
+      'bg_28_city_market_alley'
+    ],
+    desert_ancient_ruins: [
+      'bg_17_desert_temple',
+      'bg_10_ancient_ruins',
+      'bg_28_city_market_alley'
+    ],
+    frost_expedition: [
+      'bg_14_frost_peak',
+      'bg_22_crystal_mines',
       'bg_10_ancient_ruins'
     ],
-    dark_fantasy: [
-      'bg_01_tavern',
-      'bg_02_cursed_woods',
-      'bg_10_ancient_ruins',
-      'bg_13_lava_forge',
+    steampunk_inventor: [
+      'bg_26_clockwork_vault',
+      'bg_06_alchemy_lab',
       'bg_28_city_market_alley',
-      'bg_16_swamp_huts',
-      'bg_04_crimson_crypt'
+      'bg_13_lava_forge'
     ],
-    eldritch_mystery: [
-      'bg_03_sunken_citadel',
-      'bg_29_abyssal_rift',
-      'bg_07_smuggler_cave',
-      'bg_20_pirate_ship_deck',
-      'bg_12_underdark_cavern'
+    feywild_enchanted: [
+      'bg_24_feywild_glade',
+      'bg_08_arcane_library',
+      'bg_18_celestial_sanctum'
+    ],
+    court_intrigue: [
+      'bg_11_throne_room',
+      'bg_08_arcane_library',
+      'bg_28_city_market_alley'
+    ],
+    dragon_conquest: [
+      'bg_09_dragon_crater',
+      'bg_27_dragon_hoard',
+      'bg_13_lava_forge'
+    ],
+    subterranean_crystal: [
+      'bg_22_crystal_mines',
+      'bg_12_underdark_cavern',
+      'bg_13_lava_forge'
+    ],
+    frontier_war_camp: [
+      'bg_21_goblin_war_camp',
+      'bg_01_tavern',
+      'bg_16_swamp_huts'
     ],
     high_fantasy: [
       'bg_08_arcane_library',
       'bg_18_celestial_sanctum',
       'bg_24_feywild_glade',
-      'bg_09_dragon_crater',
       'bg_27_dragon_hoard'
     ],
+    eldritch_abyss: [
+      'bg_03_sunken_citadel',
+      'bg_29_abyssal_rift',
+      'bg_07_smuggler_cave',
+      'bg_12_underdark_cavern'
+    ],
+    gothic_horror: [
+      'bg_05_vampire_castle',
+      'bg_15_haunted_graveyard',
+      'bg_25_abandoned_cathedral',
+      'bg_04_crimson_crypt',
+      'bg_19_shadowfell_citadel',
+      'bg_23_dungeon_torture_chamber'
+    ],
+    // Alias kompatibilitas genre lama
+    dark_fantasy: [
+      'bg_01_tavern', 'bg_02_cursed_woods', 'bg_10_ancient_ruins', 'bg_16_swamp_huts'
+    ],
+    eldritch_mystery: [
+      'bg_03_sunken_citadel', 'bg_29_abyssal_rift', 'bg_07_smuggler_cave'
+    ],
     steampunk_fantasy: [
-      'bg_26_clockwork_vault',
-      'bg_06_alchemy_lab',
-      'bg_13_lava_forge',
-      'bg_28_city_market_alley'
+      'bg_26_clockwork_vault', 'bg_06_alchemy_lab', 'bg_28_city_market_alley'
     ],
     subterranean_survival: [
-      'bg_12_underdark_cavern',
-      'bg_22_crystal_mines',
-      'bg_14_frost_peak',
-      'bg_16_swamp_huts',
-      'bg_17_desert_temple'
+      'bg_12_underdark_cavern', 'bg_22_crystal_mines', 'bg_14_frost_peak'
     ]
   };
 
@@ -379,8 +456,27 @@ async function executeCycle() {
   const startTime = Date.now();
 
   try {
-    // 1. Generate Cerita Kampanye
-    const storyData = await generateStoryCampaign(cycleCount);
+    // 1. Pilih tema cerita secara dinamis & seimbang dari database agar beragam dan tidak mengulang
+    let chosenTheme;
+    try {
+      const existingCampaigns = await Campaign.findAll({ attributes: ['genre'] });
+      const genreCounts = {};
+      THEMES.forEach(t => { genreCounts[t.genre] = 0; });
+      existingCampaigns.forEach(c => {
+        if (c.genre && genreCounts[c.genre] !== undefined) {
+          genreCounts[c.genre]++;
+        }
+      });
+
+      const minCount = Math.min(...Object.values(genreCounts));
+      const leastUsedThemes = THEMES.filter(t => (genreCounts[t.genre] || 0) <= minCount);
+      chosenTheme = leastUsedThemes[Math.floor(Math.random() * leastUsedThemes.length)];
+    } catch (e) {
+      chosenTheme = THEMES[Math.floor(Math.random() * THEMES.length)];
+    }
+
+    // 2. Generate Cerita Kampanye
+    const storyData = await generateStoryCampaign(chosenTheme);
 
     // 2. Generate Cover Image dengan Nano Banana Agent
     const coverImageUrl = await generateImageWithNanoBanana(storyData.imagePrompt, storyData.id);

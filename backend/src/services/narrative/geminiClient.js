@@ -94,14 +94,31 @@ class GeminiClient {
       throw new Error('Gemini API client is not initialized or API key is missing');
     }
 
+    // 1. Coba Antigravity Agent Model via Interactions API (Kategori Agents, kuota 100 RPD)
+    if (this.client.interactions && typeof this.client.interactions.create === 'function') {
+      try {
+        const fullPrompt = systemPrompt ? `${systemPrompt}\n\n${prompt}` : prompt;
+        const response = await this.client.interactions.create({
+          model: 'antigravity-preview-latest',
+          input: fullPrompt
+        });
+        if (response && response.output_text) {
+          return response.output_text.trim();
+        }
+      } catch (err) {
+        const sanitizedMsg = sanitizeLog(err.message, this.apiKey);
+        console.warn(`[GeminiClient] Antigravity Agent model fallback: ${sanitizedMsg}`);
+      }
+    }
+
+    // 2. Fallback ke Text-out models
     const candidateModels = [
-      'gemini-3.7-flash',
-      'gemini-3.6-flash',
-      'gemini-3-flash-preview',
       'gemini-flash-latest',
+      'gemini-flash-lite-latest',
+      'gemini-3.8-flash',
+      'gemini-3.7-flash',
       'gemini-3.5-flash-lite',
-      'gemini-3.1-flash-lite',
-      'gemini-3.8-flash'
+      'gemini-3.1-flash-lite'
     ].filter((m, i, arr) => Boolean(m) && arr.indexOf(m) === i);
 
     let lastError = null;
