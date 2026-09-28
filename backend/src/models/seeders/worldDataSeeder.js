@@ -2,7 +2,6 @@ const Item = require('../Item');
 const NPC = require('../NPC');
 const Location = require('../Location');
 const Quest = require('../Quest');
-const QuestObjective = require('../QuestObjective');
 
 const itemsData = [
   {
@@ -764,17 +763,12 @@ async function seedWorldData() {
   }
   console.log(`[WorldDataSeeder] Synced ${npcsData.length} NPCs to database.`);
 
-  // 4. Seed Quests & Objectives
+  // 4. Seed Quests
   for (const q of questsData) {
     const { objectives, ...questFields } = q;
     await Quest.upsert(questFields);
-    if (Array.isArray(objectives)) {
-      for (const obj of objectives) {
-        await QuestObjective.upsert({ ...obj, questId: q.id });
-      }
-    }
   }
-  console.log(`[WorldDataSeeder] Synced ${questsData.length} master quests and objectives to database.`);
+  console.log(`[WorldDataSeeder] Synced ${questsData.length} master quests to database.`);
 }
 
 module.exports = {

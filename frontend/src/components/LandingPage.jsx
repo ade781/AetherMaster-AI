@@ -5,13 +5,13 @@ import {
   X,
   Scroll,
   Compass,
-  ChevronDown
+  ChevronDown,
+  Play,
+  Sparkles
 } from 'lucide-react';
 import { IconSwords } from './icons/FantasyIcons';
-
-import HeroBanner from './landing/HeroBanner';
 import CampaignGrid from './landing/CampaignGrid';
-import FeaturesShowcase from './landing/FeaturesShowcase';
+import audio from '../services/audioService';
 
 export default function LandingPage({
   campaigns = [],
@@ -44,8 +44,8 @@ export default function LandingPage({
             <div className="w-9 h-9 rounded-lg bg-slate-900 border border-amber-500/40 flex items-center justify-center p-1 shadow-sm group-hover:border-amber-400 transition-colors">
               <IconSwords className="w-6 h-6" />
             </div>
-            <span className="font-cinzel text-base md:text-lg font-bold tracking-wide text-white group-hover:text-amber-400 transition-colors">
-              /aethermaster
+            <span className="font-cinzel text-base md:text-lg font-bold tracking-wider text-white group-hover:text-amber-400 transition-colors">
+              AETHERMASTER AI
             </span>
           </a>
         </div>
@@ -54,22 +54,22 @@ export default function LandingPage({
         <nav className="hidden md:flex items-center gap-6 text-xs font-medium text-slate-300">
           <button
             onClick={() => scrollToSection('campaigns')}
-            className="flex items-center gap-1.5 hover:text-white transition-colors"
+            className="flex items-center gap-1.5 hover:text-white transition-colors cursor-pointer"
           >
-            Kampanye ({campaigns.length})
+            Pilih Kampanye ({campaigns.length})
             <ChevronDown className="w-3.5 h-3.5 opacity-70" />
           </button>
 
           <button
             onClick={() => setActiveModal('rules')}
-            className="flex items-center gap-1.5 hover:text-white transition-colors"
+            className="flex items-center gap-1.5 hover:text-white transition-colors cursor-pointer"
           >
-            Sistem 5E
+            Sistem D&amp;D 5E
           </button>
 
           <button
             onClick={() => setActiveModal('guide')}
-            className="hover:text-white transition-colors"
+            className="hover:text-white transition-colors cursor-pointer"
           >
             Panduan
           </button>
@@ -82,11 +82,11 @@ export default function LandingPage({
         {/* Top Right Save Load */}
         <div className="hidden md:flex items-center gap-3">
           <button
-            onClick={onOpenSaveLoad}
-            className="px-4 py-2 rounded-full bg-white/10 hover:bg-white/15 border border-white/20 text-xs font-medium text-white backdrop-blur-md transition-all hover:scale-105 active:scale-95 flex items-center gap-2 shadow-lg min-h-[40px]"
+            onClick={() => { audio.playClick(); onOpenSaveLoad(); }}
+            className="px-4 py-2 rounded-full bg-white/10 hover:bg-white/15 border border-white/20 text-xs font-medium text-white backdrop-blur-md transition-all hover:scale-105 active:scale-95 flex items-center gap-2 shadow-lg min-h-[40px] cursor-pointer"
           >
             <BookOpen className="w-3.5 h-3.5 text-amber-400" />
-            Muat Save Game
+            Lanjutkan Permainan
           </button>
         </div>
 
@@ -94,7 +94,7 @@ export default function LandingPage({
         <div className="flex md:hidden items-center gap-2">
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 min-h-[44px] min-w-[44px] flex items-center justify-center"
+            className="p-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer"
             aria-label="Toggle navigation menu"
           >
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -130,23 +130,84 @@ export default function LandingPage({
           </div>
           <div className="pt-2 border-t border-slate-800">
             <button
-              onClick={() => { setMobileMenuOpen(false); onOpenSaveLoad(); }}
+              onClick={() => { setMobileMenuOpen(false); audio.playClick(); onOpenSaveLoad(); }}
               className="w-full py-2.5 rounded-xl bg-amber-500/20 border border-amber-500/50 text-amber-300 font-medium text-xs flex items-center justify-center gap-2 min-h-[44px]"
             >
               <BookOpen className="w-4 h-4" />
-              Muat Save Game
+              Lanjutkan Permainan (Load Save)
             </button>
           </div>
         </div>
       )}
 
-      {/* 1. Hero Banner Component */}
-      <HeroBanner
-        onStartAdventure={() => scrollToSection('campaigns')}
-        onOpenRules={() => setActiveModal('rules')}
-        showToast={showToast}
-        campaignCount={campaigns.length}
-      />
+      {/* 1. Focused Cinematic Hero Banner */}
+      <section className="relative min-h-[92vh] md:min-h-screen w-full flex flex-col justify-between overflow-hidden">
+        {/* Background Image with Cinematic Scrim and Vignette */}
+        <div
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat z-0 transform scale-100"
+          style={{ backgroundImage: "url('/assets/hero_bg.jpg')" }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-b from-slate-950/85 via-slate-950/50 to-slate-950" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_25%,rgba(9,10,15,0.85)_100%)]" />
+        </div>
+
+        {/* Center Hero Content */}
+        <div className="relative z-10 max-w-4xl mx-auto px-6 text-center my-auto pt-28 md:pt-32 pb-12 flex flex-col items-center">
+          {/* Feature Badges */}
+          <div className="flex items-center justify-center gap-2.5 mb-5 flex-wrap">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/80 border border-amber-500/40 text-amber-400 text-xs font-mono font-semibold tracking-wider shadow-lg backdrop-blur-md">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <span>D&amp;D 5E VTT Engine</span>
+            </div>
+            {campaigns.length > 0 && (
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/15 border border-amber-400/40 text-amber-300 text-xs font-mono font-semibold tracking-wider shadow-lg backdrop-blur-md">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>{campaigns.length} Modul Petualangan Tersedia</span>
+              </div>
+            )}
+          </div>
+
+          {/* Main Display Headline */}
+          <h1 className="font-cinzel text-4xl sm:text-6xl md:text-7xl font-bold tracking-tight text-white drop-shadow-md leading-[1.1]">
+            AETHERMASTER AI
+          </h1>
+
+          {/* Tagline */}
+          <p className="mt-4 max-w-2xl text-lg sm:text-xl md:text-2xl text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-300 to-amber-100 font-cinzel font-semibold tracking-wide drop-shadow-sm">
+            Visual Novel RPG dengan AI Dungeon Master
+          </p>
+
+          <p className="mt-4 max-w-2xl text-sm md:text-base text-slate-300 font-light leading-relaxed">
+            Jelajahi petualangan fantasi interaktif berformat visual novel dengan narasi adaptif bercabang, keputusan taktis penuh konsekuensi, dan evaluasi aksi server-authoritative D&amp;D 5E.
+          </p>
+
+          {/* Dual Action CTA Buttons: Mulai Petualangan & Lanjutkan */}
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+            <button
+              onClick={() => { audio.playSelect(); scrollToSection('campaigns'); }}
+              className="px-8 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-cinzel font-bold text-sm tracking-wider shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30 transition-all hover:scale-105 active:scale-95 flex items-center gap-2.5 min-h-[48px] cursor-pointer"
+            >
+              <Play className="w-4 h-4 fill-slate-950" />
+              <span>Mulai Petualangan</span>
+            </button>
+
+            <button
+              onClick={() => { audio.playClick(); onOpenSaveLoad(); }}
+              className="px-7 py-3.5 rounded-xl bg-slate-900/80 hover:bg-slate-800/90 border border-amber-500/40 hover:border-amber-400 text-amber-300 font-cinzel font-semibold text-xs tracking-wider backdrop-blur-md transition-all hover:scale-105 active:scale-95 flex items-center gap-2 min-h-[48px] cursor-pointer"
+            >
+              <BookOpen className="w-4 h-4 text-amber-400" />
+              <span>Lanjutkan (Load Game)</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Bottom Hero Subtle Note */}
+        <div className="relative z-10 w-full pb-8 pt-4 px-6 text-center">
+          <p className="text-xs text-slate-400/80 font-normal max-w-xl mx-auto leading-relaxed">
+            Dungeon Master cerdas merespons segala aksi bebasmu secara hidup dan adaptif.
+          </p>
+        </div>
+      </section>
 
       {/* 2. Dynamic Campaign Grid Component (Populated from DB) */}
       <CampaignGrid
@@ -154,9 +215,6 @@ export default function LandingPage({
         initLoading={initLoading}
         onSelectCampaign={onSelectCampaign}
       />
-
-      {/* 3. Features Showcase Component */}
-      <FeaturesShowcase />
 
       {/* 4. Footer */}
       <footer className="relative z-20 w-full border-t border-slate-800/80 bg-slate-950 py-8 px-6 md:px-12 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-500 font-mono">

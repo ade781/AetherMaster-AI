@@ -124,8 +124,6 @@ export default function VisualNovelStage({
   onChooseAction,
   onOpenStoryTree,
   onOpenSaveLoad,
-  onOpenJournal,
-  onOpenQuest,
   onToggleInventory,
   onExitSession,
   isLoading,
@@ -170,7 +168,7 @@ export default function VisualNovelStage({
     }
   }, [isTyping, fullText]);
 
-  // Keyboard shortcut listener: Space/Enter skips, I inventory, M story tree, J journal, Q quest
+  // Keyboard shortcut listener: Space/Enter skips, I inventory, M story tree
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (['INPUT', 'TEXTAREA'].includes(e.target?.tagName)) return;
@@ -185,19 +183,11 @@ export default function VisualNovelStage({
         e.preventDefault();
         audio.playClick();
         onOpenStoryTree?.();
-      } else if (e.key === 'j' || e.key === 'J') {
-        e.preventDefault();
-        audio.playClick();
-        onOpenJournal?.();
-      } else if (e.key === 'q' || e.key === 'Q') {
-        e.preventDefault();
-        audio.playClick();
-        onOpenQuest?.();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleSkipTypewriter, onToggleInventory, onOpenStoryTree, onOpenJournal, onOpenQuest]);
+  }, [handleSkipTypewriter, onToggleInventory, onOpenStoryTree]);
 
   // Background music & ambient soundscape sync based on scene atmosphere & player choice
   const resolveSceneBgm = useCallback((bgId) => {
@@ -420,25 +410,7 @@ export default function VisualNovelStage({
             >
               {speechEnabled ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
             </button>
-            <div className="w-[1px] h-5 bg-white/20 my-auto" />
-            <button
-              id="topbar-btn-journal"
-              onClick={() => { audio.playClick(); onOpenJournal?.(); }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-amber-300 hover:text-amber-200 hover:bg-amber-500/10 transition-all min-h-[40px]"
-              title="Buka Jurnal Dunia & Fakta (Hotkey: J)"
-            >
-              <BookOpen className="w-3.5 h-3.5 text-amber-400" />
-              <span className="hidden sm:inline">Jurnal</span>
-            </button>
-            <button
-              id="topbar-btn-quest"
-              onClick={() => { audio.playClick(); onOpenQuest?.(); }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-cyan-300 hover:text-cyan-200 hover:bg-cyan-500/10 transition-all min-h-[40px]"
-              title="Buka Daftar Misi & Sasaran (Hotkey: Q)"
-            >
-              <Target className="w-3.5 h-3.5 text-cyan-400" />
-              <span className="hidden sm:inline">Misi</span>
-            </button>
+
             <button
               onClick={() => { audio.playClick(); onOpenStoryTree(); }}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-slate-200 hover:text-white hover:bg-white/10 transition-all min-h-[40px]"
@@ -502,24 +474,6 @@ export default function VisualNovelStage({
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">
-              <button
-                id="journal-card-btn-quest"
-                onClick={() => { audio.playClick(); onOpenQuest?.(); }}
-                className="px-2.5 py-1 rounded-full bg-cyan-950/60 hover:bg-cyan-900/60 border border-cyan-500/30 text-cyan-300 text-[11px] font-semibold flex items-center gap-1.5 transition-all shadow-inner"
-                title="Lihat Rincian Sasaran & Objektif Misi"
-              >
-                <Target className="w-3 h-3 text-cyan-400" />
-                <span>Detail Misi</span>
-              </button>
-              <button
-                id="journal-card-btn-journal"
-                onClick={() => { audio.playClick(); onOpenJournal?.(); }}
-                className="px-2.5 py-1 rounded-full bg-amber-950/60 hover:bg-amber-900/60 border border-amber-500/30 text-amber-300 text-[11px] font-semibold flex items-center gap-1.5 transition-all shadow-inner"
-                title="Buka Jurnal Dunia & Fakta"
-              >
-                <BookOpen className="w-3 h-3 text-amber-400" />
-                <span>Jurnal</span>
-              </button>
               <div className="px-3 py-1 rounded-full bg-amber-950/50 border border-amber-500/30 text-amber-300 text-xs font-semibold flex items-center gap-2 shadow-inner">
                 <Compass className="w-3.5 h-3.5 text-amber-400" />
                 <span>Babak {session?.turnCount || 1} dari {campaign?.totalActs || 12}</span>

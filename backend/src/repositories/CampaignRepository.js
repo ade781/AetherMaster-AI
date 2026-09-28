@@ -1,4 +1,4 @@
-const { Campaign, Location, NPC, Quest, QuestObjective } = require('../models');
+const { Campaign, Location, NPC, Quest } = require('../models');
 
 class CampaignRepository {
   static async findById(id) {
@@ -8,10 +8,7 @@ class CampaignRepository {
         include: [
           { model: Location },
           { model: NPC },
-          {
-            model: Quest,
-            include: [{ model: QuestObjective, as: 'objectives' }]
-          }
+          { model: Quest }
         ]
       });
       return camp ? camp.toJSON() : null;

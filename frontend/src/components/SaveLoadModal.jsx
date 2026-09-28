@@ -115,10 +115,10 @@ export default function SaveLoadModal({
   };
 
   const slotLabels = [
-    { num: 0, title: 'Auto-Save' },
-    { num: 1, title: 'Manual Slot 1' },
-    { num: 2, title: 'Manual Slot 2' },
-    { num: 3, title: 'Manual Slot 3' }
+    { num: 0, title: 'Slot 0: Auto Save (Hanya Muat)' },
+    { num: 1, title: 'Slot 1: Manual Save 1' },
+    { num: 2, title: 'Manual Save 2' },
+    { num: 3, title: 'Manual Save 3' }
   ];
 
   return (
@@ -132,16 +132,16 @@ export default function SaveLoadModal({
             </div>
             <div>
               <h2 className="font-cinzel text-lg md:text-xl font-bold text-emerald-400 tracking-wide">
-                Penyimpanan Lokal Multi-Slot & JSON Porter
+                Penyimpanan Permainan (4 Slot) &amp; Berkas JSON
               </h2>
               <p className="text-xs text-slate-400">
-                Simpan progres petualanganmu ke database atau unduh berkas JSON.
+                Simpan progres petualanganmu ke slot lokal atau unduh berkas JSON.
               </p>
             </div>
           </div>
           <button
             onClick={() => { audio.playClick(); onClose(); }}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -211,14 +211,14 @@ export default function SaveLoadModal({
                       <div className="pt-2 flex items-center gap-2">
                         <button
                           onClick={() => handleLoadFromSlot(num)}
-                          className="flex-1 py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-cinzel font-bold text-xs transition-colors"
+                          className="flex-1 py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-cinzel font-bold text-xs transition-colors cursor-pointer"
                         >
                           Muat (Load)
                         </button>
                         {num !== 0 && sessionId && (
                           <button
                             onClick={() => handleSaveToSlot(num)}
-                            className="py-1.5 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-cinzel text-xs border border-slate-700 transition-colors"
+                            className="py-1.5 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-cinzel text-xs border border-slate-700 transition-colors cursor-pointer"
                           >
                             Timpa (Save)
                           </button>
@@ -227,11 +227,13 @@ export default function SaveLoadModal({
                     </div>
                   ) : (
                     <div className="py-6 text-center space-y-2">
-                      <p className="text-xs text-slate-500">Slot simpanan masih kosong.</p>
+                      <p className="text-xs text-slate-500">
+                        {num === 0 ? 'Belum ada rekaman auto-save.' : 'Slot manual ini masih kosong.'}
+                      </p>
                       {num !== 0 && sessionId && (
                         <button
                           onClick={() => handleSaveToSlot(num)}
-                          className="py-1.5 px-4 rounded-lg bg-emerald-600/80 hover:bg-emerald-500 text-slate-950 font-cinzel font-bold text-xs transition-colors"
+                          className="py-1.5 px-4 rounded-lg bg-emerald-600/80 hover:bg-emerald-500 text-slate-950 font-cinzel font-bold text-xs transition-colors cursor-pointer"
                         >
                           Simpan ke Sini
                         </button>

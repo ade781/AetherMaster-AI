@@ -1,98 +1,61 @@
 import React, { useState } from 'react';
-import { Shield, Sparkles, Wand2, Swords, Crosshair, Heart, Footprints, Flame, Music, Check, X } from 'lucide-react';
+import { Shield, Wand2, Swords, Footprints, Check, X, Heart, Sparkles } from 'lucide-react';
 import audio from '../services/audioService';
 import { calculateMod } from '../utils/rpgMath';
 
 const CLASSES = [
   {
     id: 'warrior',
-    name: 'Warrior (Fighter)',
+    name: 'Warrior',
+    title: 'Fighter & Vanguard',
     icon: Swords,
-    desc: 'Mahir senjata berat, pertahanan baja kokoh, dan HP tertinggi di garis depan.',
-    stats: { hp: 35, mana: 15, str: 16, dex: 12, con: 15, int: 9, wis: 10, cha: 11 },
-    avatar: 'char_hero_01_paladin',
-    starterItem: { id: 'item_08_dragon_shield', name: 'Dragon Shield', category: 'Perisai', effect: '+2 AC Pertahanan', icon: 'item_08_dragon_shield' }
+    focus: 'HP Tinggi & Pertarungan Fisik',
+    desc: 'Ahli senjata tempur berat dan pertahanan baja kokoh. Memiliki HP tertinggi untuk memimpin pertempuran di garis depan.',
+    stats: { hp: 35, mana: 12, str: 16, dex: 12, con: 15, int: 9, wis: 10, cha: 11 },
+    avatar: 'char_hero_04_dwarf',
+    starterItem: { id: 'item_11_flame_sword', name: 'Iron Greatsword', category: 'Senjata', effect: '+5 Serangan Fisik Tebasan', icon: 'item_11_flame_sword' }
   },
   {
     id: 'rogue',
-    name: 'Rogue (Shadow)',
+    name: 'Rogue',
+    title: 'Shadow Infiltrator',
     icon: Footprints,
-    desc: 'Ahli stealth, membuka kunci perangkap, dan melancarkan serangan kritikal.',
-    stats: { hp: 28, mana: 18, str: 10, dex: 16, con: 12, int: 13, wis: 12, cha: 14 },
+    focus: 'Agility, Stealth & Critical',
+    desc: 'Pakar menyusup dalam bayangan, membobol jebakan, dan meluncurkan serangan kritikal mematikan dengan refleks secepat kilat.',
+    stats: { hp: 28, mana: 16, str: 10, dex: 16, con: 12, int: 13, wis: 12, cha: 14 },
     avatar: 'char_hero_05_rogue',
-    starterItem: { id: 'item_04_silver_dagger', name: 'Silver Dagger', category: 'Senjata', effect: 'Bonus serangan cepat', icon: 'item_04_silver_dagger' }
+    starterItem: { id: 'item_04_silver_dagger', name: 'Silver Dagger', category: 'Senjata', effect: 'Bonus serangan cepat & kritikal', icon: 'item_04_silver_dagger' }
   },
   {
     id: 'mage',
-    name: 'Mage (Wizard)',
+    name: 'Mage',
+    title: 'Arcane Spellcaster',
     icon: Wand2,
-    desc: 'Penguasa mantra elemen Aether, manipulasi ruang, dan analisa arkanum.',
+    focus: 'Intelligence & Spellcasting',
+    desc: 'Pengendali energi Aether murni dan manipulasi elemen arkanum. Didukung cadangan Mana melimpah untuk mantra penghancur.',
     stats: { hp: 24, mana: 35, str: 8, dex: 13, con: 11, int: 17, wis: 14, cha: 10 },
     avatar: 'char_hero_03_wizard',
     starterItem: { id: 'item_03_grimoire', name: 'Ancient Grimoire', category: 'Relik', effect: '+15 Max Mana', icon: 'item_03_grimoire' }
   },
   {
-    id: 'cleric',
-    name: 'Cleric (Battle Priest)',
-    icon: Sparkles,
-    desc: 'Diberkati cahaya suci penyembuh, penghalau arwah terkutuk, dan penegak keadilan.',
-    stats: { hp: 30, mana: 25, str: 13, dex: 10, con: 14, int: 10, wis: 16, cha: 13 },
-    avatar: 'char_hero_06_cleric',
-    starterItem: { id: 'item_05_cursed_amulet', name: 'Blessed Talisman', category: 'Amulet', effect: 'Perlindungan dari kutukan', icon: 'item_05_cursed_amulet' }
-  },
-  {
-    id: 'ranger',
-    name: 'High-Elf Ranger',
-    icon: Crosshair,
-    desc: 'Penembak runduk ulung, navigasi rimba liar, dan indra penglihatan tajam.',
-    stats: { hp: 28, mana: 20, str: 11, dex: 17, con: 13, int: 12, wis: 15, cha: 10 },
-    avatar: 'char_hero_02_ranger',
-    starterItem: { id: 'item_07_golden_compass', name: 'Golden Compass', category: 'Alat', effect: '+2 WIS saat eksplorasi', icon: 'item_07_golden_compass' }
-  },
-  {
-    id: 'warlock',
-    name: 'Tiefling Warlock',
-    icon: Flame,
-    desc: 'Menjalin pakta gelap dengan entitas eldritch untuk kekuatan sihir destruktif.',
-    stats: { hp: 26, mana: 30, str: 9, dex: 14, con: 12, int: 14, wis: 11, cha: 17 },
-    avatar: 'char_hero_07_warlock',
-    starterItem: { id: 'item_02_potion_mana', name: 'Celestial Mana Elixir', category: 'Obat', effect: 'Pulihkan 20 Mana', icon: 'item_02_potion_mana' }
-  },
-  {
-    id: 'barbarian',
-    name: 'Mountain Dwarf Barbarian',
-    icon: Swords,
-    desc: 'Amukan perang tanpa ampun, ketahanan fisik batu karang, dan tebasan kapak maut.',
-    stats: { hp: 38, mana: 10, str: 17, dex: 13, con: 16, int: 8, wis: 11, cha: 9 },
-    avatar: 'char_hero_04_dwarf',
-    starterItem: { id: 'item_11_flame_sword', name: 'Flame Sword', category: 'Senjata', effect: '+5 Serangan Api', icon: 'item_11_flame_sword' }
-  },
-  {
-    id: 'dragonborn',
-    name: 'Red Dragonborn Fighter',
-    icon: Flame,
-    desc: 'Pendekar naga merah gagah berpelindung sisik keras anti-senjata dengan nafas lahar.',
-    stats: { hp: 36, mana: 12, str: 17, dex: 11, con: 15, int: 10, wis: 10, cha: 13 },
-    avatar: 'char_hero_08_dragonborn',
-    starterItem: { id: 'item_08_dragon_shield', name: 'Dragon Shield', category: 'Perisai', effect: '+2 AC Pertahanan', icon: 'item_08_dragon_shield' }
-  },
-  {
-    id: 'bard',
-    name: 'Half-Elf Bard',
-    icon: Music,
-    desc: 'Musisi pengembara karismatik, ahli mantra persuasi gaib, dan penyemangat tempur.',
-    stats: { hp: 26, mana: 24, str: 10, dex: 14, con: 12, int: 12, wis: 12, cha: 17 },
-    avatar: 'char_hero_09_bard',
-    starterItem: { id: 'item_17_dragon_horn', name: 'Dragon War Horn', category: 'Instrumen', effect: 'Panggil arwah sekutu tempur', icon: 'item_17_dragon_horn' }
+    id: 'paladin',
+    name: 'Paladin',
+    title: 'Holy Guardian',
+    icon: Shield,
+    focus: 'Hybrid Tank & Holy Support',
+    desc: 'Ksatria suci bertameng tebal penahan serangan musuh, diperkuat berkah cahaya penyembuh dan aura perlindungan sekutu.',
+    stats: { hp: 32, mana: 22, str: 15, dex: 10, con: 14, int: 10, wis: 13, cha: 15 },
+    avatar: 'char_hero_01_paladin',
+    starterItem: { id: 'item_08_dragon_shield', name: 'Dragon Shield', category: 'Perisai', effect: '+2 AC Pertahanan Suci', icon: 'item_08_dragon_shield' }
   }
 ];
 
 const RACES = [
   { id: 'human', name: 'Human', trait: '+1 ke Seluruh Atribut' },
-  { id: 'elf', name: 'High Elf', trait: 'Kepekaan Penglihatan Kegelapan & Imun Tidur' },
-  { id: 'dwarf', name: 'Mountain Dwarf', trait: 'Ketahanan Racun & Bonus Pertahanan Fisik' },
-  { id: 'tiefling', name: 'Tiefling', trait: 'Resistensi Api Api Neraka & Sihir Gelap' },
-  { id: 'dragonborn', name: 'Dragonborn', trait: 'Nafas Elemen Naga & Sisik Keras' }
+  { id: 'elf', name: 'High Elf', trait: 'Kepekaan Penglihatan & Imun Tidur' },
+  { id: 'dwarf', name: 'Mountain Dwarf', trait: 'Ketahanan Racun & Bonus Pertahanan' },
+  { id: 'tiefling', name: 'Tiefling', trait: 'Resistensi Api & Sihir Gelap' },
+  { id: 'dragonborn', name: 'Dragonborn', trait: 'Nafas Naga & Sisik Keras' }
 ];
 
 export default function CharacterCreationModal({ isOpen, onClose, onConfirm, campaign, isLoading }) {
@@ -131,8 +94,6 @@ export default function CharacterCreationModal({ isOpen, onClose, onConfirm, cam
     });
   };
 
-
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
       <div className="relative w-full max-w-4xl bg-fantasy-card border-2 border-fantasy-gold/50 rounded-2xl shadow-2xl shadow-fantasy-dark overflow-hidden flex flex-col max-h-[90vh]">
@@ -149,7 +110,7 @@ export default function CharacterCreationModal({ isOpen, onClose, onConfirm, cam
           </div>
           <button
             onClick={() => { audio.playClick(); onClose(); }}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
             title="Tutup"
           >
             <X className="w-5 h-5" />
@@ -179,17 +140,17 @@ export default function CharacterCreationModal({ isOpen, onClose, onConfirm, cam
               <label className="block font-cinzel text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
                 Ras Petualang
               </label>
-              <div className="grid grid-cols-3 gap-2">
-                {RACES.slice(0, 3).map((r) => (
+              <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
+                {RACES.map((r) => (
                   <button
                     type="button"
                     key={r.id}
                     onClick={() => handleSelectRace(r)}
-                    className={`py-2 px-2 text-xs font-medium rounded-lg border transition-all truncate ${
+                    className={`py-2 px-1 text-[11px] font-medium rounded-lg border transition-all text-center truncate ${
                       selectedRace.id === r.id
-                        ? 'bg-fantasy-gold/20 border-fantasy-gold text-fantasy-gold shadow-sm'
+                        ? 'bg-fantasy-gold/20 border-fantasy-gold text-fantasy-gold shadow-sm font-semibold'
                         : 'bg-slate-900 border-slate-700 text-slate-400 hover:border-slate-500'
-                    } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    } ${isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                     disabled={isLoading}
                   >
                     {r.name}
@@ -199,12 +160,12 @@ export default function CharacterCreationModal({ isOpen, onClose, onConfirm, cam
             </div>
           </div>
 
-          {/* Class Picker */}
+          {/* Class Picker - 4 Classic Archetypes */}
           <div>
-            <label className="block font-cinzel text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
-              Pilih Kelas (D&D 5E Archetype)
+            <label className="block font-cinzel text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2.5">
+              Pilih Kelas (4 Fondasi D&D 5E)
             </label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
               {CLASSES.map((cls) => {
                 const Icon = cls.icon;
                 const isSelected = selectedClass.id === cls.id;
@@ -213,14 +174,19 @@ export default function CharacterCreationModal({ isOpen, onClose, onConfirm, cam
                     type="button"
                     key={cls.id}
                     onClick={() => handleSelectClass(cls)}
-                    className={`p-3 rounded-xl border flex flex-col items-center text-center transition-all ${
+                    className={`p-3.5 rounded-xl border flex flex-col items-center text-center transition-all cursor-pointer relative ${
                       isSelected
-                        ? 'bg-gradient-to-b from-fantasy-gold/20 to-slate-900 border-fantasy-gold shadow-lg shadow-fantasy-gold/20 scale-[1.03]'
+                        ? 'bg-gradient-to-b from-fantasy-gold/25 via-slate-900 to-slate-950 border-fantasy-gold shadow-xl shadow-fantasy-gold/20 scale-[1.02]'
                         : 'bg-slate-950/70 border-slate-800 hover:border-slate-600 opacity-80 hover:opacity-100'
                     } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                     disabled={isLoading}
                   >
-                    <div className="w-12 h-12 rounded-lg overflow-hidden border border-fantasy-border/60 mb-2 bg-slate-900">
+                    {isSelected && (
+                      <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-fantasy-gold text-slate-950 flex items-center justify-center shadow-md">
+                        <Check className="w-3 h-3 stroke-[3]" />
+                      </div>
+                    )}
+                    <div className="w-16 h-16 rounded-xl overflow-hidden border border-fantasy-border/60 mb-2.5 bg-slate-900 shadow-md">
                       <img
                         src={`/assets/portraits/${cls.avatar}.png`}
                         alt={cls.name}
@@ -228,12 +194,23 @@ export default function CharacterCreationModal({ isOpen, onClose, onConfirm, cam
                         onError={(e) => { e.target.src = '/assets/portraits/char_hero_01_paladin.png'; }}
                       />
                     </div>
-                    <span className="font-cinzel text-xs font-bold text-white leading-tight">
-                      {cls.name.split(' ')[0]}
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <Icon className="w-3.5 h-3.5 text-fantasy-gold" />
+                      <span className="font-cinzel text-sm font-bold text-white tracking-wide">
+                        {cls.name}
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-amber-300/80 font-medium px-2 py-0.5 rounded-full bg-amber-400/10 border border-amber-400/20 mb-2">
+                      {cls.focus}
                     </span>
-                    <span className="text-[10px] text-slate-400 mt-0.5">
-                      HP {cls.stats.hp}
-                    </span>
+                    <div className="flex items-center justify-center gap-3 text-[10px] text-slate-300 w-full pt-1.5 border-t border-slate-800/80">
+                      <span className="flex items-center gap-1 text-rose-400 font-mono font-semibold">
+                        <Heart className="w-2.5 h-2.5 fill-rose-500" /> {cls.stats.hp} HP
+                      </span>
+                      <span className="flex items-center gap-1 text-sky-400 font-mono font-semibold">
+                        <Sparkles className="w-2.5 h-2.5" /> {cls.stats.mana} Mana
+                      </span>
+                    </div>
                   </button>
                 );
               })}

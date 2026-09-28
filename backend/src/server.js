@@ -86,11 +86,8 @@ app.get(['/api/health', '/health', '/api'], (req, res) => {
   });
 });
 
-// Routes (supporting /api/story, /story, /api, and / for flexible reverse proxies)
+// Canonical Story Routes
 app.use('/api/story', storyRoutes);
-app.use('/story', storyRoutes);
-app.use('/api', storyRoutes);
-app.use('/', storyRoutes);
 
 // Global error handler
 app.use((err, req, res, next) => {

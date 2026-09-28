@@ -7,8 +7,6 @@ import CharacterCreationModal from './components/CharacterCreationModal';
 import StoryTreeModal from './components/StoryTreeModal';
 import SaveLoadModal from './components/SaveLoadModal';
 import GameOverModal from './components/GameOverModal';
-import JournalModal from './components/JournalModal';
-import QuestModal from './components/QuestModal';
 import LandingPage from './components/LandingPage';
 
 function MainGame() {
@@ -32,10 +30,6 @@ function MainGame() {
     setIsSaveLoadOpen,
     isInventoryOpen,
     setIsInventoryOpen,
-    isJournalOpen,
-    setIsJournalOpen,
-    isQuestOpen,
-    setIsQuestOpen,
     isLoading,
     initLoading,
     toast,
@@ -131,8 +125,6 @@ function MainGame() {
           onChooseAction={handleChooseAction}
           onOpenStoryTree={() => setIsStoryTreeOpen(true)}
           onOpenSaveLoad={() => setIsSaveLoadOpen(true)}
-          onOpenJournal={() => setIsJournalOpen(true)}
-          onOpenQuest={() => setIsQuestOpen(true)}
           onToggleInventory={() => setIsInventoryOpen(prev => !prev)}
           onExitSession={handleExitSession}
           isLoading={isLoading}
@@ -164,25 +156,6 @@ function MainGame() {
         onLoadSession={handleLoadSession}
       />
 
-      {/* Journal Modal */}
-      <JournalModal
-        isOpen={isJournalOpen}
-        onClose={() => setIsJournalOpen(false)}
-        sessionId={session?.id}
-        session={session}
-        character={character}
-        campaign={selectedCampaign || session?.Campaign}
-      />
-
-      {/* Quest Modal */}
-      <QuestModal
-        isOpen={isQuestOpen}
-        onClose={() => setIsQuestOpen(false)}
-        campaignId={selectedCampaign?.id || session?.campaignId}
-        session={session}
-        character={character}
-        campaign={selectedCampaign || session?.Campaign}
-      />
 
       {/* Game Over & Defeat Modal */}
       <GameOverModal

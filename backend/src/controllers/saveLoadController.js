@@ -15,7 +15,7 @@ exports.getSaveSlots = async (req, res) => {
   try {
     const sessions = await GameSession.findAll({
       where: {
-        slotNumber: [0, 1, 2, 3, 4, 5]
+        slotNumber: [0, 1, 2, 3]
       },
       include: [Character, Campaign],
       order: [['slotNumber', 'ASC']]
@@ -25,9 +25,7 @@ exports.getSaveSlots = async (req, res) => {
       0: null, // Auto Save
       1: null, // Manual Slot 1
       2: null, // Manual Slot 2
-      3: null, // Manual Slot 3
-      4: null, // Manual Slot 4
-      5: null  // Manual Slot 5
+      3: null  // Manual Slot 3
     };
 
     const sceneIds = sessions.map(s => s.currentSceneId).filter(Boolean);
@@ -66,16 +64,23 @@ exports.getSaveSlots = async (req, res) => {
 exports.saveToSlot = async (req, res) => {
   try {
     const { sessionId, slotNumber, saveTitle } = req.body;
+    if (!sessionId) {
+      return res.status(400).json({ success: false, error: 'sessionId wajib disertakan.' });
+    }
+
+    const slotNum = parseInt(slotNumber, 10);
+    if (isNaN(slotNum) || slotNum < 1 || slotNum > 3) {
+      return res.status(400).json({
+        success: false,
+        error: 'Nomor slot tidak valid. Penyimpanan manual hanya diizinkan untuk Slot 1, 2, dan 3 (Slot 0 dikhususkan untuk auto-save).'
+      });
+    }
+
     const session = await GameSession.findByPk(sessionId, {
       include: [Character]
     });
     if (!session || !session.Character) {
       return res.status(404).json({ success: false, error: 'Sesi atau karakter tidak ditemukan.' });
-    }
-
-    const slotNum = parseInt(slotNumber, 10);
-    if (isNaN(slotNum) || slotNum < 0 || slotNum > 5) {
-      return res.status(400).json({ success: false, error: 'Nomor slot tidak valid (0-5).' });
     }
 
     // Atomic transaction for full graph save
@@ -266,8 +271,12 @@ exports.saveToSlot = async (req, res) => {
 exports.loadFromSlot = async (req, res) => {
   try {
     const { slotNumber } = req.params;
+    const slotNum = parseInt(slotNumber, 10);
+    if (isNaN(slotNum) || slotNum < 0 || slotNum > 3) {
+      return res.status(400).json({ success: false, error: 'Nomor slot tidak valid (0-3).' });
+    }
     const slotSess = await GameSession.findOne({
-      where: { slotNumber: parseInt(slotNumber, 10) },
+      where: { slotNumber: slotNum },
       include: [Character, Campaign]
     });
     if (!slotSess || !slotSess.Character) {

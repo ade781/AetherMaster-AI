@@ -5,7 +5,6 @@ const Location = require('./Location');
 const NPC = require('./NPC');
 const Item = require('./Item');
 const Quest = require('./Quest');
-const QuestObjective = require('./QuestObjective');
 const WorldFact = require('./WorldFact');
 const GameSession = require('./GameSession');
 const StoryNode = require('./StoryNode');
@@ -45,9 +44,6 @@ NPC.belongsTo(Location, { foreignKey: 'defaultLocationId' });
 Campaign.hasMany(Quest, { foreignKey: 'campaignId', onDelete: 'CASCADE' });
 Quest.belongsTo(Campaign, { foreignKey: 'campaignId' });
 
-// Quest <-> QuestObjective
-Quest.hasMany(QuestObjective, { foreignKey: 'questId', as: 'objectives', onDelete: 'CASCADE' });
-QuestObjective.belongsTo(Quest, { foreignKey: 'questId' });
 
 // GameSession <-> StoryNode
 GameSession.hasMany(StoryNode, { foreignKey: 'sessionId', onDelete: 'CASCADE' });
@@ -106,7 +102,6 @@ module.exports = {
   NPC,
   Item,
   Quest,
-  QuestObjective,
   WorldFact,
   GameSession,
   StoryNode,

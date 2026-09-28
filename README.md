@@ -1,59 +1,63 @@
-# ⚔️ AetherMaster VTT Platform
+# ⚔️ AetherMaster AI
 
 > **Interactive Visual Novel RPG & Adaptive Narrative Engine**  
-> Menggabungkan kekayaan dunia petualangan fantasi dengan kedalaman narasi adaptif bertenaga AI, sintesis audio prosedural, dan pohon percabangan berbasis *Directed Acyclic Graph* (DAG).
+> Menggabungkan pengalaman visual novel fantasi interaktif dengan kecerdasan narasi bertenaga AI (Google Gemini), graf percabangan skenario terarah (*Directed Acyclic Graph*), persistensi dunia, dan sintesis audio real-time.
 
 ---
 
-## 🌟 Pilar Fitur Utama
+## 🌟 Fitur Utama
 
-### 1. 📖 Kecerdasan Narasi Interaktif DM
-* **Dungeon Master Adaptif**: Alur cerita dan konsekuensi aksi dievaluasi secara cerdas oleh AI berdasarkan kecerdikan pemain, atribut karakter, dan konteks situasi skenario.
-* **Format Naratif Sastrawi**: Dialog mendalam yang merespons langsung aksi pemain, interaksi NPC kaya emosi, serta 12 babak petualangan terstruktur.
+### 1. 📖 AI Narrative Dungeon Master
+* Alur cerita dan konsekuensi tindakan dianalisis secara dinamis oleh AI (Google Gemini) dengan mempertimbangkan atribut karakter, riwayat adegan, dan fakta dunia (*WorldFacts*).
+* Dilengkapi **Deterministic Fallback Engine** berkecepatan tinggi yang menjamin alur permainan tetap berjalan mulus meskipun tanpa koneksi API eksternal.
 
-### 2. 🌿 Pohon Narasi Bercabang & Mekanisme Kilas Balik (*Rewind DAG*)
-* Setiap keputusan pemain mencabangkan alur cerita baru (*StoryNode*) yang tersimpan dalam relasi *Directed Acyclic Graph* (DAG).
-* **Modal Story Tree**: Pemain dapat membuka diagram jejak adegan kapan saja untuk meninjau riwayat dan melakukan *Rewind* ke titik persimpangan sebelumnya lengkap dengan pemulihan *snapshot* status karakter (HP, Mana, Emas, dan Inventaris).
+### 2. 🎭 Visual Novel Stage & Turn-Based Encounters
+* Antarmuka panggung visual novel dengan potret karakter beresolusi tinggi, latar lokasi tematik, kotak dialog sastrawi berkecepatan dinamis (*typewriter*), dan efek transisi sinematik.
+* Interaksi pertemuan taktis berbasis aturan RPG (D20 skill checks, perhitungan stat STR/DEX/CON/INT/WIS/CHA, serta sistem HP & Mana).
 
-### 3. 🎒 Inventaris & Status Karakter
-* Sistem inventaris terintegrasi dengan pemulihan status instan untuk ramuan, senjata berkekuatan magis, dan item pembuka kunci jalur pilihan tersembunyi.
-* Atribut karakter (STR, DEX, CON, INT, WIS, CHA) dan modifikator aktif mempengaruhi dinamika narasi dan dialog.
+### 3. 🌿 Pohon Narasi Bercabang (*Story DAG*) & Fitur Rewind
+* Setiap pilihan pemain membentuk simpul baru (*StoryNode*) dalam struktur *Directed Acyclic Graph* (DAG).
+* **Story Tree Modal**: Pemain dapat meninjau peta keputusan kapan saja dan melakukan *Rewind* ke persimpangan sebelumnya lengkap dengan pemulihan *snapshot* kondisi karakter (HP, Mana, Emas, dan Inventaris).
 
-### 4. 🔊 Sintesis Audio Prosedural 100% Lokal (Web Audio API)
-* **Zero External MP3**: Seluruh efek suara (*sound effect*) dibangkitkan secara prosedural (*real-time wave synthesis*) di browser menggunakan Web Audio API:
-  * Efek benturan senjata (*sword clash*).
-  * Detak jantung darurat (*critical HP heartbeat*).
-  * Tiga variasi *soundscape ambient background* (Kedai Oakhaven, Puncak Badai Salju, Palung Laut Kuno).
-* Didukung *text-to-speech* narasi suara otomatis via Web Speech API.
+### 4. 🧠 Persistent World State (*World Facts*)
+* Sistem memori jangka panjang yang mencatat pilihan moral, rahasia yang terungkap, status reputasi faksi, dan relasi NPC sepanjang petualangan.
 
-### 5. 💾 Multi-Slot Save & Load Terenkripsi
-* Tiga slot penyimpanan mandiri dengan *timestamp*, cuplikan adegan, dan *stat preview*.
-* Fitur **Ekspor / Impor JSON** yang memungkinkan pemain memindahkan progres petualangan ke perangkat lain.
+### 5. 🔊 Hybrid Audio System
+* **Procedural Web Audio SFX**: Seluruh efek suara benturan senjata, pulsa detak jantung darurat, klik antarmuka, dan sihir dibangkitkan secara prosedural langsung via Web Audio API browser (0ms latency, zero extra bandwidth).
+* **Ambient Soundscapes**: Lapisan audio suasana dinamis yang menyesuaikan latar panggung aktif.
+* **Neural Voice Narration**: Pembacaan dialog ekspresif dengan Microsoft Edge Neural TTS dan fallback otomatis ke browser Web Speech API.
+
+### 6. 💾 Multi-Slot Save & Load (4 Slot)
+* **Slot 0 (Auto Save)**: Tersimpan otomatis pada setiap transisi babak dan persimpangan adegan penting.
+* **Slot 1–3 (Manual Saves)**: Tiga slot penyimpanan mandiri dengan cuplikan adegan, timestamp, dan pratinjau status karakter.
+* **Ekspor & Impor JSON**: Kemampuan mencadangkan dan memindahkan progres permainan antarperangkat secara aman.
 
 ---
 
-## 🏗️ Arsitektur Teknologi
+## 🏗️ Struktur Repositori
 
 ```
 AetherMaster AI/
 ├── backend/                  # Server Node.js & REST API
 │   ├── src/
-│   │   ├── config/           # Konfigurasi Database (MySQL/PostgreSQL) & Sequelize ORM
-│   │   ├── controllers/      # Logika alur cerita, aksi D20, & save/load
-│   │   ├── models/           # Skema Campaign, Character, GameSession, StoryNode
-│   │   ├── routes/           # Endpoint API RESTful
-│   │   ├── services/         # Integrasi LLM & Fallback Engine
-│   │   └── utils/            # Kalkulator atribut RPG & stat engine
+│   │   ├── config/           # Konfigurasi Database (PostgreSQL / MySQL) & Sequelize ORM
+│   │   ├── controllers/      # REST API handler (Story, Character, Campaign, Save/Load)
+│   │   ├── engine/           # State engine, D20 check, & rule resolver
+│   │   ├── models/           # Skema Sequelize (Campaign, Character, GameSession, StoryNode, dll)
+│   │   ├── repositories/     # Abstraksi akses basis data
+│   │   └── services/         # Integrasi LLM (Gemini 2.5 Flash), Edge TTS, & Fallback Engine
+│   └── tests/                # Automated integration tests
 ├── frontend/                 # Web Client SPA (React 18 + Vite)
 │   ├── src/
-│   │   ├── components/       # Komponen VN Stage, Combat, HUD, Modals
-│   │   ├── services/         # Web Audio API procedural synthesizer
-│   │   ├── store/            # GameContext (State Management)
-│   │   └── utils/            # Helper matematika RPG
-│   └── public/assets/        # Aset visual (portraits, backgrounds, 3d maps)
-├── docs/                     # Dokumentasi perencanaan & Laporan Tugas Akhir
-└── scripts/                  # Skrip utilitas & tools developer
+│   │   ├── components/       # VN Stage, HUD, Modals, Audio Controls, Story Tree
+│   │   ├── services/         # Web Audio API Synthesizer & Speech synthesis
+│   │   └── store/            # GameContext (State Management)
+│   └── public/assets/        # Aset visual latar panggung, potret NPC, dan ikon item
+└── docs/                     # Dokumentasi arsitektur dan laporan akademik
+    └── ARCHITECTURE.md       # Spesifikasi arsitektur teknis lengkap
 ```
+
+Untuk rincian arsitektur mendalam, silakan baca [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ---
 
@@ -62,34 +66,43 @@ AetherMaster AI/
 ### Prasyarat
 * **Node.js**: Versi `18.x` atau lebih baru
 * **NPM**: Versi `9.x` atau lebih baru
+* Basis data PostgreSQL (disarankan untuk cloud) atau MySQL (lokal)
 
-### 1. Clone Repositori
-```bash
-git clone https://github.com/ade781/AetherMaster-AI.git
-cd AetherMaster-AI
-```
-
-### 2. Pasang Seluruh Dependensi
-Jalankan satu perintah berikut di root folder untuk memasang dependensi root, backend, dan frontend secara otomatis:
+### 1. Pasang Seluruh Dependensi
+Jalankan satu perintah berikut di root folder untuk memasang seluruh dependensi (root, backend, frontend):
 ```bash
 npm run install:all
 ```
 
-### 3. Konfigurasi Environment Variable Backend
-Salin berkas contoh konfigurasi di folder `backend/`:
+### 2. Konfigurasi Environment Variable
+Salin contoh berkas konfigurasi di folder `backend/`:
 ```bash
 cp backend/.env.example backend/.env
 ```
-Isi konfigurasi di `backend/.env` (opsional jika ingin menggunakan LLM live):
+
+Atur konfigurasi pada `backend/.env`:
 ```env
 PORT=5000
 NODE_ENV=development
+
+# Database Configuration (pilih salah satu)
+# Opsi 1: PostgreSQL Connection URL (Supabase, Neon, Render)
+DATABASE_URL=postgresql://user:password@host:5432/dbname
+
+# Opsi 2: Local MySQL / Postgres via parameter terpisah
+# DB_DIALECT=mysql
+# DB_HOST=localhost
+# DB_PORT=3306
+# DB_USER=root
+# DB_PASS=
+# DB_NAME=ai_dungeon_vtt
+
+# AI Narrative Provider (Opsional - jika kosong, sistem menggunakan Fallback Engine)
 GEMINI_API_KEY=your_gemini_api_key_here
 ```
-> *Catatan: Jika `GEMINI_API_KEY` tidak diisi, sistem secara otomatis beralih ke **Deterministic Fallback Engine** berkecepatan tinggi tanpa error.*
 
-### 4. Jalankan Aplikasi
-Jalankan backend dan frontend serentak dengan satu perintah:
+### 3. Jalankan Aplikasi
+Jalankan backend dan frontend secara bersamaan dengan satu perintah:
 ```bash
 npm run dev
 ```
@@ -99,7 +112,7 @@ npm run dev
 
 ---
 
-## ⌨️ Kontrol & Tombol Pintas (*Hotkeys*)
+## ⌨️ Pintasan Papan Ketik (*Hotkeys*)
 
 | Tombol | Fungsi |
 | :---: | :--- |
@@ -107,10 +120,11 @@ npm run dev
 | <kbd>I</kbd> | Membuka / Menutup Tas Inventaris (*Backpack*) |
 | <kbd>M</kbd> | Membuka Peta Percabangan Takdir (*Story Tree DAG & Rewind*) |
 | <kbd>L</kbd> | Membuka Catatan Riwayat Dialog (*Backlog Log*) |
+| <kbd>Esc</kbd> | Menutup Modal Aktif |
 
 ---
 
 ## 👥 Pengembang & Hak Cipta
 
-* **Penulis**: ADE7 ASLI
-* **Lisensi**: Proyek Tugas Akhir / Penelitian Terbuka — Bebas dikembangkan untuk keperluan akademik dan portofolio.
+* **Pengembang**: Tim AetherMaster AI
+* **Lisensi**: Proyek Tugas Akhir / Riset Terbuka — Bebas dikembangkan untuk keperluan akademik dan portofolio.

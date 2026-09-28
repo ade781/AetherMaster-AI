@@ -21,19 +21,11 @@ const storyAiLimiter = rateLimit({
 router.get('/campaigns', storyController.getCampaigns);
 router.post('/start', storyAiLimiter, storyController.startCampaign);
 router.post('/action', storyAiLimiter, storyController.submitAction);
-router.get('/action-stream', storyAiLimiter, storyController.actionStream);
-router.post('/action-stream', storyAiLimiter, storyController.actionStream);
 router.post('/combat/action', storyController.combatAction);
 router.post('/use-item', storyController.useItem);
-router.post('/rewind', storyController.rewindToNode);
 router.get('/tree/:sessionId', storyController.getStoryTree);
+router.post('/rewind', storyController.rewindToNode);
 router.get('/backlog/:sessionId', storyController.getBacklog);
-router.get('/summary/:sessionId', storyController.getGameSummary);
-router.get('/items', storyController.getItems);
-router.get('/npcs', storyController.getNpcs);
-router.get('/locations', storyController.getLocations);
-router.get('/quests/:campaignId', storyController.getQuests);
-router.get('/journal/:sessionId', storyController.getJournal);
 router.get('/session/:sessionId', storyController.getSession);
 
 // Multi-Slot Save / Load Routes

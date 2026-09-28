@@ -1,6 +1,7 @@
 /**
  * AetherMaster Procedural Web Audio Synth & Voice Gateway
- * 100% local synthesis using standard Web Audio API & SpeechSynthesis.
+ * 100% client-side synthesis using Web Audio API & SpeechSynthesis.
+ * Eliminates heavy MP3 BGM files and browser autoplay blockers.
  */
 
 class AudioService {
@@ -10,14 +11,12 @@ class AudioService {
     this.ambientNode = null;
     this.heartbeatTimer = null;
     this.isSpeechEnabled = false;
-    this.bgmAudio = null;
-    this.currentBgmSrc = null;
     this.speechAudio = null;
     this.speechAbortController = null;
     this.voiceConfig = {
       voice: 'id-ID-ArdiNeural', // Pria Indonesia Neural
       pitch: '-25Hz',            // Deep / Bass tua
-      rate: '-10%'              // Tenang, lambat berwibawa
+      rate: '-10%'               // Tenang, lambat berwibawa
     };
   }
 
@@ -46,54 +45,27 @@ class AudioService {
 
   // --- PROCEDURAL SFX GENERATION ---
 
-  playDiceRoll() {
-    // Dice mechanic removed
-  }
-
-  playCriticalSuccess() {
+  playClick() {
     if (this.isMuted) return;
     this.init();
     const now = this.ctx.currentTime;
-    const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51]; // C major fanfare
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
 
-    notes.forEach((freq, idx) => {
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, now + idx * 0.07);
-      
-      gain.gain.setValueAtTime(0.25, now + idx * 0.07);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.07 + 0.4);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(800, now);
+    gain.gain.setValueAtTime(0.08, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
 
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
 
-      osc.start(now + idx * 0.07);
-      osc.stop(now + idx * 0.07 + 0.45);
-    });
+    osc.start(now);
+    osc.stop(now + 0.04);
   }
 
-  playCriticalFailure() {
-    if (this.isMuted) return;
-    this.init();
-    const now = this.ctx.currentTime;
-    const notes = [220, 207.65, 196, 174.61]; // descending dissonance
-
-    notes.forEach((freq, idx) => {
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(freq, now + idx * 0.12);
-
-      gain.gain.setValueAtTime(0.3, now + idx * 0.12);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.12 + 0.5);
-
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
-
-      osc.start(now + idx * 0.12);
-      osc.stop(now + idx * 0.12 + 0.55);
-    });
+  playSelect() {
+    this.playClick();
   }
 
   playSwordClash() {
@@ -103,7 +75,7 @@ class AudioService {
 
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
-    osc.type = 'highpass' in this.ctx ? 'sine' : 'triangle';
+    osc.type = 'triangle';
     osc.frequency.setValueAtTime(2400, now);
     osc.frequency.exponentialRampToValueAtTime(300, now + 0.25);
 
@@ -115,6 +87,49 @@ class AudioService {
 
     osc.start(now);
     osc.stop(now + 0.26);
+  }
+
+  playHeal() {
+    if (this.isMuted) return;
+    this.init();
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(440, now);
+    osc.frequency.exponentialRampToValueAtTime(880, now + 0.4);
+
+    gain.gain.setValueAtTime(0.2, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    osc.start(now);
+    osc.stop(now + 0.42);
+  }
+
+  playMagic() {
+    if (this.isMuted) return;
+    this.init();
+    const now = this.ctx.currentTime;
+    const freqs = [587.33, 880, 1174.66, 1760]; // D5, A5, D6, A6 shimmer
+    freqs.forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.05);
+
+      gain.gain.setValueAtTime(0.12, now + idx * 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.05 + 0.35);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      osc.start(now + idx * 0.05);
+      osc.stop(now + idx * 0.05 + 0.38);
+    });
   }
 
   playGoldCoins() {
@@ -139,48 +154,50 @@ class AudioService {
     });
   }
 
-  playHeal() {
+  playCriticalSuccess() {
     if (this.isMuted) return;
     this.init();
     const now = this.ctx.currentTime;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
+    const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51]; // C major fanfare
 
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(440, now);
-    osc.frequency.exponentialRampToValueAtTime(880, now + 0.4);
+    notes.forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.07);
 
-    gain.gain.setValueAtTime(0.2, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+      gain.gain.setValueAtTime(0.25, now + idx * 0.07);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.07 + 0.4);
 
-    osc.connect(gain);
-    gain.connect(this.ctx.destination);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
 
-    osc.start(now);
-    osc.stop(now + 0.42);
+      osc.start(now + idx * 0.07);
+      osc.stop(now + idx * 0.07 + 0.45);
+    });
   }
 
-  playClick() {
+  playCriticalFailure() {
     if (this.isMuted) return;
     this.init();
     const now = this.ctx.currentTime;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
+    const notes = [220, 207.65, 196, 174.61]; // descending dissonance
 
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(800, now);
-    gain.gain.setValueAtTime(0.08, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+    notes.forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.12);
 
-    osc.connect(gain);
-    gain.connect(this.ctx.destination);
+      gain.gain.setValueAtTime(0.25, now + idx * 0.12);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.12 + 0.5);
 
-    osc.start(now);
-    osc.stop(now + 0.04);
-  }
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
 
-  playSelect() {
-    this.playClick();
+      osc.start(now + idx * 0.12);
+      osc.stop(now + idx * 0.12 + 0.55);
+    });
   }
 
   // --- REACTIVE HEARTBEAT SYNTH (< 20% HP) ---
@@ -229,7 +246,7 @@ class AudioService {
     }
   }
 
-  // --- AMBIENT SOUNDSCAPE ---
+  // --- PROCEDURAL AMBIENT SOUND GENERATOR ---
 
   startAmbient(type = 'tavern') {
     if (this.isMuted) return;
@@ -239,45 +256,53 @@ class AudioService {
     }
 
     try {
-      const bufferSize = this.ctx.sampleRate * 2;
-      const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-      const output = noiseBuffer.getChannelData(0);
-      for (let i = 0; i < bufferSize; i++) {
-        output[i] = Math.random() * 2 - 1;
-      }
+      const osc1 = this.ctx.createOscillator();
+      const osc2 = this.ctx.createOscillator();
+      const oscGain = this.ctx.createGain();
 
-      const whiteNoise = this.ctx.createBufferSource();
-      whiteNoise.buffer = noiseBuffer;
-      whiteNoise.loop = true;
+      const cleanType = String(type).toLowerCase();
+      let baseFreq = 110; // A2 tavern
 
-      const filter = this.ctx.createBiquadFilter();
-      const gain = this.ctx.createGain();
-
-      // Atmospheric presets
-      if (type.includes('frost') || type.includes('peak') || type === 'frost') {
-        // High whistly howling cold wind
-        filter.type = 'bandpass';
-        filter.frequency.value = 420;
-        filter.Q.value = 3.5;
-        gain.gain.setValueAtTime(0.05, this.ctx.currentTime);
-      } else if (type.includes('ocean') || type.includes('citadel') || type.includes('cave') || type === 'ocean') {
-        // Deep resonant ocean swell
-        filter.type = 'lowpass';
-        filter.frequency.value = 160;
-        gain.gain.setValueAtTime(0.06, this.ctx.currentTime);
+      if (cleanType.includes('boss') || cleanType.includes('combat') || cleanType.includes('war')) {
+        baseFreq = 65.41; // C2 ominous
+        osc1.type = 'sawtooth';
+        osc2.type = 'triangle';
+        oscGain.gain.setValueAtTime(0.03, this.ctx.currentTime);
+      } else if (cleanType.includes('mystic') || cleanType.includes('arcadia') || cleanType.includes('arcane')) {
+        baseFreq = 146.83; // D3 ethereal
+        osc1.type = 'sine';
+        osc2.type = 'triangle';
+        oscGain.gain.setValueAtTime(0.035, this.ctx.currentTime);
+      } else if (cleanType.includes('graveyard') || cleanType.includes('dungeon') || cleanType.includes('crypt')) {
+        baseFreq = 73.42; // D2 eerie
+        osc1.type = 'triangle';
+        osc2.type = 'sine';
+        oscGain.gain.setValueAtTime(0.028, this.ctx.currentTime);
       } else {
-        // Warm tavern / room ambiance
-        filter.type = 'lowpass';
-        filter.frequency.value = 260;
-        gain.gain.setValueAtTime(0.04, this.ctx.currentTime);
+        osc1.type = 'sine';
+        osc2.type = 'sine';
+        oscGain.gain.setValueAtTime(0.025, this.ctx.currentTime);
       }
 
-      whiteNoise.connect(filter);
-      filter.connect(gain);
-      gain.connect(this.ctx.destination);
+      osc1.frequency.setValueAtTime(baseFreq, this.ctx.currentTime);
+      osc2.frequency.setValueAtTime(baseFreq * 1.502, this.ctx.currentTime); // subtle beating harmonic
 
-      whiteNoise.start(0);
-      this.ambientNode = { source: whiteNoise, gain };
+      osc1.connect(oscGain);
+      osc2.connect(oscGain);
+      oscGain.connect(this.ctx.destination);
+
+      osc1.start();
+      osc2.start();
+
+      this.ambientNode = {
+        stop: () => {
+          try {
+            osc1.stop();
+            osc2.stop();
+            oscGain.disconnect();
+          } catch (e) {}
+        }
+      };
     } catch (e) {
       console.warn('Ambient start error:', e);
     }
@@ -286,56 +311,18 @@ class AudioService {
   stopAmbient() {
     if (this.ambientNode) {
       try {
-        this.ambientNode.source.stop();
+        this.ambientNode.stop();
       } catch (e) {}
       this.ambientNode = null;
     }
   }
 
-  // --- BACKGROUND MUSIC (BGM) TRACKS ---
-
-  playBGM(type = 'tavern', volume = 0.22) {
+  playBGM(type = 'tavern') {
     if (this.isMuted) return;
-    const sources = {
-      tavern: '/assets/audio/bgm_tavern.mp3',
-      dungeon: '/assets/audio/bgm_dungeon.mp3',
-      combat: '/assets/audio/bgm_combat.mp3',
-      mystic: '/assets/audio/bgm_mystic.mp3',
-      exploration: '/assets/audio/bgm_exploration.mp3',
-      boss: '/assets/audio/bgm_boss.mp3',
-      graveyard: '/assets/audio/bgm_graveyard.mp3'
-    };
-    const src = sources[type] || sources.tavern;
-    if (this.currentBgmSrc === src && this.bgmAudio && !this.bgmAudio.paused) {
-      return;
-    }
-    this.stopBGM();
-    try {
-      this.bgmAudio = new Audio(src);
-      this.bgmAudio.loop = true;
-      this.bgmAudio.volume = volume;
-      this.currentBgmSrc = src;
-      const playPromise = this.bgmAudio.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(() => {
-          // Autoplay policy or load fallback
-          this.startAmbient(type);
-        });
-      }
-    } catch (e) {
-      this.startAmbient(type);
-    }
+    this.startAmbient(type);
   }
 
   stopBGM() {
-    if (this.bgmAudio) {
-      try {
-        this.bgmAudio.pause();
-        this.bgmAudio.currentTime = 0;
-      } catch (e) {}
-      this.bgmAudio = null;
-      this.currentBgmSrc = null;
-    }
     this.stopAmbient();
   }
 
