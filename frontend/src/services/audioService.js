@@ -353,7 +353,7 @@ class AudioService {
 
       const apiBase = (typeof window !== 'undefined' && window.__API_BASE__) 
         || import.meta.env?.VITE_API_BASE 
-        || 'http://127.0.0.1:5000/api/story';
+        || '/api/story';
 
       const response = await fetch(`${apiBase}/tts`, {
         method: 'POST',

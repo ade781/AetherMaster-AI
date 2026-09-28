@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Skull, RotateCcw, FolderOpen, Home, AlertOctagon, ScrollText, ChevronDown, ChevronUp, Shield, Coins, Sparkles } from 'lucide-react';
 import audio from '../services/audioService';
 
-const API_BASE = 'http://127.0.0.1:5000/api/story';
+import { API_BASE } from '../store/GameContext';
 
 export default function GameOverModal({
   isOpen,

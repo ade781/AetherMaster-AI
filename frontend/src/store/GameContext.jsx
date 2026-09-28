@@ -3,7 +3,7 @@ import audio from '../services/audioService';
 
 const GameContext = createContext(null);
 
-export const API_BASE = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:5000/api/story';
+export const API_BASE = import.meta.env.VITE_API_BASE || '/api/story';
 
 export function GameProvider({ children }) {
   const [campaigns, setCampaigns] = useState([]);
