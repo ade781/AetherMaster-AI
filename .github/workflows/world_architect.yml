@@ -1,0 +1,57 @@
+name: AetherMaster World Architect
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # Berjalan otomatis setiap 6 jam
+  workflow_dispatch:        # Tombol pemicu manual di tab GitHub Actions & API dispatch endpoint
+  push:
+    branches:
+      - main
+    paths:
+      - 'scripts/run_antigravity_agent.js'
+      - '.github/workflows/world_architect.yml'
+
+jobs:
+  world-architect:
+    name: Generate Story & World Assets
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 📦 Install Dependencies
+        run: |
+          npm install --legacy-peer-deps || npm install --force
+
+      - name: 🌌 Jalankan Antigravity World Architect Agent
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NODE_ENV: production
+        run: |
+          node scripts/run_antigravity_agent.js
+
+      - name: 📋 Publikasikan Ringkasan Cerita Baru ke GitHub Actions
+        if: always()
+        run: |
+          echo "## 🌌 Laporan Rilis Cerita Baru (AetherMaster AI)" >> $GITHUB_STEP_SUMMARY
+          echo "Waktu Server: $(date -u)" >> $GITHUB_STEP_SUMMARY
+          if [ -f logs/latest_agent_report.md ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            cat logs/latest_agent_report.md >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: 📁 Simpan File Log sebagai Artifact Unduhan
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: world-architect-logs-${{ github.run_number }}
+          path: logs/
+          retention-days: 7

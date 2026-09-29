@@ -12,6 +12,10 @@ export default function CampaignCard({
 
   const getCoverSrc = () => {
     if (campaign.coverImage) {
+      if (campaign.coverImage.includes('pollinations.ai')) {
+        const bgId = campaign.defaultBackgroundId || 'bg_01_tavern';
+        return `/assets/backgrounds/${bgId.replace(/\.png$/i, '')}.png`;
+      }
       if (campaign.coverImage.startsWith('http') || campaign.coverImage.startsWith('/') || campaign.coverImage.startsWith('data:')) {
         return campaign.coverImage;
       }
@@ -20,7 +24,7 @@ export default function CampaignCard({
       if (campaign.defaultBackgroundId.startsWith('http') || campaign.defaultBackgroundId.startsWith('/')) {
         return campaign.defaultBackgroundId;
       }
-      return `/assets/backgrounds/${campaign.defaultBackgroundId}.png`;
+      return `/assets/backgrounds/${campaign.defaultBackgroundId.replace(/\.png$/i, '')}.png`;
     }
     return '/assets/backgrounds/bg_01_tavern.png';
   };
@@ -62,9 +66,10 @@ export default function CampaignCard({
           alt={campaign.title}
           className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
           onError={(e) => {
-            if (campaign.defaultBackgroundId && !e.target.src.includes(campaign.defaultBackgroundId)) {
-              e.target.src = `/assets/backgrounds/${campaign.defaultBackgroundId}.png`;
-            } else {
+            const fallbackBg = campaign.defaultBackgroundId ? `/assets/backgrounds/${campaign.defaultBackgroundId.replace(/\.png$/i, '')}.png` : '/assets/backgrounds/bg_01_tavern.png';
+            if (!e.target.src.endsWith(fallbackBg) && !e.target.src.endsWith('/assets/backgrounds/bg_01_tavern.png')) {
+              e.target.src = fallbackBg;
+            } else if (!e.target.src.endsWith('/assets/backgrounds/bg_01_tavern.png')) {
               e.target.src = '/assets/backgrounds/bg_01_tavern.png';
             }
           }}

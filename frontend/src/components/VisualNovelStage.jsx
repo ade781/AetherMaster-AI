@@ -250,13 +250,21 @@ export default function VisualNovelStage({
   };
 
   const getBackgroundSrc = (bgId) => {
+    // 0. Intercept pollinations URLs
+    if (bgId && typeof bgId === 'string' && bgId.includes('pollinations.ai')) {
+      const fallbackId = campaign?.defaultBackgroundId || 'bg_01_tavern';
+      const clean = fallbackId.replace(/\.png$/i, '');
+      const mapped = BACKGROUND_MAP[clean] || Object.values(BACKGROUND_MAP).find(v => v.includes(clean) || clean.includes(v)) || clean;
+      return `/assets/backgrounds/${mapped}.png`;
+    }
+
     // 1. Direct database background URL from node or location
     if (bgId && (bgId.startsWith('http') || bgId.startsWith('data:') || bgId.startsWith('/assets/'))) {
       return bgId;
     }
 
     // 2. Direct database cover image from campaign if valid URL
-    if (campaign?.coverImage && (campaign.coverImage.startsWith('http') || campaign.coverImage.startsWith('data:'))) {
+    if (campaign?.coverImage && !campaign.coverImage.includes('pollinations.ai') && (campaign.coverImage.startsWith('http') || campaign.coverImage.startsWith('data:'))) {
       if (!bgId || bgId === 'bg_01_tavern' || bgId === campaign.defaultBackgroundId) {
         return campaign.coverImage;
       }
@@ -266,7 +274,7 @@ export default function VisualNovelStage({
     if (!resolved || (resolved === 'bg_01_tavern' && campaign?.defaultBackgroundId && campaign.defaultBackgroundId !== 'bg_01_tavern')) {
       resolved = campaign?.defaultBackgroundId || 'bg_01_tavern';
     }
-    if (resolved.startsWith('/') || resolved.startsWith('http') || resolved.startsWith('data:')) return resolved;
+    if (resolved.startsWith('/') || (resolved.startsWith('http') && !resolved.includes('pollinations.ai')) || resolved.startsWith('data:')) return resolved;
 
     const clean = resolved.replace(/\.png$/i, '');
     const mapped = BACKGROUND_MAP[clean] || Object.values(BACKGROUND_MAP).find(v => v.includes(clean) || clean.includes(v)) || clean;
@@ -308,15 +316,16 @@ export default function VisualNovelStage({
             alt="Adventure Scene"
             className="w-full h-full object-cover object-center filter brightness-[0.7] contrast-[1.05] transition-all duration-700 scale-[1.02]"
             onError={(e) => {
-              if (campaign?.coverImage && !e.target.src.includes(campaign.coverImage)) {
+              const fallbackId = campaign?.defaultBackgroundId || 'bg_01_tavern';
+              const clean = fallbackId.replace(/\.png$/i, '');
+              const fallbackMapped = BACKGROUND_MAP[clean] || clean;
+              const target = `/assets/backgrounds/${fallbackMapped}.png`;
+              if (campaign?.coverImage && !campaign.coverImage.includes('pollinations.ai') && !e.target.src.includes(campaign.coverImage)) {
                 e.target.src = campaign.coverImage;
-              } else {
-                const fallbackId = campaign?.defaultBackgroundId || 'bg_01_tavern';
-                const fallbackMapped = BACKGROUND_MAP[fallbackId] || fallbackId;
-                const target = `/assets/backgrounds/${fallbackMapped}.png`;
-                if (!e.target.src.endsWith(target)) {
-                  e.target.src = target;
-                }
+              } else if (!e.target.src.endsWith(target)) {
+                e.target.src = target;
+              } else if (!e.target.src.endsWith('/assets/backgrounds/bg_01_tavern.png')) {
+                e.target.src = '/assets/backgrounds/bg_01_tavern.png';
               }
             }}
           />
