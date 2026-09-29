@@ -289,6 +289,11 @@ function parseSceneJson(rawText) {
   return sceneSchema.parse(normalized);
 }
 
+function validateScene(raw) {
+  const normalized = normalizeSceneData(raw);
+  return sceneSchema.parse(normalized);
+}
+
 module.exports = {
   cleanText,
   KNOWN_ITEMS: itemMaster.ITEM_CATALOG,
@@ -301,5 +306,6 @@ module.exports = {
   missionLogSchema,
   sceneSchema,
   normalizeSceneData,
-  parseSceneJson
+  parseSceneJson,
+  validateScene
 };

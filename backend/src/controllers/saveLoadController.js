@@ -1,13 +1,14 @@
 const saveLoadService = require('../services/saveLoadService');
 const logger = require('../utils/logger');
+const { errorResponse, successResponse, ERROR_CODES } = require('../utils/apiResponse');
 
 exports.getSaveSlots = async (req, res) => {
   try {
     const slots = await saveLoadService.getSaveSlots();
-    return res.json({ success: true, data: slots });
+    return successResponse(res, slots);
   } catch (err) {
     logger.error('getSaveSlots error:', err);
-    return res.status(500).json({ success: false, error: err.message || 'Internal server error' });
+    return errorResponse(res, 500, ERROR_CODES.INTERNAL_ERROR, err.message || 'Internal server error');
   }
 };
 
@@ -15,15 +16,11 @@ exports.saveToSlot = async (req, res) => {
   try {
     const { sessionId, slotNumber, saveTitle } = req.body;
     const savedSession = await saveLoadService.saveToSlot({ sessionId, slotNumber, saveTitle });
-    return res.json({
-      success: true,
-      message: `Berhasil disimpan ke Slot ${slotNumber}!`,
-      data: savedSession
-    });
+    return successResponse(res, savedSession, `Berhasil disimpan ke Slot ${slotNumber}!`);
   } catch (err) {
     logger.error('saveToSlot error:', err);
     const statusCode = err.statusCode || 500;
-    return res.status(statusCode).json({ success: false, error: err.message || 'Gagal menyimpan sesi.' });
+    return errorResponse(res, statusCode, err.code || ERROR_CODES.SAVE_FAILED, err.message || 'Gagal menyimpan sesi.');
   }
 };
 
@@ -31,15 +28,11 @@ exports.loadFromSlot = async (req, res) => {
   try {
     const { slotNumber } = req.params;
     const result = await saveLoadService.loadFromSlot(slotNumber);
-    return res.json({
-      success: true,
-      message: `Berhasil memuat Slot ${slotNumber}!`,
-      data: result
-    });
+    return successResponse(res, result, `Berhasil memuat Slot ${slotNumber}!`);
   } catch (err) {
     logger.error('loadFromSlot error:', err);
     const statusCode = err.statusCode || 500;
-    return res.status(statusCode).json({ success: false, error: err.message || 'Gagal memuat sesi simpanan.' });
+    return errorResponse(res, statusCode, err.code || ERROR_CODES.LOAD_FAILED, err.message || 'Gagal memuat sesi simpanan.');
   }
 };
 
@@ -53,7 +46,7 @@ exports.exportSessionJson = async (req, res) => {
   } catch (err) {
     logger.error('exportSessionJson error:', err);
     const statusCode = err.statusCode || 500;
-    return res.status(statusCode).json({ success: false, error: err.message || 'Gagal mengekspor data simpanan.' });
+    return errorResponse(res, statusCode, err.code || ERROR_CODES.INVALID_SAVE_FILE, err.message || 'Gagal mengekspor data simpanan.');
   }
 };
 
@@ -61,14 +54,10 @@ exports.importSessionJson = async (req, res) => {
   try {
     const { sessionData } = req.body;
     const result = await saveLoadService.importSessionJson(sessionData);
-    return res.json({
-      success: true,
-      message: 'Petualangan berhasil diimpor!',
-      data: result
-    });
+    return successResponse(res, result, 'Petualangan berhasil diimpor!');
   } catch (err) {
     logger.error('importSessionJson error:', err);
     const statusCode = err.statusCode || 500;
-    return res.status(statusCode).json({ success: false, error: err.message || 'Gagal mengimpor data simpanan.' });
+    return errorResponse(res, statusCode, err.code || ERROR_CODES.INVALID_SAVE_FILE, err.message || 'Gagal mengimpor data simpanan.');
   }
 };
