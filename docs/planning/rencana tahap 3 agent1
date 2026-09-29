@@ -1,0 +1,504 @@
+# AGENT 1
+
+## Backend Correctness, Domain Integrity & Security
+
+Repository:
+`ade781/AetherMaster-AI`
+
+Branch utama:
+`main`
+
+## Misi
+
+Hardening backend setelah Stage 2 refactor.
+Jangan melakukan refactor arsitektur besar. Struktur service hasil Stage 2 dipertahankan kecuali ditemukan masalah nyata.
+Tujuan utama:
+> memastikan AI output, game state, persistence, database, dan API memiliki contract yang konsisten dan dapat diuji.
+
+---
+
+# 1. AUDIT BACKEND TERLEBIH DAHULU
+
+Sebelum mengubah kode:
+audit:
+```text
+backend/src/services/
+backend/src/engine/
+backend/src/routes/
+backend/src/controllers/
+backend/src/models/
+backend/src/services/narrative/
+backend/src/config/
+backend/package.json
+```
+
+Cari:
+* legacy field
+* duplicate state transformation
+* duplicate cloning
+* dead endpoint
+* dead service
+* inconsistent error response
+* unvalidated user input
+* AI output yang langsung masuk ke state
+* database source-of-truth ambiguity
+* compatibility code yang sudah tidak diperlukan
+
+Jangan langsung memperbaiki semuanya sekaligus.
+Buat daftar temuan berdasarkan:
+```text
+P0 = dapat menyebabkan state corruption / security issue
+P1 = functional inconsistency
+P2 = cleanup
+```
+
+---
+
+# 2. CANONICALIZE AI SCENE SCHEMA
+
+Target schema harus menggunakan satu vocabulary.
+
+Canonical fields:
+```text
+hpChange
+manaChange
+goldChange
+receivedItemId
+consumedItemId
+reputationChange
+factDiscovered
+
+missionLog.objective
+```
+
+Cari semua penggunaan:
+```text
+proposedHpChange
+proposedManaChange
+proposedGoldChange
+addLedgerFact
+reputation
+targetGoal
+```
+
+Audit minimal:
+```text
+sceneSchema.js
+promptBuilder.js
+fallbackGenerator.js
+AI response parser
+story services
+gameStateEngine
+tests
+```
+
+## Aturan
+Jangan mempertahankan dua format secara permanen.
+Jika tidak ada kebutuhan backward compatibility, hapus legacy alias.
+
+Pipeline yang diinginkan:
+```text
+AI Provider
+   ↓
+raw response
+   ↓
+parse
+   ↓
+normalize
+   ↓
+Zod validation
+   ↓
+Canonical Scene
+   ↓
+Game State Engine
+```
+
+AI tidak boleh langsung memodifikasi database.
+
+---
+
+# 3. PERBAIKI FALLBACK GENERATOR DAN PROMPT
+
+Pastikan prompt dan fallback generator menghasilkan canonical schema.
+Contoh:
+BENAR:
+```json
+{
+  "stateUpdates": {
+    "hpChange": -10,
+    "manaChange": 0,
+    "goldChange": 0,
+    "reputationChange": {},
+    "factDiscovered": null
+  }
+}
+```
+
+HINDARI:
+```json
+{
+  "proposedHpChange": -10
+}
+```
+
+Jangan menambahkan compatibility alias hanya agar prompt lama tetap berjalan.
+Update test fixture jika diperlukan.
+
+---
+
+# 4. AI OUTPUT CONTRACT TEST
+
+Buat test untuk pipeline AI → canonical scene.
+
+Minimal test:
+### Valid scene
+Input valid harus menghasilkan canonical scene.
+
+### Missing optional field
+Optional field harus memperoleh default yang benar.
+
+### Invalid type
+Contoh:
+```json
+{
+  "hpChange": "ten"
+}
+```
+harus ditolak atau dinormalisasi secara aman.
+
+### Invalid item
+`receivedItemId` yang tidak ada dalam item master tidak boleh menciptakan item baru.
+
+### Invalid reputation
+Reputation harus memiliki struktur numeric yang valid.
+
+### Empty dialogue
+Scene tidak boleh lolos jika dialogue wajib tetapi kosong.
+
+### Invalid choice
+Choice harus mengikuti schema.
+
+### Malformed AI response
+Parser harus gagal secara terkendali.
+
+### Unexpected fields
+Pastikan perilakunya jelas dan konsisten.
+
+---
+
+# 5. GAME STATE INVARIANT TEST
+
+Audit `gameStateEngine`.
+
+Pastikan invariant berikut selalu berlaku:
+```text
+0 <= hp <= maxHp
+0 <= mana <= maxMana
+gold >= 0
+```
+
+Inventory:
+```text
+item hanya dapat ditambahkan jika item valid
+item hanya dapat dikonsumsi jika tersedia
+jumlah item tidak boleh negatif
+```
+
+Reputation:
+```text
+hanya numeric delta
+```
+
+World facts:
+```text
+tidak boleh menghasilkan duplicate state yang tidak diinginkan
+```
+
+Turn:
+```text
+turnCount mengikuti aturan yang konsisten
+```
+
+Game over:
+```text
+game over state harus konsisten dengan character/session state
+```
+
+Jangan hanya membuat unit test happy path.
+Tambahkan edge cases:
+```text
+HP -999999
+HP +999999
+Mana -999999
+Gold -999999
+item tidak ada
+item quantity 0
+reputation delta 0
+null state
+undefined optional fields
+```
+
+---
+
+# 6. SOURCE OF TRUTH AUDIT
+
+Audit model dan service:
+```text
+GameSession
+Character
+StoryNode
+StoryChoice
+StorySnapshot
+WorldLedger
+Mission/Quest
+```
+
+Untuk setiap state penting, tentukan:
+```text
+Apa source of truth?
+Siapa yang boleh mengubahnya?
+Siapa yang hanya membaca?
+Bagaimana state dipersist?
+```
+
+Hindari kondisi seperti:
+```text
+currentNode di GameSession
++
+currentNode di Snapshot
++
+currentNode di object lain
+```
+jika ketiganya dapat menjadi state aktif.
+
+Snapshot boleh menyimpan historical state.
+Tetapi active state harus memiliki owner yang jelas.
+Dokumentasikan keputusan tersebut dalam code comment singkat atau dokumentasi backend.
+
+---
+
+# 7. SAVE/LOAD ROUND-TRIP TEST
+
+Buat test:
+```text
+create session
+   ↓
+modify state
+   ↓
+save
+   ↓
+load
+   ↓
+compare state
+```
+
+Minimal validasi:
+```text
+character
+HP
+maxHP
+mana
+maxMana
+gold
+inventory
+location
+current story state
+turnCount
+worldLedger
+reputation
+facts
+mission state
+active branch
+```
+
+Jika combat state memang persistable, masukkan juga combat state.
+
+Target:
+```text
+state_before_save ≈ state_after_load
+```
+Perbedaan hanya boleh terjadi pada metadata yang memang seharusnya berubah, misalnya timestamp.
+
+---
+
+# 8. SAVE GRAPH CLONING
+
+Audit:
+```text
+graphCloneService
+saveFileService
+slotService
+```
+
+Pastikan tidak terjadi:
+* shared object reference
+* mutation terhadap original session
+* ID collision
+* incomplete nested clone
+* missing relation
+* broken StoryNode reference
+
+Tambahkan regression test untuk graph dengan:
+```text
+session
+ ├─ character
+ ├─ story node
+ ├─ choices
+ ├─ snapshots
+ ├─ world ledger
+ └─ mission
+```
+
+---
+
+# 9. API ERROR CONTRACT
+
+Buat standar backend.
+Contoh:
+```json
+{
+  "success": false,
+  "error": {
+    "code": "SESSION_NOT_FOUND",
+    "message": "Session tidak ditemukan"
+  }
+}
+```
+
+Gunakan error code yang stabil.
+Contoh:
+```text
+SESSION_NOT_FOUND
+INVALID_SCENE
+INVALID_ACTION
+SAVE_FAILED
+LOAD_FAILED
+INVALID_SAVE_FILE
+AI_GENERATION_FAILED
+VALIDATION_FAILED
+UNAUTHORIZED
+FORBIDDEN
+```
+
+Jangan mengubah struktur response hanya karena endpoint berbeda.
+
+---
+
+# 10. ROUTE AUDIT
+
+Audit semua route.
+Cari:
+```text
+summary
+backlog
+export
+import
+legacy endpoints
+unused endpoints
+```
+
+Untuk setiap endpoint:
+```text
+ada consumer?
+masih dibutuhkan?
+terdokumentasi?
+response contract jelas?
+```
+
+Jangan menghapus endpoint hanya berdasarkan nama.
+Jika endpoint memang dead:
+1. hapus route
+2. hapus controller
+3. hapus service method
+4. hapus frontend consumer jika ada
+5. hapus test yang tidak relevan
+6. cari reference terakhir
+
+---
+
+# 11. JSON EXPORT/IMPORT
+
+Tentukan statusnya.
+Jika fitur resmi:
+* validasi schema import
+* batasi ukuran file
+* validasi semua nested data
+* jangan percaya ID dari file
+* cegah malformed graph
+* test round-trip
+* dokumentasikan formatnya
+
+---
+
+# 12. SECURITY AUDIT
+
+Audit:
+```text
+authentication
+authorization
+session ownership
+input validation
+rate limiting
+CORS
+helmet
+JSON body size
+file import
+database queries
+AI API key handling
+```
+
+Pastikan user tidak dapat mengakses save/session milik session lain hanya dengan mengganti ID.
+AI-generated content juga harus dianggap untrusted input.
+
+---
+
+# 13. BACKEND DEPENDENCY AUDIT
+
+Audit `backend/package.json`.
+Cari dependency:
+* tidak digunakan
+* duplicate
+* hanya digunakan development
+* hanya digunakan oleh service yang sudah dihapus
+
+---
+
+# 14. TEST COMMAND
+
+Pastikan tersedia command yang jelas untuk:
+```text
+backend unit tests
+backend integration tests
+lint
+```
+
+---
+
+# DEFINITION OF DONE
+
+Agent 1 dianggap selesai jika:
+* [ ] AI output menggunakan canonical fields
+* [ ] legacy state fields tidak digunakan aktif
+* [ ] scene schema test tersedia
+* [ ] gameState invariant test tersedia
+* [ ] save/load round-trip test tersedia
+* [ ] graph clone test tersedia
+* [ ] API error contract konsisten
+* [ ] route audit selesai
+* [ ] JSON export/import sudah diputuskan
+* [ ] source of truth state jelas
+* [ ] security audit selesai
+* [ ] backend dependency audit selesai
+* [ ] backend tests passing
+* [ ] tidak ada architecture rewrite yang tidak perlu
+
+Output akhir agent:
+```text
+1. Changed files
+2. Canonical contracts
+3. Tests added
+4. Security findings
+5. Removed legacy code
+6. Remaining known issues
+7. Commands used to verify
+```

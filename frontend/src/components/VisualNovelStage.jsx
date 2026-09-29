@@ -41,8 +41,7 @@ export default function VisualNovelStage({
     return {
       title: parsed?.title || campaign?.title || 'Jurnal Misi Petualang',
       prologue: parsed?.prologue || campaign?.description || 'Informasi latar belakang misi sedang disinkronkan oleh Dungeon Master. Selesaikan penyelidikan di lokasi saat ini.',
-      objective: parsed?.objective || parsed?.targetGoal || 'Tuntaskan investigasi dan netralkan sumber krisis.',
-      targetGoal: parsed?.objective || parsed?.targetGoal || 'Tuntaskan investigasi dan netralkan sumber krisis.'
+      objective: parsed?.objective || 'Tuntaskan investigasi dan netralkan sumber krisis.'
     };
   }, [session?.missionLog, campaign?.title, campaign?.description]);
 

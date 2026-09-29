@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Save, Download, Upload, X, Clock, MapPin, Heart, Shield, RefreshCw, Check } from 'lucide-react';
 import audio from '../services/audioService';
 import storyApi, { API_BASE } from '../services/api';
+import { formatErrorMessage } from '../utils/errorHandler';
 
 export default function SaveLoadModal({
   isOpen,
@@ -48,7 +49,7 @@ export default function SaveLoadModal({
         showFeedback(`Berhasil disimpan ke Slot ${slotNumber === 0 ? 'Auto' : slotNumber}!`);
         fetchSlots();
       } else {
-        alert(data.error || 'Gagal menyimpan.');
+        alert(formatErrorMessage(data.error, 'Gagal menyimpan.'));
       }
     } catch (err) {
       alert('Koneksi server gagal saat menyimpan.');
@@ -63,7 +64,7 @@ export default function SaveLoadModal({
         onLoadSession(data.data);
         onClose();
       } else {
-        alert(data.error || 'Gagal memuat slot.');
+        alert(formatErrorMessage(data.error, 'Gagal memuat slot.'));
       }
     } catch (err) {
       alert('Koneksi server gagal saat memuat.');
@@ -89,7 +90,7 @@ export default function SaveLoadModal({
           onLoadSession(data.data);
           onClose();
         } else {
-          alert(data.error || 'Format file save JSON tidak valid.');
+          alert(formatErrorMessage(data.error, 'Format file save JSON tidak valid.'));
         }
       } catch (err) {
         alert('Gagal membaca file JSON.');

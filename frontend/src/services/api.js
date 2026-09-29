@@ -3,7 +3,7 @@
  * Centralized API client for all backend endpoints.
  */
 
-export const API_BASE = import.meta.env.VITE_API_BASE || '/api/story';
+export const API_BASE = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE) || '/api/story';
 
 async function request(endpoint, options = {}) {
   const url = `${API_BASE}${endpoint}`;
@@ -12,13 +12,23 @@ async function request(endpoint, options = {}) {
     ...(options.headers || {})
   };
 
-  const response = await fetch(url, {
-    ...options,
-    headers
-  });
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers
+    });
 
-  const data = await response.json();
-  return data;
+    const data = await response.json();
+    return data;
+  } catch (err) {
+    return {
+      success: false,
+      error: {
+        code: 'NETWORK_ERROR',
+        message: err.message || 'Koneksi ke backend gagal.'
+      }
+    };
+  }
 }
 
 export const storyApi = {

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import audio from '../services/audioService';
 import storyApi, { API_BASE } from '../services/api';
+import { formatErrorMessage } from '../utils/errorHandler';
 
 const GameContext = createContext(null);
 
@@ -24,7 +25,9 @@ export function GameProvider({ children }) {
   const [initLoading, setInitLoading] = useState(true);
   const [toast, setToast] = useState(null);
 
-  const showToast = useCallback((message, type = 'error') => {
+  const showToast = useCallback((rawMessage, type = 'error') => {
+    const fallback = type === 'error' ? 'Terjadi kesalahan pada sistem.' : 'Operasi berhasil.';
+    const message = formatErrorMessage(rawMessage, fallback);
     setToast({ message, type });
     setTimeout(() => setToast(null), 3500);
   }, []);
