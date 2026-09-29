@@ -62,9 +62,6 @@ function generateFallbackOpening(campaign, character) {
     dialogue: cleanText(dialogue),
     consequenceNote: `Tiba di ${location} untuk memulai investigasi misi.`,
     stateUpdates: {
-      proposedHpChange: 0,
-      proposedManaChange: 0,
-      proposedGoldChange: 10,
       hpChange: 0,
       manaChange: 0,
       goldChange: 10,
@@ -73,9 +70,7 @@ function generateFallbackOpening(campaign, character) {
       receivedItem,
       consumedItem: null,
       reputationChange: {},
-      reputation: {},
-      factDiscovered: `Memulai petualangan di ${title}.`,
-      addLedgerFact: `Memulai petualangan di ${title}.`
+      factDiscovered: `Memulai petualangan di ${title}.`
     },
     combatEncounter: null,
     choices: [
@@ -141,9 +136,6 @@ function generateFallbackNextScene({
       dialogue: cleanText(resolved.diegeticFeedback),
       consequenceNote: `Tindakan aneh di luar nalar hanya mengundang kebingungan. Takdir memaksamu kembali fokus ke kenyataan.`,
       stateUpdates: {
-        proposedHpChange: 0,
-        proposedManaChange: 0,
-        proposedGoldChange: 0,
         hpChange: 0,
         manaChange: 0,
         goldChange: 0,
@@ -152,9 +144,7 @@ function generateFallbackNextScene({
         receivedItem: null,
         consumedItem: null,
         reputationChange: {},
-        reputation: {},
-        factDiscovered: `${charName} tersadar dan memusatkan kembali perhatian ke situasi sekitar.`,
-        addLedgerFact: `${charName} tersadar dan memusatkan kembali perhatian ke situasi sekitar.`
+        factDiscovered: `${charName} tersadar dan memusatkan kembali perhatian ke situasi sekitar.`
       },
       combatEncounter: null,
       choices: [
@@ -382,9 +372,6 @@ function generateFallbackNextScene({
     dialogue: cleanText(dialogue),
     consequenceNote: cleanText(consequenceNote),
     stateUpdates: {
-      proposedHpChange: 0,
-      proposedManaChange: manaDelta,
-      proposedGoldChange: 0,
       hpChange: 0,
       manaChange: manaDelta,
       goldChange: 0,
@@ -393,9 +380,7 @@ function generateFallbackNextScene({
       receivedItem: null,
       consumedItem: null,
       reputationChange: {},
-      reputation: {},
-      factDiscovered: `Melakukan '${actionText.slice(0, 35)}' di ${prevLoc}.`,
-      addLedgerFact: `Melakukan '${actionText.slice(0, 35)}' di ${prevLoc}.`
+      factDiscovered: `Melakukan '${actionText.slice(0, 35)}' di ${prevLoc}.`
     },
     combatEncounter: null,
     choices,

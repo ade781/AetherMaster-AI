@@ -137,7 +137,6 @@ Keluarkan respon HANYA dalam format JSON valid tanpa pembungkus markdown (tanpa 
   "missionLog": {
     "title": "Jurnal Misi: [Judul]",
     "prologue": "Ringkasan latar belakang kampanye dan peran karakter personal (2-3 paragraf)",
-    "targetGoal": "Sasaran utama investigasi misi",
     "objective": "Sasaran utama investigasi misi",
     "status": "active"
   },
@@ -150,9 +149,6 @@ Keluarkan respon HANYA dalam format JSON valid tanpa pembungkus markdown (tanpa 
   "dialogue": "Narasi adegan Babak I di lokasi kejadian (in media res). Jangan ulangi teks dari prologue!",
   "consequenceNote": "Tiba di lokasi untuk memulai investigasi.",
   "stateUpdates": {
-    "proposedHpChange": 0,
-    "proposedManaChange": 0,
-    "proposedGoldChange": 0,
     "hpChange": 0,
     "manaChange": 0,
     "goldChange": 0,
@@ -191,9 +187,6 @@ Keluarkan respon HANYA dalam format JSON valid tanpa pembungkus markdown (tanpa 
   "dialogue": "Narasi deskriptif dan dialog langsung yang merespons aksi pemain secara spesifik",
   "consequenceNote": "1 kalimat ringkas mengenai konsekuensi dari aksi yang diambil",
   "stateUpdates": {
-    "proposedHpChange": 0,
-    "proposedManaChange": 0,
-    "proposedGoldChange": 0,
     "hpChange": 0,
     "manaChange": 0,
     "goldChange": 0,

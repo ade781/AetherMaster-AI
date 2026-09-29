@@ -99,24 +99,18 @@ const stateUpdatesSchema = z.object({
   hpChange: z.number().int().default(0),
   manaChange: z.number().int().default(0),
   goldChange: z.number().int().default(0),
-  proposedHpChange: z.number().int().default(0),
-  proposedManaChange: z.number().int().default(0),
-  proposedGoldChange: z.number().int().default(0),
   receivedItemId: z.string().nullable().optional(),
   consumedItemId: z.string().nullable().optional(),
   receivedItem: itemSchema.nullable().optional(),
   consumedItem: z.union([z.string(), itemSchema]).nullable().optional(),
   reputationChange: z.record(z.string(), z.number()).default({}),
-  reputation: z.record(z.string(), z.number()).default({}),
-  factDiscovered: z.string().nullable().optional(),
-  addLedgerFact: z.string().nullable().optional()
+  factDiscovered: z.string().nullable().optional()
 }).default({});
 
 // 5. Strict Mission Log Schema
 const missionLogSchema = z.object({
   title: z.string().min(1).default('Jurnal Misi Petualang'),
   prologue: z.string().default(''),
-  targetGoal: z.string().default('Tuntaskan penyelidikan dan atasi krisis utama.'),
   objective: z.string().default('Tuntaskan penyelidikan dan atasi krisis utama.'),
   status: z.enum(['active', 'completed', 'failed']).default('active')
 }).nullable().optional();
@@ -202,17 +196,12 @@ function normalizeSceneData(raw) {
     hpChange,
     manaChange,
     goldChange,
-    proposedHpChange: hpChange,
-    proposedManaChange: manaChange,
-    proposedGoldChange: goldChange,
     receivedItemId,
     consumedItemId,
     receivedItem,
     consumedItem,
     reputationChange: rep,
-    reputation: rep,
-    factDiscovered: factDiscovered ? cleanText(factDiscovered) : null,
-    addLedgerFact: factDiscovered ? cleanText(factDiscovered) : null
+    factDiscovered: factDiscovered ? cleanText(factDiscovered) : null
   };
 
   // Normalize missionLog
@@ -220,14 +209,12 @@ function normalizeSceneData(raw) {
     const ml = normalized.missionLog;
     const title = cleanText(ml.title || 'Jurnal Misi Petualang');
     const prologue = cleanText(ml.prologue || '');
-    const targetGoal = cleanText(ml.targetGoal || ml.objective || 'Tuntaskan penyelidikan dan atasi krisis utama.');
-    const objective = cleanText(ml.objective || targetGoal);
+    const objective = cleanText(ml.objective || ml.targetGoal || 'Tuntaskan penyelidikan dan atasi krisis utama.');
     const status = ['active', 'completed', 'failed'].includes(ml.status) ? ml.status : 'active';
 
     normalized.missionLog = {
       title,
       prologue,
-      targetGoal,
       objective,
       status
     };

@@ -77,10 +77,9 @@ function resolveAction(session, character, currentNode, actionIntent = {}, aiSta
   }
 
   // 3. Deterministic Stat Clamping (HP, Mana, Gold)
-  // AI may propose changes: proposedHpChange / hpChange
-  const rawHpDelta = Number(updates.proposedHpChange ?? updates.hpChange ?? 0);
-  const rawManaDelta = Number(updates.proposedManaChange ?? updates.manaChange ?? 0);
-  const rawGoldDelta = Number(updates.proposedGoldChange ?? updates.goldChange ?? 0);
+  const rawHpDelta = Number(updates.hpChange ?? 0);
+  const rawManaDelta = Number(updates.manaChange ?? 0);
+  const rawGoldDelta = Number(updates.goldChange ?? 0);
 
   // Clamp HP: never exceeds maxHp, never drops below 0
   const targetHp = currentHp + rawHpDelta;
@@ -98,7 +97,7 @@ function resolveAction(session, character, currentNode, actionIntent = {}, aiSta
   const finalGoldChange = clampedGold - currentGold;
 
   // 4. Reputation updates
-  const reputationChanges = updates.reputationChange || updates.reputation || {};
+  const reputationChanges = updates.reputationChange || {};
   if (typeof reputationChanges === 'object') {
     for (const [faction, delta] of Object.entries(reputationChanges)) {
       if (faction && delta) {
@@ -108,7 +107,7 @@ function resolveAction(session, character, currentNode, actionIntent = {}, aiSta
   }
 
   // 5. Fact discovery
-  const factText = updates.factDiscovered || updates.addLedgerFact;
+  const factText = updates.factDiscovered || null;
   if (factText) {
     worldLedgerService.addFact(currentWorldLedger, factText, (session?.turnCount || 1) + 1);
   }
