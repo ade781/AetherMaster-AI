@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Skull, RotateCcw, FolderOpen, Home, AlertOctagon, ScrollText, ChevronDown, ChevronUp, Shield, Coins, Sparkles } from 'lucide-react';
 import audio from '../services/audioService';
-
-import { API_BASE } from '../store/GameContext';
+import storyApi from '../services/api';
 
 export default function GameOverModal({
   isOpen,
@@ -17,8 +16,7 @@ export default function GameOverModal({
 
   useEffect(() => {
     if (isOpen && session?.id) {
-      fetch(`${API_BASE}/summary/${session.id}`)
-        .then(res => res.json())
+      storyApi.getSessionSummary(session.id)
         .then(d => {
           if (d.success) setSummary(d.data);
         })

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { GitFork, RotateCcw, X, MapPin, AlertCircle } from 'lucide-react';
 import audio from '../services/audioService';
-import { API_BASE } from '../store/GameContext';
+import storyApi from '../services/api';
 
 export default function StoryTreeModal({
   isOpen,
@@ -17,8 +17,7 @@ export default function StoryTreeModal({
   useEffect(() => {
     if (!isOpen || !sessionId) return;
     setLoading(true);
-    fetch(`${API_BASE}/tree/${sessionId}`)
-      .then(res => res.json())
+    storyApi.getStoryTree(sessionId)
       .then(data => {
         if (data.success) {
           setTreeNodes(data.data || []);

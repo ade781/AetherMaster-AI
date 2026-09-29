@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import audio from '../services/audioService';
+import storyApi, { API_BASE } from '../services/api';
 
 const GameContext = createContext(null);
 
-export const API_BASE = import.meta.env.VITE_API_BASE || '/api/story';
+export { API_BASE };
 
 export function GameProvider({ children }) {
   const [campaigns, setCampaigns] = useState([]);
@@ -13,14 +14,11 @@ export function GameProvider({ children }) {
   const [currentNode, setCurrentNode] = useState(null);
   const [combatState, setCombatState] = useState(null);
 
-  // Modals & UI states
+  // Active Modals & UI states
   const [isCharCreationOpen, setIsCharCreationOpen] = useState(false);
   const [isStoryTreeOpen, setIsStoryTreeOpen] = useState(false);
-  const [isBacklogOpen, setIsBacklogOpen] = useState(false);
   const [isSaveLoadOpen, setIsSaveLoadOpen] = useState(false);
   const [isInventoryOpen, setIsInventoryOpen] = useState(false);
-  const [isJournalOpen, setIsJournalOpen] = useState(false);
-  const [isQuestOpen, setIsQuestOpen] = useState(false);
 
   const [isLoading, setIsLoading] = useState(false);
   const [initLoading, setInitLoading] = useState(true);
@@ -33,8 +31,7 @@ export function GameProvider({ children }) {
 
   // Fetch campaigns and restore session if available on mount
   useEffect(() => {
-    fetch(`${API_BASE}/campaigns`)
-      .then(res => res.json())
+    storyApi.getCampaigns()
       .then(data => {
         if (data.success) {
           setCampaigns(data.data || []);
@@ -45,8 +42,7 @@ export function GameProvider({ children }) {
 
     const savedSessionId = localStorage.getItem('aethermaster_active_session_id');
     if (savedSessionId) {
-      fetch(`${API_BASE}/session/${savedSessionId}`)
-        .then(res => res.json())
+      storyApi.getSession(savedSessionId)
         .then(data => {
           if (data.success && data.data) {
             setSession(data.data.session);
@@ -85,17 +81,10 @@ export function GameProvider({ children }) {
 
   // Start new game
   const handleStartGame = useCallback(async (characterData) => {
+    if (!selectedCampaign) return;
     setIsLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/start`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          campaignId: selectedCampaign.id,
-          characterData
-        })
-      });
-      const data = await res.json();
+      const data = await storyApi.startAdventure(selectedCampaign.id, characterData);
       if (data.success) {
         if (data.data.session?.id) {
           localStorage.setItem('aethermaster_active_session_id', data.data.session.id);
@@ -121,27 +110,17 @@ export function GameProvider({ children }) {
     setIsLoading(true);
 
     try {
-      const res = await fetch(`${API_BASE}/action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId: session.id,
-          choiceId: choice.id,
-          customText: choice.customText,
-          tone: choice.tone
-        })
+      const data = await storyApi.chooseAction(session.id, {
+        choiceId: choice.id,
+        customText: choice.customText,
+        tone: choice.tone
       });
 
-      const data = await res.json();
       if (data.success) {
-        const nextNode = data.data.currentNode;
-        const nextChar = data.data.character;
-        const nextSess = data.data.session;
-
-        setSession(nextSess);
-        setCharacter(nextChar);
-        setCurrentNode(nextNode);
-        setCombatState(nextSess?.combatState || null);
+        setSession(data.data.session);
+        setCharacter(data.data.character);
+        setCurrentNode(data.data.currentNode);
+        setCombatState(data.data.session?.combatState || null);
       } else {
         showToast(data.error || 'Gagal mengambil tindakan.', 'error');
       }
@@ -158,19 +137,8 @@ export function GameProvider({ children }) {
     setIsLoading(true);
 
     try {
-      const res = await fetch(`${API_BASE}/combat/action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId: session.id,
-          action,
-          itemId
-        })
-      });
-
-      const data = await res.json();
+      const data = await storyApi.combatAction(session.id, action, itemId);
       if (data.success && data.data) {
-        // Update states purely from authoritative server payload
         setSession(data.data.session);
         setCharacter(data.data.character);
         setCombatState(data.data.combatState);
@@ -196,7 +164,7 @@ export function GameProvider({ children }) {
     }
   }, [session, isLoading, showToast]);
 
-  // Use item from inventory (Authoritative Server Confirmation)
+  // Use item from inventory
   const handleUseItem = useCallback(async (item) => {
     if (!character || !session) return;
 
@@ -208,16 +176,7 @@ export function GameProvider({ children }) {
 
     audio.playSelect();
     try {
-      const res = await fetch(`${API_BASE}/use-item`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId: session.id,
-          itemId: item.id
-        })
-      });
-
-      const data = await res.json();
+      const data = await storyApi.useItem(session.id, item.id);
       if (data.success && data.data?.character) {
         setCharacter(data.data.character);
         audio.playHeal();
@@ -235,15 +194,7 @@ export function GameProvider({ children }) {
     if (!session) return;
     setIsLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/rewind`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId: session.id,
-          targetNodeId
-        })
-      });
-      const data = await res.json();
+      const data = await storyApi.rewindStory(session.id, targetNodeId);
       if (data.success) {
         setSession(data.data.session);
         setCharacter(data.data.character);
@@ -275,7 +226,7 @@ export function GameProvider({ children }) {
     setIsSaveLoadOpen(false);
   }, []);
 
-  // Narrative transition after confirmed combat victory (No client-side stat mutation)
+  // Narrative transition after confirmed combat victory
   const handleResolveCombat = useCallback(() => {
     handleChooseAction({
       id: 'combat_victory',
@@ -293,32 +244,7 @@ export function GameProvider({ children }) {
     });
   }, [handleChooseAction]);
 
-  // Global Keyboard Shortcuts (I, L, M)
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (['INPUT', 'TEXTAREA'].includes(e.target?.tagName)) return;
-
-      if (e.key === 'i' || e.key === 'I') {
-        e.preventDefault();
-        setIsInventoryOpen(prev => !prev);
-      } else if (e.key === 'l' || e.key === 'L') {
-        if (session) {
-          e.preventDefault();
-          setIsBacklogOpen(prev => !prev);
-        }
-      } else if (e.key === 'm' || e.key === 'M') {
-        if (session) {
-          e.preventDefault();
-          setIsStoryTreeOpen(prev => !prev);
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [session]);
-
-  // Reactive Heartbeat audio synth when HP < 20%
+  // Reactive Heartbeat audio synth when HP <= 20%
   useEffect(() => {
     if (!character || character.hp <= 0) {
       audio.stopHeartbeat?.();
@@ -350,16 +276,10 @@ export function GameProvider({ children }) {
     setIsCharCreationOpen,
     isStoryTreeOpen,
     setIsStoryTreeOpen,
-    isBacklogOpen,
-    setIsBacklogOpen,
     isSaveLoadOpen,
     setIsSaveLoadOpen,
     isInventoryOpen,
     setIsInventoryOpen,
-    isJournalOpen,
-    setIsJournalOpen,
-    isQuestOpen,
-    setIsQuestOpen,
     isLoading,
     initLoading,
     toast,
