@@ -15,6 +15,7 @@ import audio from '../services/audioService';
 export default function CombatStage({
   character,
   combatState,
+  backgroundId,
   onCombatAction,
   onResolveCombat,
   onFleeCombat,
@@ -45,7 +46,15 @@ export default function CombatStage({
     `Pertarungan dimulai! ${enemyData.name} (AC ${enemyData.ac || 12}) menghadang jalanmu.`
   ];
 
-  // Play epic combat BGM during battle encounter
+  // Resolve background based on props/state with fallback
+  const resolvedBackground = () => {
+    const bg = backgroundId || combatState?.backgroundId || 'bg_04_crimson_crypt';
+    if (bg.startsWith('/') || bg.startsWith('http') || bg.startsWith('data:')) return bg;
+    const clean = bg.replace(/\.png$/i, '');
+    return `/assets/backgrounds/${clean}.png`;
+  };
+
+  // Play combat ambient soundscape during battle encounter
   useEffect(() => {
     const enemyName = (enemyData.name || '').toLowerCase();
     const isBoss = enemyName.includes('naga') ||
@@ -54,9 +63,9 @@ export default function CombatStage({
                    enemyName.includes('raja') ||
                    enemyName.includes('lord') ||
                    (maxEnemyHp >= 50);
-    audio.playBGM(isBoss ? 'boss' : 'combat', 0.26);
+    audio.startAmbient(isBoss ? 'boss' : 'combat');
     return () => {
-      audio.stopBGM();
+      audio.stopAmbient();
     };
   }, [enemyData.name, maxEnemyHp]);
 
@@ -123,7 +132,7 @@ export default function CombatStage({
         {/* Arena Background */}
         <div
           className="absolute inset-0 bg-cover bg-center filter brightness-[0.4] contrast-125 z-0"
-          style={{ backgroundImage: "url('/assets/backgrounds/bg_04_crimson_crypt.png')" }}
+          style={{ backgroundImage: `url('${resolvedBackground()}')` }}
         >
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-slate-950/80" />
         </div>
@@ -132,7 +141,7 @@ export default function CombatStage({
         <div className="relative z-10 flex items-center justify-between">
           <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-rose-950/80 border border-rose-500/50 text-rose-300 text-xs font-cinzel font-bold shadow-lg">
             <Swords className="w-4 h-4 text-rose-400 animate-pulse" />
-            <span>Pertempuran Taktis Server RPG • Ronde {round}</span>
+            <span>Pertempuran Taktis • Ronde {round}</span>
           </div>
 
           <div className="flex items-center gap-2 text-xs font-mono text-slate-300 bg-black/60 px-3 py-1.5 rounded-xl border border-white/10">
@@ -250,7 +259,7 @@ export default function CombatStage({
         <div className="flex-1 overflow-hidden flex flex-col space-y-2 pb-4">
           <div className="flex items-center gap-2 pb-2 border-b border-slate-800 text-xs font-mono text-slate-400">
             <ScrollText className="w-4 h-4 text-amber-400" />
-            <span>Catatan Pertempuran Resmi (Server Verified)</span>
+            <span>Catatan Pertempuran Resmi</span>
           </div>
 
           <div className="flex-1 overflow-y-auto space-y-2 pr-1 font-outfit text-xs text-slate-300 leading-relaxed scrollbar-hide">

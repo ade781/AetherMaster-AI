@@ -8,20 +8,23 @@ import ItemSlot from './common/ItemSlot';
 export default function CharacterHUD({
   character,
   onUseItem,
-  isInventoryOpen: propInventoryOpen,
+  isInventoryOpen = false,
   onToggleInventory
 }) {
-  const [localInventoryOpen, setLocalInventoryOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
 
   if (!character) return null;
 
-  const showInventory = propInventoryOpen !== undefined ? propInventoryOpen : localInventoryOpen;
-  const setShowInventory = (val) => {
+  const handleToggle = () => {
+    audio.playClick();
     if (onToggleInventory) {
-      onToggleInventory(val);
-    } else {
-      setLocalInventoryOpen(val);
+      onToggleInventory(!isInventoryOpen);
+    }
+  };
+
+  const handleClose = () => {
+    if (onToggleInventory) {
+      onToggleInventory(false);
     }
   };
 
@@ -68,20 +71,17 @@ export default function CharacterHUD({
             </div>
           </div>
 
-          {/* Gold & Inventory (Touch Target min 44px) */}
+          {/* Gold & Inventory */}
           <div className="flex items-center gap-2 shrink-0">
             <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 font-mono text-[11px] font-bold shadow-sm">
               <Coins className="w-3.5 h-3.5" />
               <span>{character.gold ?? 50} G</span>
             </div>
             <button
-              onClick={() => {
-                audio.playClick();
-                setShowInventory(!showInventory);
-              }}
+              onClick={handleToggle}
               className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-medium text-slate-300 hover:text-white transition-all cursor-pointer min-h-[44px]"
-              aria-label="Buka Tas Inventaris (Hotkey: I)"
-              title="Buka Tas Inventaris (Hotkey: I)"
+              aria-label="Buka Tas Inventaris"
+              title="Buka Tas Inventaris"
             >
               <Backpack className="w-4 h-4 text-amber-400" />
               <span className="w-5 h-5 rounded-full bg-amber-400/20 text-amber-300 flex items-center justify-center text-[10px] font-bold">
@@ -106,8 +106,9 @@ export default function CharacterHUD({
             </div>
             <div className="w-full h-1.5 bg-black/50 rounded-full overflow-hidden border border-white/5 relative shadow-inner">
               <div
-                className={`h-full transition-all duration-500 rounded-full ${isHpCritical ? 'bg-rose-500 animate-pulse' : 'bg-gradient-to-r from-rose-700 to-rose-400'
-                  }`}
+                className={`h-full transition-all duration-500 rounded-full ${
+                  isHpCritical ? 'bg-rose-500 animate-pulse' : 'bg-gradient-to-r from-rose-700 to-rose-400'
+                }`}
                 style={{ width: `${hpPercent}%` }}
               />
             </div>
@@ -155,10 +156,10 @@ export default function CharacterHUD({
       </div>
 
       {/* 6-Slot Grid Inventory Modal / Drawer */}
-      {showInventory && (
+      {isInventoryOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-150"
-          onClick={() => setShowInventory(false)}
+          onClick={handleClose}
         >
           <div
             className="relative w-full max-w-md rounded-2xl border border-slate-700 bg-slate-950/95 shadow-2xl p-5 text-white"
@@ -172,7 +173,7 @@ export default function CharacterHUD({
                 </h3>
               </div>
               <button
-                onClick={() => setShowInventory(false)}
+                onClick={handleClose}
                 className="w-10 h-10 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer min-h-[44px] min-w-[44px]"
                 aria-label="Tutup Tas"
               >
@@ -180,7 +181,7 @@ export default function CharacterHUD({
               </button>
             </div>
 
-            {/* 6 Slot Grid with unified ItemSlot component */}
+            {/* 6 Slot Grid */}
             <div className="grid grid-cols-3 gap-3 mb-4">
               {slots.map((item, idx) => (
                 <ItemSlot
@@ -226,7 +227,7 @@ export default function CharacterHUD({
               </div>
             ) : (
               <div className="text-center py-2 text-xs text-slate-500">
-                Pilih salah satu barang di atas untuk melihat detail (Hotkey: I untuk tutup).
+                Pilih salah satu barang di atas untuk melihat detail.
               </div>
             )}
           </div>

@@ -11,14 +11,8 @@ export default function CampaignCard({
   if (!campaign) return null;
 
   const getCoverSrc = () => {
-    if (campaign.coverImage) {
-      if (campaign.coverImage.includes('pollinations.ai')) {
-        const bgId = campaign.defaultBackgroundId || 'bg_01_tavern';
-        return `/assets/backgrounds/${bgId.replace(/\.png$/i, '')}.png`;
-      }
-      if (campaign.coverImage.startsWith('http') || campaign.coverImage.startsWith('/') || campaign.coverImage.startsWith('data:')) {
-        return campaign.coverImage;
-      }
+    if (campaign.coverImage && (campaign.coverImage.startsWith('http') || campaign.coverImage.startsWith('/') || campaign.coverImage.startsWith('data:'))) {
+      return campaign.coverImage;
     }
     if (campaign.defaultBackgroundId) {
       if (campaign.defaultBackgroundId.startsWith('http') || campaign.defaultBackgroundId.startsWith('/')) {
@@ -54,10 +48,11 @@ export default function CampaignCard({
         audio.playClick();
         onSelect(campaign);
       }}
-      className={`group relative rounded-2xl overflow-hidden cursor-pointer border transition-all duration-300 flex flex-col justify-between ${isSelected
+      className={`group relative rounded-2xl overflow-hidden cursor-pointer border transition-all duration-300 flex flex-col justify-between ${
+        isSelected
           ? 'bg-slate-900 border-amber-400 shadow-xl shadow-amber-500/10 scale-[1.02]'
           : 'bg-slate-950/80 border-slate-800 hover:border-slate-600 hover:bg-slate-900/60'
-        }`}
+      }`}
     >
       {/* Top Image Banner */}
       <div className="relative h-44 w-full overflow-hidden bg-slate-950">
@@ -66,10 +61,7 @@ export default function CampaignCard({
           alt={campaign.title}
           className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
           onError={(e) => {
-            const fallbackBg = campaign.defaultBackgroundId ? `/assets/backgrounds/${campaign.defaultBackgroundId.replace(/\.png$/i, '')}.png` : '/assets/backgrounds/bg_01_tavern.png';
-            if (!e.target.src.endsWith(fallbackBg) && !e.target.src.endsWith('/assets/backgrounds/bg_01_tavern.png')) {
-              e.target.src = fallbackBg;
-            } else if (!e.target.src.endsWith('/assets/backgrounds/bg_01_tavern.png')) {
+            if (!e.target.src.endsWith('/assets/backgrounds/bg_01_tavern.png')) {
               e.target.src = '/assets/backgrounds/bg_01_tavern.png';
             }
           }}

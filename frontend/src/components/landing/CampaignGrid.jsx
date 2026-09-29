@@ -118,15 +118,11 @@ export default function CampaignGrid({
             {/* Visual Cover (5 cols) */}
             <div className="lg:col-span-5 relative h-64 lg:h-auto min-h-[220px] overflow-hidden bg-slate-950">
               <img
-                src={activeCampaign.coverImage || (activeCampaign.defaultBackgroundId ? `/assets/backgrounds/${activeCampaign.defaultBackgroundId}.png` : '/assets/backgrounds/bg_01_tavern.png')}
+                src={activeCampaign.coverImage || (activeCampaign.defaultBackgroundId ? `/assets/backgrounds/${activeCampaign.defaultBackgroundId.replace(/\.png$/i, '')}.png` : '/assets/backgrounds/bg_01_tavern.png')}
                 alt={activeCampaign.title}
                 className="w-full h-full object-cover"
                 onError={(e) => {
-                  if (activeCampaign.defaultBackgroundId && !e.target.src.includes(activeCampaign.defaultBackgroundId)) {
-                    e.target.src = `/assets/backgrounds/${activeCampaign.defaultBackgroundId}.png`;
-                  } else {
-                    e.target.src = '/assets/backgrounds/bg_01_tavern.png';
-                  }
+                  e.target.src = '/assets/backgrounds/bg_01_tavern.png';
                 }}
               />
               <div className="absolute inset-0 bg-gradient-to-t lg:bg-gradient-to-r from-slate-900 via-transparent to-transparent" />

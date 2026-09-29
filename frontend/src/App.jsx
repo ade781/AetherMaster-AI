@@ -14,18 +14,13 @@ function MainGame() {
     campaigns,
     selectedCampaign,
     session,
-    setSession,
     character,
-    setCharacter,
     currentNode,
-    setCurrentNode,
     combatState,
     isCharCreationOpen,
     setIsCharCreationOpen,
     isStoryTreeOpen,
     setIsStoryTreeOpen,
-    isBacklogOpen,
-    setIsBacklogOpen,
     isSaveLoadOpen,
     setIsSaveLoadOpen,
     isInventoryOpen,
@@ -33,7 +28,6 @@ function MainGame() {
     isLoading,
     initLoading,
     toast,
-    showToast,
     handleSelectCampaign,
     handleStartGame,
     handleChooseAction,
@@ -72,7 +66,6 @@ function MainGame() {
           initLoading={initLoading}
           onSelectCampaign={handleSelectCampaign}
           onOpenSaveLoad={() => setIsSaveLoadOpen(true)}
-          showToast={showToast}
         />
 
         {/* Character Creation Modal */}
@@ -111,6 +104,7 @@ function MainGame() {
         <CombatStage
           character={character}
           combatState={combatState || { inCombat: true, round: 1, enemy: currentNode.combatEncounter }}
+          backgroundId={currentNode?.backgroundId}
           onCombatAction={handleCombatAction}
           onResolveCombat={handleResolveCombat}
           onFleeCombat={handleFleeCombat}
@@ -155,7 +149,6 @@ function MainGame() {
         sessionId={session?.id}
         onLoadSession={handleLoadSession}
       />
-
 
       {/* Game Over & Defeat Modal */}
       <GameOverModal

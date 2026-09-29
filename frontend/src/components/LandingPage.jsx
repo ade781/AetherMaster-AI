@@ -17,8 +17,7 @@ export default function LandingPage({
   campaigns = [],
   initLoading = false,
   onSelectCampaign,
-  onOpenSaveLoad,
-  showToast
+  onOpenSaveLoad
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeModal, setActiveModal] = useState(null);
