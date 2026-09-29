@@ -1,8 +1,9 @@
 /**
  * AetherMaster Procedural Web Audio Synth & Voice Gateway
- * 100% client-side synthesis using Web Audio API & SpeechSynthesis.
- * Eliminates heavy MP3 BGM files and browser autoplay blockers.
+ * Procedural client-side synthesis using Web Audio API & SpeechSynthesis/Neural Edge TTS.
  */
+
+import { API_BASE } from './api';
 
 class AudioService {
   constructor() {
@@ -23,9 +24,11 @@ class AudioService {
   init() {
     if (!this.ctx) {
       const AudioContext = window.AudioContext || window.webkitAudioContext;
-      this.ctx = new AudioContext();
+      if (AudioContext) {
+        this.ctx = new AudioContext();
+      }
     }
-    if (this.ctx.state === 'suspended') {
+    if (this.ctx && this.ctx.state === 'suspended') {
       this.ctx.resume();
     }
   }
@@ -33,7 +36,7 @@ class AudioService {
   setMuted(muted) {
     this.isMuted = Boolean(muted);
     if (this.isMuted) {
-      this.stopBGM();
+      this.stopAmbient();
       this.stopHeartbeat();
     }
   }
@@ -48,6 +51,8 @@ class AudioService {
   playClick() {
     if (this.isMuted) return;
     this.init();
+    if (!this.ctx) return;
+
     const now = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
@@ -71,8 +76,9 @@ class AudioService {
   playSwordClash() {
     if (this.isMuted) return;
     this.init();
-    const now = this.ctx.currentTime;
+    if (!this.ctx) return;
 
+    const now = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
     osc.type = 'triangle';
@@ -89,9 +95,15 @@ class AudioService {
     osc.stop(now + 0.26);
   }
 
+  playCombat() {
+    this.playSwordClash();
+  }
+
   playHeal() {
     if (this.isMuted) return;
     this.init();
+    if (!this.ctx) return;
+
     const now = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
@@ -113,6 +125,8 @@ class AudioService {
   playMagic() {
     if (this.isMuted) return;
     this.init();
+    if (!this.ctx) return;
+
     const now = this.ctx.currentTime;
     const freqs = [587.33, 880, 1174.66, 1760]; // D5, A5, D6, A6 shimmer
     freqs.forEach((freq, idx) => {
@@ -135,6 +149,8 @@ class AudioService {
   playGoldCoins() {
     if (this.isMuted) return;
     this.init();
+    if (!this.ctx) return;
+
     const now = this.ctx.currentTime;
     const freqs = [1800, 2400, 3200];
     freqs.forEach((f, i) => {
@@ -157,6 +173,8 @@ class AudioService {
   playCriticalSuccess() {
     if (this.isMuted) return;
     this.init();
+    if (!this.ctx) return;
+
     const now = this.ctx.currentTime;
     const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51]; // C major fanfare
 
@@ -177,9 +195,15 @@ class AudioService {
     });
   }
 
+  playSuccess() {
+    this.playCriticalSuccess();
+  }
+
   playCriticalFailure() {
     if (this.isMuted) return;
     this.init();
+    if (!this.ctx) return;
+
     const now = this.ctx.currentTime;
     const notes = [220, 207.65, 196, 174.61]; // descending dissonance
 
@@ -198,6 +222,10 @@ class AudioService {
       osc.start(now + idx * 0.12);
       osc.stop(now + idx * 0.12 + 0.55);
     });
+  }
+
+  playFailure() {
+    this.playCriticalFailure();
   }
 
   // --- REACTIVE HEARTBEAT SYNTH (< 20% HP) ---
@@ -251,6 +279,8 @@ class AudioService {
   startAmbient(type = 'tavern') {
     if (this.isMuted) return;
     this.init();
+    if (!this.ctx) return;
+
     if (this.ambientNode) {
       this.stopAmbient();
     }
@@ -317,8 +347,8 @@ class AudioService {
     }
   }
 
+  // Clean wrappers for backward compatibility
   playBGM(type = 'tavern') {
-    if (this.isMuted) return;
     this.startAmbient(type);
   }
 
@@ -347,15 +377,11 @@ class AudioService {
     const clean = text.replace(/[*_~`#>]/g, '').replace(/\[.*?\]\(.*?\)/g, '').trim();
     if (!clean) return;
 
-    // 1. Coba Neural Edge TTS via Backend (Suara Pria Tua Deep Alami)
+    // 1. Try Neural Edge TTS via Backend
     try {
       this.speechAbortController = new AbortController();
 
-      const apiBase = (typeof window !== 'undefined' && window.__API_BASE__) 
-        || import.meta.env?.VITE_API_BASE 
-        || '/api/story';
-
-      const response = await fetch(`${apiBase}/tts`, {
+      const response = await fetch(`${API_BASE}/tts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -390,7 +416,7 @@ class AudioService {
       console.warn('[AudioService] Neural TTS dialihkan ke Web Speech API:', err.message);
     }
 
-    // 2. Fallback jika offline: Web Speech API dengan tuning Deep Pitch & Calm Pace
+    // 2. Fallback to Web Speech API
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(clean);
@@ -402,14 +428,10 @@ class AudioService {
       );
       if (maleVoice) utterance.voice = maleVoice;
       utterance.lang = 'id-ID';
-      utterance.pitch = 0.65; // Suara deep / berat
-      utterance.rate = 0.85;  // Tempo tenang tetua
+      utterance.pitch = 0.65;
+      utterance.rate = 0.85;
       window.speechSynthesis.speak(utterance);
     }
-  }
-
-  speakText(text, lang = 'id-ID') {
-    return this.speakNarration(text);
   }
 
   stopSpeech() {
