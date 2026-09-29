@@ -30,9 +30,9 @@ describe('Narrative Orchestration & Security Tests', () => {
         mood: 'mysterious',
         dialogue: 'Eldrin menyeka gelas kayu lalu berbisik pelan memberitahumu tentang sebuah kunci kuno.',
         stateUpdates: {
-          proposedHpChange: 0,
-          proposedManaChange: 0,
-          proposedGoldChange: 5,
+          hpChange: 0,
+          manaChange: 0,
+          goldChange: 5,
           factDiscovered: 'Eldrin menyebutkan Kunci Makam Kuno'
         },
         choices: [
@@ -42,7 +42,7 @@ describe('Narrative Orchestration & Security Tests', () => {
 
       assert.strictEqual(mockNextScene.mood, 'mysterious');
       assert.ok(mockNextScene.dialogue.length > 10);
-      assert.strictEqual(mockNextScene.stateUpdates.proposedHpChange, 0);
+      assert.strictEqual(mockNextScene.stateUpdates.hpChange, 0);
     });
   });
 
@@ -150,7 +150,7 @@ describe('Narrative Orchestration & Security Tests', () => {
         choices: [{ id: 'c1', text: 'Ambil ramuan', tone: 'cautious' }],
         stateUpdates: {
           receivedItemId: 'item_01_potion_heal',
-          proposedHpChange: 5
+          hpChange: 5
         }
       }));
 

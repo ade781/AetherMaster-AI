@@ -228,7 +228,7 @@ function buildOpeningSystemPrompt({ campaign, character }) {
 1. 'missionLog':
    - 'title': Judul berkas misi singkat (misal: "Jurnal Misi: ${campaign?.title || 'Petualangan'}").
    - 'prologue': Narasi 2-3 paragraf mengalir memadukan premis krisis dengan profil ${character?.name || 'Petualang'} sang ${character?.characterClass || 'Pengelana'}.
-   - 'objective' & 'targetGoal': 1 kalimat lugas sasaran utama misi.
+   - 'objective': 1 kalimat lugas sasaran utama misi.
 2. ADEGAN BABAK I IN MEDIA RES:
    - Adegan Babak I dimulai langsung di tempat kejadian (in media res).
    - DILARANG KERAS mengulang teks prolog 'missionLog' di dalam 'dialogue'!

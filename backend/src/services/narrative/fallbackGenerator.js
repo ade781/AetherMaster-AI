@@ -34,7 +34,6 @@ function generateFallbackOpening(campaign, character) {
   const missionLog = {
     title: `Jurnal Misi: ${title}`,
     prologue: `${campaign?.premise || 'Krisis tak terduga mengancam wilayah ini.'}\n\nKehadiran ${charName} sebagai seorang ${charClass} membawa harapan penting bagi penyelesaian masalah ini. Penyelidikan mendalam harus segera dilakukan untuk mengungkap fakta sebelum dampak buruk kian meluas.`,
-    targetGoal: `Selesaikan investigasi di ${location} dan netralkan sumber ancaman.`,
     objective: `Selesaikan investigasi di ${location} dan netralkan sumber ancaman.`,
     status: 'active'
   };

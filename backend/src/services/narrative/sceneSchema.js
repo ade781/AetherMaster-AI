@@ -163,9 +163,9 @@ function normalizeSceneData(raw) {
     ? { ...normalized.stateUpdates }
     : {};
 
-  const hpChange = typeof rawSu.hpChange === 'number' ? rawSu.hpChange : (rawSu.proposedHpChange || 0);
-  const manaChange = typeof rawSu.manaChange === 'number' ? rawSu.manaChange : (rawSu.proposedManaChange || 0);
-  const goldChange = typeof rawSu.goldChange === 'number' ? rawSu.goldChange : (rawSu.proposedGoldChange || 0);
+  const hpChange = typeof rawSu.hpChange === 'number' ? rawSu.hpChange : (Number(rawSu.hpChange) || 0);
+  const manaChange = typeof rawSu.manaChange === 'number' ? rawSu.manaChange : (Number(rawSu.manaChange) || 0);
+  const goldChange = typeof rawSu.goldChange === 'number' ? rawSu.goldChange : (Number(rawSu.goldChange) || 0);
 
   let candidateItemId = rawSu.receivedItemId || (rawSu.receivedItem && typeof rawSu.receivedItem === 'object' ? rawSu.receivedItem.id : (typeof rawSu.receivedItem === 'string' ? rawSu.receivedItem : null));
   let receivedItem = null;
@@ -189,8 +189,8 @@ function normalizeSceneData(raw) {
     }
   }
 
-  const factDiscovered = rawSu.factDiscovered || rawSu.addLedgerFact || null;
-  const rep = rawSu.reputationChange || rawSu.reputation || {};
+  const factDiscovered = rawSu.factDiscovered || null;
+  const rep = (rawSu.reputationChange && typeof rawSu.reputationChange === 'object') ? rawSu.reputationChange : {};
 
   normalized.stateUpdates = {
     hpChange,
@@ -209,7 +209,7 @@ function normalizeSceneData(raw) {
     const ml = normalized.missionLog;
     const title = cleanText(ml.title || 'Jurnal Misi Petualang');
     const prologue = cleanText(ml.prologue || '');
-    const objective = cleanText(ml.objective || ml.targetGoal || 'Tuntaskan penyelidikan dan atasi krisis utama.');
+    const objective = cleanText(ml.objective || 'Tuntaskan penyelidikan dan atasi krisis utama.');
     const status = ['active', 'completed', 'failed'].includes(ml.status) ? ml.status : 'active';
 
     normalized.missionLog = {

@@ -177,9 +177,9 @@ function evaluateObjectives(session, campaign, worldLedger, actionContext = {}) 
   }
 
   // Fact discovery event
-  if (updates.factDiscovered || updates.addLedgerFact) {
+  if (updates.factDiscovered) {
     synthesizedEvents.push(createGameEvent(EVENT_TYPES.CLUE_DISCOVERED, {
-      description: updates.factDiscovered || updates.addLedgerFact,
+      description: updates.factDiscovered,
       turn
     }));
   }

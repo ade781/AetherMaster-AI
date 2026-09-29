@@ -146,7 +146,7 @@ class StoryActionService {
     }
 
     // 7. Record WorldFacts for discoveries and item acquisition
-    const factText = stateUpdates.factDiscovered || stateUpdates.addLedgerFact;
+    const factText = stateUpdates.factDiscovered || null;
     if (factText) {
       await WorldFactRepository.addFact({
         sessionId: session.id,
