@@ -1,0 +1,1600 @@
+# AetherMaster-AI
+
+## Large Scale Code Cleanup, Simplification & Feature Reduction
+
+### Target utama
+
+Perombakan besar-besaran AetherMaster-AI dengan tujuan:
+
+1. Menghapus fungsi dan UI yang tidak digunakan.
+2. Menghapus state yang sudah tidak memiliki konsumen.
+3. Memecah file yang terlalu panjang berdasarkan tanggung jawab.
+4. Menggabungkan fungsi yang memiliki tanggung jawab sama.
+5. Mengurangi duplikasi logic.
+6. Menormalisasi penamaan file, function, variable, dan component.
+7. Memisahkan business logic dari controller dan UI.
+8. Menghapus compatibility code yang sudah tidak diperlukan.
+9. Menghilangkan opsi yang tidak seharusnya diberikan kepada pemain.
+10. Membuat struktur kode lebih mudah dipahami manusia maupun AI agent.
+11. Memastikan perilaku gameplay tetap sama setelah refactor.
+12. Tidak menambahkan fitur baru selama proses cleanup.
+
+---
+
+# ATURAN BESAR
+
+Refactor ini bukan redesign gameplay.
+
+Jangan mengubah konsep inti:
+
+`Campaign`
+→ `Character Creation`
+→ `AI Narrative`
+→ `Player Action`
+→ `Game State Update`
+→ `Story Node`
+→ `Branching`
+→ `Combat`
+→ `Save / Load`
+→ `Rewind`
+→ `Ending`
+
+Yang diubah adalah cara kode mengimplementasikan sistem tersebut.
+
+Prinsip utama:
+
+> Jika sebuah fungsi tidak diperlukan oleh gameplay, hapus.
+>
+> Jika dua fungsi melakukan hal yang sama, gabungkan.
+>
+> Jika satu file menangani terlalu banyak tanggung jawab, pecah.
+>
+> Jika sebuah opsi tidak seharusnya tersedia untuk pemain, jangan tampilkan opsi tersebut.
+>
+> Jangan mempertahankan abstraction hanya karena “mungkin nanti berguna”.
+
+---
+
+# PEMBAGIAN AGENT
+
+## AGENT 1
+
+# FRONTEND ARCHITECTURE & UI CLEANUP
+
+### Ownership
+
+Agent 1 hanya mengubah:
+
+* `frontend/**`
+* `frontend/package.json`
+
+Agent 1 TIDAK boleh mengubah:
+
+* `backend/**`
+* root `package.json`
+* root `package-lock.json`
+* `backend/package-lock.json`
+* `vercel.json`
+* `.github/**`
+* `scripts/**`
+* database/schema backend
+* API contract backend kecuali menemukan bug contract yang harus dilaporkan
+
+Jika Agent 1 menemukan masalah backend, catat sebagai `BACKEND_REVIEW_REQUIRED`, jangan langsung mengubah backend.
+
+---
+
+# AGENT 1 — PHASE 1
+
+## Frontend Dead Code Audit
+
+Audit seluruh frontend sebelum melakukan refactor.
+
+Cari:
+
+* component yang tidak pernah di-render
+* function yang tidak pernah dipanggil
+* state yang tidak pernah dibaca
+* props yang selalu kosong
+* callback yang tidak memiliki consumer
+* import yang tidak digunakan
+* CSS class yang tidak pernah digunakan
+* asset yang tidak pernah direferensikan
+* keyboard shortcut yang tidak diperlukan
+* modal yang sudah tidak digunakan
+* menu yang tidak memiliki fungsi nyata
+* fallback UI yang sudah tidak relevan
+* code comment yang menggambarkan fitur lama
+
+Buat keputusan:
+
+`KEEP`
+`SIMPLIFY`
+`MERGE`
+`DELETE`
+
+Jangan mempertahankan kode hanya karena masih technically executable.
+
+---
+
+# AGENT 1 — PHASE 2
+
+## Hapus UI Legacy
+
+Prioritas:
+
+### Hapus state legacy
+
+Dari `GameContext.jsx`:
+
+* `isJournalOpen`
+* `setIsJournalOpen`
+* `isQuestOpen`
+* `setIsQuestOpen`
+
+Setelah memastikan tidak ada consumer lain.
+
+### Audit Journal / Quest UI
+
+Jika benar-benar sudah tidak digunakan:
+
+* hapus `JournalModal.jsx`
+* hapus `QuestModal.jsx`
+* hapus component quest UI yang hanya mendukung UI lama
+
+Jangan menghapus `questEngine` backend pada task ini.
+
+---
+
+# AGENT 1 — PHASE 3
+
+## Hilangkan Keyboard Shortcut yang Tidak Perlu
+
+Audit shortcut:
+
+* `I`
+* `L`
+* `M`
+
+Jika UI sudah memiliki tombol yang jelas, hapus global shortcut.
+
+Tujuannya mengurangi global event listener dan state coupling.
+
+Jika shortcut masih dianggap penting, pertahankan hanya yang benar-benar berguna.
+
+Jangan mempertahankan shortcut hanya karena mudah dibuat.
+
+---
+
+# AGENT 1 — PHASE 4
+
+## Bongkar GameContext.jsx
+
+`GameContext.jsx` saat ini terlalu banyak tanggung jawab.
+
+Target akhirnya:
+
+### GameContext
+
+Hanya mengelola:
+
+* session state
+* character state
+* current node
+* combat state
+* campaign
+* UI modal state yang benar-benar diperlukan
+
+Logic request API harus dipindahkan ke service/hook.
+
+Contoh struktur target:
+
+```text
+frontend/src/
+├── context/
+│   └── GameContext.jsx
+│
+├── hooks/
+│   ├── useGameSession.js
+│   ├── useNarrative.js
+│   ├── useCombat.js
+│   └── useSaveLoad.js
+│
+└── services/
+    ├── api.js
+    └── audioService.js
+```
+
+Tidak wajib menggunakan struktur persis tersebut jika hasil audit menunjukkan struktur yang lebih sederhana.
+
+Prinsipnya:
+
+`Context = state`
+
+bukan:
+
+`Context = seluruh aplikasi`.
+
+---
+
+# AGENT 1 — PHASE 5
+
+## Pecah VisualNovelStage.jsx
+
+`VisualNovelStage.jsx` adalah salah satu file paling gemuk.
+
+Audit dan pecah berdasarkan tanggung jawab.
+
+Target konseptual:
+
+```text
+VisualNovelStage
+├── SceneBackground
+├── SceneDialogue
+├── SceneChoices
+├── SceneToolbar
+├── CustomActionInput
+└── SceneStatus / metadata
+```
+
+Tidak perlu membuat component hanya untuk memindahkan 10 baris.
+
+Component baru harus memiliki tanggung jawab yang jelas dan reusable.
+
+Logic seperti:
+
+* background resolution
+* BGM resolution
+* typewriter
+* TTS
+* action input
+
+jangan semuanya hidup di component utama.
+
+---
+
+# AGENT 1 — PHASE 6
+
+## Hapus Background / BGM Selection yang Tidak Logis
+
+Pemain tidak perlu memilih BGM manual.
+
+Hapus UI seperti:
+
+```text
+selectedBgm
+showBgmMenu
+BGM selector
+manual track selection
+```
+
+Sistem harus menentukan audio berdasarkan:
+
+```text
+current scene
+backgroundId
+combat state
+mood
+```
+
+Contoh:
+
+```text
+scene → backgroundId → atmosphere → audio
+```
+
+Bukan:
+
+```text
+scene → pemain memilih musik
+```
+
+Pertahankan:
+
+```text
+mute / sound enabled
+```
+
+jika memang masih dibutuhkan.
+
+---
+
+# AGENT 1 — PHASE 7
+
+## Rapikan Audio Service
+
+Audit `audioService.js`.
+
+Pisahkan konsep:
+
+### SFX
+
+```text
+playClick
+playSelect
+playHeal
+playSuccess
+playFailure
+playCombat
+playHeartbeat
+```
+
+### Ambient
+
+```text
+startAmbient
+stopAmbient
+```
+
+### Narration
+
+```text
+speakNarration
+stopSpeech
+```
+
+Hindari alias yang sebenarnya melakukan hal yang sama.
+
+Contoh yang perlu diperiksa:
+
+```text
+playBGM()
+startAmbient()
+stopBGM()
+stopAmbient()
+```
+
+Jika `playBGM()` hanya wrapper untuk `startAmbient()`, pertimbangkan menghilangkannya dan menggunakan satu API yang jelas.
+
+Jangan mempertahankan nama `BGM` jika sistem sebenarnya hanya procedural ambient.
+
+---
+
+# AGENT 1 — PHASE 8
+
+## Simplifikasi CharacterHUD
+
+Audit:
+
+* local inventory state
+* global inventory state
+* duplicate toggle
+* duplicate item validation
+* repeated item display logic
+
+Saat ini terdapat indikasi state inventory lokal dan state inventory dari parent.
+
+Target:
+
+```text
+satu sumber kebenaran
+```
+
+Jangan memiliki:
+
+```text
+localInventoryOpen
++
+propInventoryOpen
++
+globalInventoryOpen
+```
+
+untuk satu fungsi yang sama.
+
+---
+
+# AGENT 1 — PHASE 9
+
+## Pecah FantasyIcons.jsx
+
+`FantasyIcons.jsx` sangat besar.
+
+Audit semua exported icon.
+
+Pisahkan hanya jika memang diperlukan.
+
+Contoh:
+
+```text
+icons/
+├── ActionIcons.jsx
+├── CombatIcons.jsx
+├── ItemIcons.jsx
+├── NavigationIcons.jsx
+└── FantasyIcons.jsx
+```
+
+Jika sebagian besar icon tidak digunakan:
+
+DELETE.
+
+Jangan memecah file besar menjadi lima file besar baru tanpa alasan.
+
+---
+
+# AGENT 1 — PHASE 10
+
+## Landing Page Cleanup
+
+Audit:
+
+```text
+LandingPage
+HeroBanner
+CampaignGrid
+CampaignCard
+```
+
+Cari:
+
+* animation yang tidak memberikan fungsi
+* visual decoration berlebihan
+* data yang tidak digunakan
+* fallback cover yang berlapis-lapis
+* logic Pollinations legacy
+* prop yang tidak diperlukan
+
+Target:
+
+Landing hanya melakukan:
+
+```text
+show campaigns
+show campaign information
+start campaign
+load save
+```
+
+---
+
+# AGENT 1 — PHASE 11
+
+## CombatStage Cleanup
+
+Jangan mengubah combat mechanic.
+
+Yang dibersihkan:
+
+* duplicate rendering
+* duplicate state
+* hardcoded visual yang seharusnya berasal dari state
+* helper function yang hanya digunakan sekali
+* conditional rendering terlalu panjang
+* audio logic yang seharusnya berada di audio service
+
+Perhatikan khusus:
+
+```text
+bg_04_crimson_crypt
+```
+
+yang saat ini digunakan secara hardcoded.
+
+Jika combat memiliki background khusus, tentukan satu sumber data yang jelas.
+
+Jangan biarkan:
+
+```text
+story background
++
+combat hardcoded background
+```
+
+saling bertentangan.
+
+---
+
+# AGENT 1 — PHASE 12
+
+## Penamaan Frontend
+
+Audit nama:
+
+### Component
+
+Gunakan:
+
+```text
+PascalCase
+```
+
+### Hooks
+
+Gunakan:
+
+```text
+useSomething.js
+```
+
+### Services
+
+Gunakan nama berdasarkan tanggung jawab:
+
+```text
+api.js
+audioService.js
+```
+
+### Function
+
+Gunakan kata kerja:
+
+```text
+handleStartGame
+handleChooseAction
+loadSession
+saveSession
+```
+
+Hindari nama ambigu:
+
+```text
+process
+doThing
+handleData
+updateStuff
+```
+
+---
+
+# AGENT 1 — PHASE 13
+
+## Frontend Final Audit
+
+Cari kembali:
+
+* unused import
+* unused state
+* unused props
+* unused callback
+* duplicate helper
+* duplicate API request
+* duplicate UI
+* dead component
+* dead CSS
+* dead asset reference
+* console.log debugging
+* comment legacy
+
+Build frontend.
+
+Jangan mengubah backend untuk membuat build lolos.
+
+Jika backend contract bermasalah:
+
+buat laporan untuk Agent 2.
+
+---
+
+# AGENT 2
+
+# BACKEND ARCHITECTURE & GAME LOGIC CLEANUP
+
+### Ownership
+
+Agent 2 hanya mengubah:
+
+* `backend/**`
+
+Agent 2 TIDAK boleh mengubah:
+
+* `frontend/**`
+* root `package.json`
+* root `package-lock.json`
+* `vercel.json`
+* `.github/**`
+* `scripts/**`
+
+Jika menemukan frontend/API consumer yang perlu berubah, catat sebagai:
+
+`FRONTEND_CONTRACT_CHANGE_REQUIRED`
+
+Jangan mengedit frontend.
+
+---
+
+# AGENT 2 — PHASE 1
+
+## Backend Dependency Audit
+
+Audit dependency berdasarkan penggunaan aktual.
+
+Cari:
+
+* package tidak digunakan
+* package digunakan hanya oleh legacy code
+* duplicate library
+* polyfill yang tidak diperlukan
+* utility package yang sebenarnya dapat digantikan native Node.js
+
+Jangan langsung menghapus dependency hanya berdasarkan nama.
+
+Gunakan dependency graph.
+
+---
+
+# AGENT 2 — PHASE 2
+
+## Pecah storyController.js
+
+`storyController.js` sekitar 32 KB.
+
+Ini terlalu besar.
+
+Controller seharusnya tidak menjadi tempat seluruh game logic.
+
+Target konseptual:
+
+```text
+storyController
+    ↓
+storyService
+    ↓
+gameStateEngine
+    ↓
+repositories
+```
+
+Controller hanya:
+
+```text
+validate request
+→ call service
+→ return response
+```
+
+Pindahkan logic seperti:
+
+* choice resolution
+* story history
+* scene generation
+* background resolution
+* state update
+* persistence
+* branching
+* snapshot handling
+
+ke layer yang sesuai.
+
+Jangan membuat `storyService.js` baru yang akhirnya menjadi storyController versi 2.
+
+Pisahkan berdasarkan use-case nyata.
+
+---
+
+# AGENT 2 — PHASE 3
+
+## Pecah saveLoadController.js
+
+`saveLoadController.js` juga terlalu besar.
+
+Pisahkan konsep:
+
+```text
+save
+load
+list saves
+delete/replace save
+session restore
+rewind
+```
+
+Jika rewind sebenarnya merupakan story operation, jangan campurkan dengan save/load hanya karena sama-sama menyimpan state.
+
+Target:
+
+```text
+SaveLoadController
+    ↓
+SaveLoadService
+```
+
+dan:
+
+```text
+StoryController
+    ↓
+Rewind / Story Service
+```
+
+sesuai dependency aktual.
+
+---
+
+# AGENT 2 — PHASE 4
+
+## Audit GameStateEngine
+
+`gameStateEngine.js` adalah core.
+
+Jangan menghapus logic hanya karena panjang.
+
+Cari:
+
+* fungsi yang melakukan hal sama
+* normalisasi berulang
+* validasi berulang
+* mutation yang bisa disatukan
+* state update yang dilakukan dua kali
+* quest processing yang tidak lagi dibutuhkan
+* item processing duplicate
+
+Target:
+
+```text
+Player Action
+→ Resolver
+→ State Mutation
+→ State Validation
+→ Persist
+```
+
+Satu jalur.
+
+Jangan sampai HP diproses di tiga tempat berbeda.
+
+---
+
+# AGENT 2 — PHASE 5
+
+## Audit Quest Engine
+
+`questEngine.js` belum boleh langsung dihapus.
+
+Trace semua pemanggilnya.
+
+Tentukan apakah quest benar-benar memiliki fungsi gameplay.
+
+Jika quest hanya digunakan untuk menghasilkan:
+
+```text
+objective
+missionLog
+targetGoal
+```
+
+pertimbangkan menyederhanakannya menjadi state sederhana.
+
+Jika memang masih diperlukan, pertahankan engine tetapi kurangi API dan state yang tidak digunakan.
+
+Target:
+
+```text
+activeObjective
+status
+progress
+```
+
+jika itu sudah cukup.
+
+---
+
+# AGENT 2 — PHASE 6
+
+## Simplifikasi Scene Schema
+
+`sceneSchema.js` merupakan salah satu tempat yang paling jelas memiliki historical baggage.
+
+Audit semua field berikut:
+
+```text
+proposedHpChange
+hpChange
+
+proposedManaChange
+manaChange
+
+proposedGoldChange
+goldChange
+
+reputation
+reputationChange
+
+factDiscovered
+addLedgerFact
+
+targetGoal
+objective
+
+receivedItem
+receivedItemId
+
+consumedItem
+consumedItemId
+```
+
+Tentukan satu canonical representation.
+
+Jangan mempertahankan dua nama untuk satu konsep jika data lama sudah tidak diperlukan.
+
+Compatibility layer hanya boleh dipertahankan jika masih ada data nyata yang harus dibaca.
+
+---
+
+# AGENT 2 — PHASE 7
+
+## Rapikan Narrative Engine
+
+Audit:
+
+```text
+contextBuilder
+fallbackGenerator
+geminiClient
+intentResolver
+promptBuilder
+sceneSchema
+```
+
+Cari overlap.
+
+Kemungkinan struktur target:
+
+```text
+NarrativeService
+├── buildContext
+├── buildPrompt
+├── generate
+├── parseScene
+└── validateScene
+```
+
+Tidak harus menggunakan nama tersebut.
+
+Yang penting:
+
+```text
+satu tanggung jawab
+satu sumber kebenaran
+```
+
+Jangan sampai Gemini service dan fallback generator masing-masing memiliki versi sendiri dari logic scene normalization.
+
+---
+
+# AGENT 2 — PHASE 8
+
+## Item System Cleanup
+
+Audit:
+
+```text
+itemMaster
+ItemRepository
+sceneSchema KNOWN_ITEMS
+ITEM_ALIASES
+Character.inventory
+```
+
+Cari apakah master item didefinisikan di lebih dari satu tempat.
+
+Saat ini ada indikasi item registry berada di schema sementara terdapat `itemMaster` sendiri.
+
+Target:
+
+```text
+Satu master item definition.
+```
+
+Schema hanya melakukan validation.
+
+Master data tidak seharusnya hidup di validation layer.
+
+---
+
+# AGENT 2 — PHASE 9
+
+## Repository Audit
+
+Audit semua:
+
+```text
+CampaignRepository
+ItemRepository
+LocationRepository
+NPCRepository
+SnapshotRepository
+StoryChoiceRepository
+StoryNodeRepository
+WorldFactRepository
+```
+
+Untuk setiap repository:
+
+1. Berapa consumer?
+2. Berapa method?
+3. Apakah method benar-benar berbeda?
+4. Apakah repository hanya membungkus `Model.findOne()`?
+5. Apakah abstraction tersebut memberi nilai nyata?
+
+Jika repository hanya:
+
+```js
+return Model.findOne(...)
+```
+
+dan tidak memberikan abstraction yang berarti, pertimbangkan menggabungkannya.
+
+Tetapi jangan menghapus repository yang memiliki transaction handling atau domain-specific query penting.
+
+---
+
+# AGENT 2 — PHASE 10
+
+## Model & Database Cleanup
+
+Audit:
+
+```text
+Campaign
+Character
+GameSession
+Item
+Location
+NPC
+Quest
+StoryChoice
+StoryNode
+StorySnapshot
+WorldFact
+```
+
+Jangan menghapus model hanya karena tidak tampil di UI.
+
+Bedakan:
+
+```text
+UI feature
+vs
+domain persistence
+```
+
+Khusus:
+
+### Jangan hapus tanpa pembuktian:
+
+```text
+StoryNode
+StoryChoice
+StorySnapshot
+WorldFact
+```
+
+karena masih digunakan oleh branching, rewind, dan persistent world.
+
+---
+
+# AGENT 2 — PHASE 11
+
+## Naming & Folder Architecture
+
+Audit nama file dan folder.
+
+Contoh yang perlu dipertimbangkan:
+
+```text
+engine/
+services/
+repositories/
+controllers/
+utils/
+```
+
+Pastikan tidak ada service yang berada di `engine` hanya karena sejarah proyek.
+
+Contoh:
+
+```text
+worldLedgerService.js
+```
+
+bernama `Service` tetapi berada di:
+
+```text
+engine/
+```
+
+Ini perlu diputuskan:
+
+```text
+domain engine
+```
+
+atau:
+
+```text
+service
+```
+
+jangan campur istilah.
+
+Tujuan akhirnya adalah developer bisa mengetahui fungsi file dari lokasinya tanpa membuka file.
+
+---
+
+# AGENT 2 — PHASE 12
+
+## Simplifikasi Background Resolution
+
+Background bukan pilihan pemain.
+
+Background harus berasal dari:
+
+```text
+Campaign
+→ Location
+→ StoryNode
+→ Scene
+```
+
+Audit seluruh fallback:
+
+```text
+defaultBackgroundId
+backgroundId
+campaignBg
+currentBg
+candidateBg
+fallback background
+```
+
+Cari apakah ada terlalu banyak lapisan fallback.
+
+Target:
+
+```text
+resolve background sekali
+```
+
+bukan:
+
+```text
+resolve
+→ fallback
+→ fallback lagi
+→ default
+→ hardcoded
+```
+
+---
+
+# AGENT 2 — PHASE 13
+
+## Audio/TTS Backend Cleanup
+
+Audit:
+
+```text
+ttsController
+Edge TTS configuration
+voice configuration
+fallback handling
+```
+
+Pertahankan satu alur:
+
+```text
+Backend TTS
+→ frontend audio playback
+```
+
+Web Speech API tetap boleh menjadi fallback frontend.
+
+Jangan klaim sistem 100% lokal.
+
+Hapus parameter voice/pitch/rate jika memang tidak pernah dikontrol secara bermakna.
+
+---
+
+# AGENT 2 — PHASE 14
+
+## API Cleanup
+
+Audit endpoint yang benar-benar digunakan frontend.
+
+Target hanya mempertahankan endpoint gameplay inti.
+
+Contoh:
+
+```text
+GET  /campaigns
+POST /start
+POST /action
+POST /combat/action
+POST /use-item
+POST /rewind
+GET  /session/:id
+GET  /story/tree/:id
+GET  /backlog/:id
+GET  /saves
+POST /saves/save
+GET  /saves/load/:slot
+POST /tts
+```
+
+Jangan mempertahankan endpoint hanya karena route masih ada.
+
+Trace frontend consumer terlebih dahulu.
+
+---
+
+# AGENT 2 — PHASE 15
+
+## Backend Final Audit
+
+Cari:
+
+* unused imports
+* unused functions
+* unused variables
+* duplicate queries
+* duplicate normalization
+* duplicate validation
+* dead endpoints
+* dead repository methods
+* dead model fields
+* dead compatibility aliases
+* console.log
+* comments yang menjelaskan sistem lama
+* error handling yang duplikat
+
+Run:
+
+```text
+npm test
+```
+
+dan backend build/start validation.
+
+---
+
+# FILE YANG TIDAK BOLEH DIKERJAKAN BERSAMA
+
+Untuk mencegah collision:
+
+## Agent 1
+
+```text
+frontend/**
+```
+
+## Agent 2
+
+```text
+backend/**
+```
+
+## Jangan disentuh keduanya
+
+```text
+package.json
+package-lock.json
+README.md
+docs/**
+scripts/**
+.github/**
+vercel.json
+```
+
+File shared tersebut ditangani setelah kedua agent selesai.
+
+---
+
+# INTEGRATION PHASE
+
+## Dikerjakan setelah Agent 1 dan Agent 2 selesai
+
+Jangan menjalankan integration cleanup bersamaan.
+
+Urutan:
+
+```text
+Agent 1 selesai
+        ↓
+Agent 2 selesai
+        ↓
+merge
+        ↓
+install dependencies
+        ↓
+lint
+        ↓
+test
+        ↓
+build
+        ↓
+manual gameplay test
+        ↓
+shared-file cleanup
+```
+
+---
+
+# SHARED CLEANUP
+
+Setelah kedua agent selesai:
+
+## 1. Root package.json
+
+Audit script:
+
+```text
+dev
+build
+test
+start
+lint
+```
+
+Hapus script yang mengarah ke fitur lama.
+
+## 2. package-lock
+
+Regenerate setelah dependency final.
+
+Jangan dua agent mengubah lockfile secara bersamaan.
+
+## 3. README
+
+Update setelah arsitektur final.
+
+## 4. docs
+
+Update:
+
+```text
+ARCHITECTURE.md
+```
+
+dan hapus dokumentasi yang menggambarkan fitur yang sudah tidak ada.
+
+## 5. scripts
+
+Audit:
+
+```text
+run_antigravity_agent.js
+```
+
+Jika memang hanya digunakan sebagai authoring/development tool, pisahkan jelas dari runtime.
+
+Jika tidak digunakan lagi, hapus.
+
+---
+
+# PRIORITAS TEMUAN SAAT INI
+
+## P0 — Bersihkan terlebih dahulu
+
+### Frontend
+
+```text
+GameContext.jsx
+VisualNovelStage.jsx
+CharacterHUD.jsx
+FantasyIcons.jsx
+```
+
+### Backend
+
+```text
+storyController.js
+saveLoadController.js
+sceneSchema.js
+gameStateEngine.js
+```
+
+Ini adalah file yang paling berpotensi menghasilkan pengurangan kompleksitas terbesar.
+
+---
+
+# P1 — Setelah struktur utama bersih
+
+```text
+CombatStage.jsx
+CharacterCreationModal.jsx
+LandingPage.jsx
+CampaignGrid.jsx
+audioService.js
+geminiService.js
+fallbackGenerator.js
+promptBuilder.js
+contextBuilder.js
+repositories/*
+```
+
+---
+
+# P2 — Cleanup terakhir
+
+```text
+assets
+documentation
+scripts
+configuration
+dependency
+legacy compatibility
+```
+
+Jangan mulai dari asset. Menghapus PNG tidak memperbaiki arsitektur. Itu cuma membuat folder lebih kosong dan developer merasa produktif.
+
+---
+
+# RULE UNTUK REFACTOR
+
+Agent wajib mengikuti aturan:
+
+### Jangan membuat abstraction baru tanpa alasan.
+
+Buruk:
+
+```text
+controller
+→ service
+→ manager
+→ processor
+→ handler
+→ utility
+→ model
+```
+
+jika masing-masing hanya meneruskan function.
+
+Lebih baik:
+
+```text
+controller
+→ service
+→ repository
+```
+
+atau:
+
+```text
+controller
+→ engine
+→ repository
+```
+
+sesuai kebutuhan.
+
+---
+
+### Jangan memecah file berdasarkan jumlah baris saja.
+
+File 800 baris belum tentu salah.
+
+File 300 baris yang memiliki 8 tanggung jawab bisa jauh lebih buruk.
+
+Gunakan:
+
+```text
+Single Responsibility
+```
+
+sebagai dasar pemisahan.
+
+---
+
+### Jangan menggabungkan function hanya demi mengurangi jumlah file.
+
+Dua function boleh tetap terpisah jika domainnya berbeda.
+
+Tujuan:
+
+```text
+less unnecessary code
+```
+
+bukan:
+
+```text
+less files at all costs
+```
+
+---
+
+### Jangan mempertahankan backward compatibility selamanya.
+
+Compatibility layer harus memiliki alasan konkret.
+
+Jika tidak ada data lama yang perlu dibaca:
+
+```text
+hapus.
+```
+
+---
+
+### Jangan mengubah behavior gameplay tanpa alasan.
+
+Refactor harus menghasilkan:
+
+```text
+same gameplay
++
+less code
++
+clearer architecture
++
+fewer bugs
+```
+
+bukan:
+
+```text
+different gameplay
++
+new bugs
++
+developer confusion
+```
+
+---
+
+# TARGET ARSITEKTUR AKHIR
+
+Secara konseptual:
+
+```text
+FRONTEND
+│
+├── UI Components
+│   ├── Landing
+│   ├── Character Creation
+│   ├── Visual Novel
+│   ├── Combat
+│   ├── Inventory
+│   ├── Save/Load
+│   └── Story Tree
+│
+├── Hooks
+│   ├── Session
+│   ├── Narrative
+│   ├── Combat
+│   └── Save/Load
+│
+├── Context
+│   └── Game State
+│
+└── Services
+    ├── API
+    └── Audio
+
+
+BACKEND
+│
+├── Routes
+│
+├── Controllers
+│   └── Thin HTTP layer
+│
+├── Services
+│   ├── Story
+│   ├── Narrative
+│   ├── Save/Load
+│   └── TTS
+│
+├── Engines
+│   ├── Game State
+│   ├── Combat
+│   └── Item
+│
+├── Repositories
+│
+├── Models
+│
+└── Config / Utils
+```
+
+Bukan struktur wajib, tetapi arah arsitekturnya harus seperti ini:
+
+```text
+UI
+ ↓
+State / API
+ ↓
+Controller
+ ↓
+Domain Service / Engine
+ ↓
+Repository
+ ↓
+Database
+```
+
+---
+
+# DEFINITION OF DONE
+
+Refactor dianggap selesai apabila:
+
+### Code
+
+* Tidak ada unused import.
+* Tidak ada state tanpa consumer.
+* Tidak ada function tanpa consumer.
+* Tidak ada component tanpa consumer.
+* Tidak ada API endpoint tanpa consumer atau alasan domain yang jelas.
+* Tidak ada duplicate implementation untuk konsep yang sama.
+* Tidak ada compatibility field yang tidak diperlukan.
+* File besar sudah dipisahkan berdasarkan responsibility.
+* Naming konsisten.
+
+### UI
+
+* Tidak ada menu yang tidak memiliki fungsi.
+* Tidak ada opsi BGM manual.
+* Tidak ada UI Journal/Quest legacy.
+* Tidak ada background selector yang seharusnya bukan kontrol pemain.
+* Tidak ada keyboard shortcut yang tidak diperlukan.
+* Tidak ada UI placeholder atau decorative feature tanpa fungsi.
+
+### Backend
+
+* Controller tipis.
+* Game logic berada di engine/service.
+* Schema hanya menangani validation/normalization yang memang diperlukan.
+* Repository tidak menjadi wrapper kosong.
+* Item memiliki satu sumber master data.
+* Background memiliki satu jalur resolusi.
+* Story branching tetap berfungsi.
+* Rewind tetap berfungsi.
+* Save/load tetap berfungsi.
+* Combat tetap berfungsi.
+
+### Testing
+
+Wajib lolos:
+
+```text
+npm test
+npm run build
+```
+
+dan manual test:
+
+```text
+Landing
+→ pilih campaign
+→ character creation
+→ mulai game
+→ AI narrative
+→ choice
+→ custom action
+→ state update
+→ branching
+→ combat
+→ item
+→ victory
+→ continue narrative
+→ save
+→ load
+→ story tree
+→ rewind
+→ game over
+→ restart
+```
+
+---
+
+# HASIL YANG DIINGINKAN
+
+Setelah dua agent selesai, AetherMaster-AI seharusnya terasa seperti satu aplikasi yang sengaja dirancang dari awal.
+
+Bukan seperti:
+
+```text
+fitur baru
+→ fitur lama
+→ compatibility layer
+→ workaround
+→ workaround untuk workaround
+→ komentar "legacy"
+→ function yang katanya temporary sejak tiga bulan lalu
+```
+
+Target akhirnya:
+
+> **AetherMaster-AI adalah AI-powered visual novel RPG dengan persistent world, branching story, dan tactical combat, dengan arsitektur kode yang kecil, jelas, dan mudah dikembangkan.**
