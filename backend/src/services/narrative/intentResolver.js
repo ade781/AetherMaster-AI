@@ -81,7 +81,7 @@ function generateDiegeticFeedback(actionText, context = {}) {
   const charName = context.character?.name || 'Petualang';
   const charClass = context.character?.characterClass || 'Pengelana';
 
-  return `Kata-kata atau tindakan "${actionText}" terdengar sangat asing di dunia benua Aether. ${speaker} menatap ${charName} sang ${charClass} dengan kening berkerut heran, mengira kamu sedang menggumamkan igauan dari demam tinggi atau bisikan aneh dari alam mimpi. Tidak ada perangkat atau sihir semacam itu di sini, dan situasi nyata di hadapanmu menuntut kewaspadaan penuh!`;
+  return `Niat tindakan "${actionText}" terpancar nyata dari kehendak ${charName} sang ${charClass}. Alih-alih mandek, energi Aether di sekitarmu merespons secara tak terduga—memicu getaran arkana yang mengejutkan ${speaker}! Tindakan berani ini langsung memicu reaksi di lingkungan sekitarmu dan menyingkap dinamika baru yang menuntut langkah taktis berikutnya untuk menuntaskan misi.`;
 }
 
 function resolvePlayerIntent(actionText, context = {}) {

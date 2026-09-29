@@ -123,17 +123,17 @@ function generateFallbackNextScene({
     speaker: prevSpeaker
   });
 
-  // 1. Handling non-diegetic / modern actions without arbitrary HP penalties
+  // 1. Handling non-diegetic / creative actions with real impact & mission steering
   if (resolved.isAnachronistic) {
     return {
-      chapterTitle: `Babak ${turnCount + 1}: Suara Ganjil di Keheningan`,
+      chapterTitle: `Babak ${turnCount + 1}: Gema Aksi yang Tak Terduga`,
       location: prevLoc,
       backgroundId: prevBgId,
       speaker: prevSpeaker,
       characterId: prevCharId,
       mood: 'mysterious',
       dialogue: cleanText(resolved.diegeticFeedback),
-      consequenceNote: `Tindakan aneh di luar nalar hanya mengundang kebingungan. Takdir memaksamu kembali fokus ke kenyataan.`,
+      consequenceNote: `Aksi berani ini memicu reaksi nyata di sekitarmu dan menuntut langkah taktis berikutnya untuk menuntaskan misi.`,
       stateUpdates: {
         hpChange: 0,
         manaChange: 0,
@@ -143,22 +143,22 @@ function generateFallbackNextScene({
         receivedItem: null,
         consumedItem: null,
         reputationChange: {},
-        factDiscovered: `${charName} tersadar dan memusatkan kembali perhatian ke situasi sekitar.`
+        factDiscovered: `${charName} mengambil langkah tak terduga yang mengubah dinamika situasi sekitar.`
       },
       combatEncounter: null,
       choices: [
         {
           id: `c_${turnCount + 1}_1`,
-          text: `Kumpulkan kembali fokus pikiran ${charName} dan selidiki situasi sekitar`,
+          text: `Manfaatkan momentum perhatian sekitar untuk menyelidiki petunjuk misi lebih dalam`,
           tone: 'cautious',
           actionType: 'INVESTIGATE',
           requiredItem: null
         },
         {
           id: `c_${turnCount + 1}_2`,
-          text: `Abaikan kecanggungan barusan dan amati langkah berikutnya`,
+          text: `Tegaskan kehendakmu dan tuntut kejelasan arah petualangan ini`,
           tone: 'bold',
-          actionType: 'OBSERVE',
+          actionType: 'TALK',
           requiredItem: null
         }
       ],
