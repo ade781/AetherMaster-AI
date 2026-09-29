@@ -1,4 +1,5 @@
 const { MsEdgeTTS, OUTPUT_FORMAT } = require('msedge-tts');
+const { errorResponse, ERROR_CODES } = require('../utils/apiResponse');
 
 const DEFAULT_VOICE = 'id-ID-ArdiNeural';
 const DEFAULT_PITCH = '-25Hz';
@@ -12,7 +13,7 @@ exports.synthesizeSpeech = async (req, res) => {
   try {
     const text = req.body?.text || req.query?.text;
     if (!text || typeof text !== 'string') {
-      return res.status(400).json({ success: false, error: 'Text is required for TTS' });
+      return errorResponse(res, 400, ERROR_CODES.VALIDATION_FAILED, 'Teks narasi wajib diisi untuk sintesis suara.');
     }
 
     // Clean text from Markdown artifacts (asterisks, hashtags, backticks, emojis)
@@ -22,7 +23,7 @@ exports.synthesizeSpeech = async (req, res) => {
       .trim();
 
     if (!cleanText) {
-      return res.status(400).json({ success: false, error: 'Text cannot be empty' });
+      return errorResponse(res, 400, ERROR_CODES.VALIDATION_FAILED, 'Teks narasi tidak boleh kosong.');
     }
 
     const tts = new MsEdgeTTS();
@@ -38,13 +39,13 @@ exports.synthesizeSpeech = async (req, res) => {
     audioStream.on('error', (err) => {
       console.error('[TTS Stream Error]:', err.message);
       if (!res.headersSent) {
-        res.status(500).json({ success: false, error: 'Gagal melakukan sintesis suara narasi.' });
+        return errorResponse(res, 500, ERROR_CODES.INTERNAL_ERROR, 'Gagal melakukan sintesis suara narasi.');
       }
     });
   } catch (err) {
     console.error('[TTS Controller Error]:', err.message);
     if (!res.headersSent) {
-      res.status(500).json({ success: false, error: err.message || 'Gagal memproses TTS' });
+      return errorResponse(res, 500, ERROR_CODES.INTERNAL_ERROR, err.message || 'Gagal memproses TTS');
     }
   }
 };

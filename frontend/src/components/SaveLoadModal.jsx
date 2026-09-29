@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Save, Download, Upload, X, Clock, MapPin, Heart, Shield, RefreshCw, Check } from 'lucide-react';
+import { BookOpen, Download, Upload, Clock, MapPin, Heart, Check, AlertCircle, RefreshCw } from 'lucide-react';
+import FantasyModal from './common/FantasyModal';
+import FantasyButton from './common/FantasyButton';
+import FantasyBadge from './common/FantasyBadge';
 import audio from '../services/audioService';
 import storyApi, { API_BASE } from '../services/api';
 import { formatErrorMessage } from '../utils/errorHandler';
@@ -12,6 +15,8 @@ export default function SaveLoadModal({
 }) {
   const [slots, setSlots] = useState({ 0: null, 1: null, 2: null, 3: null });
   const [loading, setLoading] = useState(false);
+  const [savingSlot, setSavingSlot] = useState(null);
+  const [loadingSlot, setLoadingSlot] = useState(null);
   const [notification, setNotification] = useState(null);
   const fileInputRef = useRef(null);
 
@@ -20,10 +25,10 @@ export default function SaveLoadModal({
     storyApi.getSaveSlots()
       .then(data => {
         if (data.success) {
-          setSlots(data.data);
+          setSlots(data.data || {});
         }
       })
-      .catch(err => console.error('Gagal memuat slot simpanan:', err))
+      .catch(err => console.error('Gagal memuat slot arsip:', err))
       .finally(() => setLoading(false));
   };
 
@@ -37,26 +42,30 @@ export default function SaveLoadModal({
 
   const showFeedback = (msg) => {
     setNotification(msg);
-    setTimeout(() => setNotification(null), 3000);
+    setTimeout(() => setNotification(null), 3500);
   };
 
   const handleSaveToSlot = async (slotNumber) => {
     if (!sessionId) return;
+    setSavingSlot(slotNumber);
     audio.playSelect();
     try {
       const data = await storyApi.saveToSlot(sessionId, slotNumber);
       if (data.success) {
-        showFeedback(`Berhasil disimpan ke Slot ${slotNumber === 0 ? 'Auto' : slotNumber}!`);
+        showFeedback(`Progres berhasil diarsipkan ke Slot ${slotNumber === 0 ? 'Autosave' : slotNumber}!`);
         fetchSlots();
       } else {
-        alert(formatErrorMessage(data.error, 'Gagal menyimpan.'));
+        alert(formatErrorMessage(data.error, 'Gagal menyimpan progres.'));
       }
     } catch (err) {
-      alert('Koneksi server gagal saat menyimpan.');
+      alert(formatErrorMessage(err, 'Koneksi server terganggu saat menyimpan.'));
+    } finally {
+      setSavingSlot(null);
     }
   };
 
   const handleLoadFromSlot = async (slotNumber) => {
+    setLoadingSlot(slotNumber);
     audio.playSelect();
     try {
       const data = await storyApi.loadFromSlot(slotNumber);
@@ -64,10 +73,12 @@ export default function SaveLoadModal({
         onLoadSession(data.data);
         onClose();
       } else {
-        alert(formatErrorMessage(data.error, 'Gagal memuat slot.'));
+        alert(formatErrorMessage(data.error, 'Gagal memuat slot arsip.'));
       }
     } catch (err) {
-      alert('Koneksi server gagal saat memuat.');
+      alert(formatErrorMessage(err, 'Koneksi server terganggu saat memuat.'));
+    } finally {
+      setLoadingSlot(null);
     }
   };
 
@@ -86,14 +97,14 @@ export default function SaveLoadModal({
         const sessionData = JSON.parse(event.target.result);
         const data = await storyApi.importSession(sessionData);
         if (data.success) {
-          showFeedback('Berhasil mengimpor progres petualangan!');
+          showFeedback('Berkas arsip JSON berhasil diimpor!');
           onLoadSession(data.data);
           onClose();
         } else {
-          alert(formatErrorMessage(data.error, 'Format file save JSON tidak valid.'));
+          alert(formatErrorMessage(data.error, 'Format berkas arsip JSON tidak valid.'));
         }
       } catch (err) {
-        alert('Gagal membaca file JSON.');
+        alert(formatErrorMessage(err, 'Gagal memproses berkas JSON.'));
       }
     };
     reader.readAsText(file);
@@ -112,66 +123,50 @@ export default function SaveLoadModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
-      <div className="relative w-full max-w-2xl bg-fantasy-card border-2 border-fantasy-gold/50 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-        {/* Header */}
-        <div className="px-6 py-4 bg-gradient-to-r from-slate-900 via-slate-950 to-slate-900 border-b border-fantasy-gold/30 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400">
-              <Save className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="font-cinzel text-lg md:text-xl font-bold text-amber-300 tracking-wide">
-                Simpan & Muat Progres Petualangan
-              </h2>
-              <p className="text-xs text-slate-400">
-                Pilih slot penyimpanan memori atau kelola berkas arsip (JSON).
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() => { audio.playClick(); onClose(); }}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Notification Toast */}
+    <FantasyModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Chronicle Archive (Arsip Petualangan)"
+      subtitle="Kelola slot penyimpanan memori atau berkas arsip JSON petualang"
+      icon={BookOpen}
+      maxWidth="max-w-2xl"
+    >
+      <div className="space-y-4">
+        {/* Feedback Alert Toast */}
         {notification && (
-          <div className="bg-emerald-950/90 border-b border-emerald-500/50 text-emerald-200 px-6 py-2 text-xs flex items-center gap-2 font-medium">
-            <Check className="w-4 h-4 text-emerald-400" />
+          <div className="p-3 rounded-xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-200 text-xs flex items-center gap-2 font-medium animate-fadeIn">
+            <Check className="w-4 h-4 text-emerald-400 shrink-0" />
             <span>{notification}</span>
           </div>
         )}
 
-        {/* Content Body */}
-        <div className="p-6 overflow-y-auto space-y-4 flex-1">
-          {/* Slots List */}
-          <div className="grid grid-cols-1 gap-3">
-            {[0, 1, 2, 3].map((slotNum) => {
+        {/* Slot Grid List */}
+        <div className="space-y-3">
+          {loading ? (
+            <div className="py-12 text-center text-xs text-slate-400 font-cinzel space-y-2">
+              <RefreshCw className="w-5 h-5 mx-auto animate-spin text-amber-400" />
+              <p>Membaca gulungan arsip...</p>
+            </div>
+          ) : (
+            [0, 1, 2, 3].map((slotNum) => {
               const slotData = slots[slotNum];
               const isAuto = slotNum === 0;
 
               return (
                 <div
                   key={slotNum}
-                  className={`p-4 rounded-xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                  className={`p-4 rounded-xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 ${
                     slotData
-                      ? 'bg-slate-900/90 border-slate-700/80 hover:border-amber-400/50'
-                      : 'bg-slate-950/40 border-slate-800/60 border-dashed'
+                      ? 'bg-slate-900/90 border-white/10 hover:border-amber-400/40'
+                      : 'bg-slate-950/50 border-white/5 border-dashed'
                   }`}
                 >
-                  {/* Slot Details */}
-                  <div className="space-y-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className={`text-xs font-cinzel font-bold px-2.5 py-0.5 rounded-full ${
-                        isAuto
-                          ? 'bg-cyan-950 text-cyan-300 border border-cyan-700'
-                          : 'bg-amber-950 text-amber-300 border border-amber-700'
-                      }`}>
+                  {/* Slot Details Header & Metadata */}
+                  <div className="space-y-1.5 min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <FantasyBadge variant={isAuto ? 'cyan' : 'gold'} size="sm">
                         {isAuto ? 'Slot 0 (Autosave)' : `Slot ${slotNum}`}
-                      </span>
+                      </FantasyBadge>
 
                       {slotData && (
                         <span className="text-[11px] text-slate-400 flex items-center gap-1 font-mono">
@@ -182,15 +177,16 @@ export default function SaveLoadModal({
                     </div>
 
                     {slotData ? (
-                      <div className="space-y-0.5 pt-1">
+                      <div className="space-y-1 pt-0.5">
                         <div className="font-cinzel text-sm font-bold text-white flex items-center gap-2 truncate">
-                          <span>{slotData.campaignTitle || 'Kampanye Petualangan'}</span>
+                          <span>{slotData.campaignTitle || 'Kronik Petualangan'}</span>
                           <span className="text-slate-500">•</span>
-                          <span className="text-amber-400 font-sans text-xs">
+                          <span className="text-amber-300 font-sans text-xs">
                             {slotData.characterName} (Lvl {slotData.characterLevel || 1} {slotData.characterClass})
                           </span>
                         </div>
-                        <div className="text-xs text-slate-400 flex items-center gap-3">
+
+                        <div className="text-xs text-slate-400 flex items-center gap-3 flex-wrap">
                           <span className="flex items-center gap-1 text-slate-300 truncate">
                             <MapPin className="w-3 h-3 text-amber-400 shrink-0" />
                             {slotData.location || 'Lokasi Tak Dikenal'}
@@ -206,74 +202,79 @@ export default function SaveLoadModal({
                       </div>
                     ) : (
                       <div className="text-xs text-slate-500 italic py-1">
-                        Slot Kosong (Belum ada catatan petualangan)
+                        Slot Kosong (Belum ada catatan petualangan tersimpan)
                       </div>
                     )}
                   </div>
 
-                  {/* Slot Actions */}
+                  {/* Slot Action Buttons */}
                   <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
                     {sessionId && !isAuto && (
-                      <button
+                      <FantasyButton
+                        variant="secondary"
+                        size="sm"
+                        loading={savingSlot === slotNum}
+                        disabled={savingSlot !== null || loadingSlot !== null}
                         onClick={() => handleSaveToSlot(slotNum)}
-                        className="px-3.5 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs font-semibold font-cinzel transition-colors flex items-center gap-1.5 min-h-[36px]"
                       >
-                        <Save className="w-3.5 h-3.5" />
-                        <span>{slotData ? 'Timpa' : 'Simpan'}</span>
-                      </button>
+                        {slotData ? 'Timpa' : 'Simpan'}
+                      </FantasyButton>
                     )}
 
                     {slotData && (
-                      <button
+                      <FantasyButton
+                        variant="primary"
+                        size="sm"
+                        loading={loadingSlot === slotNum}
+                        disabled={savingSlot !== null || loadingSlot !== null}
                         onClick={() => handleLoadFromSlot(slotNum)}
-                        className="px-4 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 text-xs font-bold font-cinzel transition-all shadow-md flex items-center gap-1.5 min-h-[36px]"
                       >
-                        <span>Muat</span>
-                      </button>
+                        Muat
+                      </FantasyButton>
                     )}
                   </div>
                 </div>
               );
-            })}
-          </div>
+            })
+          )}
+        </div>
 
-          {/* Cloud/JSON Backup Tools */}
-          <div className="pt-4 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-400">
-            <span className="font-mono text-[11px]">
-              Berkas Arsip Lokal (Cadangan Eksternal)
-            </span>
+        {/* External Archive Tools (Export & Import JSON) */}
+        <div className="pt-4 border-t border-white/5 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-400">
+          <span className="font-mono text-[11px] text-slate-400">
+            Cadangan Berkas Eksternal (.json)
+          </span>
 
-            <div className="flex items-center gap-2">
-              {sessionId && (
-                <button
-                  onClick={handleExportJson}
-                  className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1.5 transition-colors"
-                  title="Unduh berkas JSON petualangan aktif"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Ekspor JSON</span>
-                </button>
-              )}
-
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1.5 transition-colors"
-                title="Unggah berkas JSON simpanan sebelumnya"
+          <div className="flex items-center gap-2">
+            {sessionId && (
+              <FantasyButton
+                variant="outline"
+                size="sm"
+                icon={Download}
+                onClick={handleExportJson}
               >
-                <Upload className="w-3.5 h-3.5" />
-                <span>Impor JSON</span>
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".json"
-                className="hidden"
-                onChange={handleImportJson}
-              />
-            </div>
+                Ekspor JSON
+              </FantasyButton>
+            )}
+
+            <FantasyButton
+              variant="outline"
+              size="sm"
+              icon={Upload}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              Impor JSON
+            </FantasyButton>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json"
+              className="hidden"
+              onChange={handleImportJson}
+            />
           </div>
         </div>
       </div>
-    </div>
+    </FantasyModal>
   );
 }

@@ -1,0 +1,490 @@
+# AETHERMASTER UI/UX OVERHAUL
+
+## Agent 2 â€” In-Game Experience, Visual Novel & Combat UI
+
+Kamu bertanggung jawab atas overhaul UI/UX **selama gameplay berlangsung**, khususnya Visual Novel, Character HUD, Inventory/Item interaction, Combat, scene transition, dialogue, dan interaction feedback.
+
+Tujuan utama:
+
+> Membuat pengalaman bermain terasa seperti fantasy narrative game modern yang polished, immersive, dan profesional tanpa mengorbankan readability atau usability.
+
+Jangan mengubah backend, API, database, story logic, AI pipeline, atau gameplay mechanics.
+
+---
+
+# 1. ARAH DESAIN
+
+Gunakan konsep:
+
+> **Modern Fantasy Interface**
+
+Gameplay UI harus:
+
+* cinematic
+* clean
+* atmospheric
+* minimal
+* readable
+* elegant
+* fantasy tetapi tidak berlebihan
+
+Prinsip utama:
+
+> **The world should dominate. The interface should support it.**
+
+Scene artwork dan narrative harus menjadi fokus utama.
+
+UI jangan sampai terlihat seperti dashboard yang kebetulan memiliki naga.
+
+---
+
+# 2. TAHAP KERJA
+
+## Phase 1 â€” Audit Gameplay UI
+
+Audit:
+
+* VisualNovelStage
+* visual-novel components
+* CharacterHUD
+* CombatStage
+* FantasyAvatar
+* ItemSlot
+* dialogue system UI
+* choice/action UI
+* inventory interaction
+* combat feedback
+* scene transitions
+* loading state
+* error state
+* responsive behavior
+
+Cari:
+
+* visual inconsistency
+* excessive decoration
+* duplicated style
+* unnecessary borders
+* excessive glow
+* poor spacing
+* unclear hierarchy
+* weak feedback
+* accessibility issue
+* mobile issue
+* dead UI
+* unused imports
+
+Jangan langsung memecah komponen lebih kecil hanya demi jumlah file bertambah.
+
+---
+
+# 3. VISUAL NOVEL EXPERIENCE
+
+Visual Novel adalah pusat pengalaman gameplay.
+
+Prioritas hierarchy:
+
+1. Scene/world
+2. Character
+3. Dialogue
+4. Choices
+5. Supporting HUD
+
+Scene harus memiliki ruang visual yang cukup.
+
+UI tidak boleh menutupi artwork secara berlebihan.
+
+---
+
+# 4. SCENE HEADER
+
+Redesign Scene Header agar minimal.
+
+Informasi penting dapat mencakup:
+
+* location
+* chapter/scene context
+* relevant state
+
+Jangan membuat header seperti navbar website.
+
+Gunakan typography, spacing, opacity, dan subtle ornament untuk memberikan nuansa fantasy.
+
+---
+
+# 5. DIALOGUE BOX
+
+Dialogue box harus menjadi salah satu elemen paling polished.
+
+Target visual:
+
+> **Arcane dialogue interface**
+
+Karakteristik:
+
+* dark translucent surface
+* subtle texture/ornament
+* clear character name
+* strong dialogue typography
+* readable contrast
+* subtle fantasy accent
+* minimal border
+* restrained shadow
+
+Jangan menggunakan terlalu banyak:
+
+* glow
+* gradient
+* corner decoration
+* rune
+* particle
+* animation
+
+Dialogue harus tetap nyaman dibaca dalam sesi panjang.
+
+---
+
+# 6. CHARACTER PORTRAIT
+
+Character portrait harus terintegrasi dengan scene, bukan terlihat seperti avatar dashboard.
+
+Perhatikan:
+
+* positioning
+* scale
+* visual hierarchy
+* entrance animation
+* active speaker state
+* inactive character state
+
+Jika character sedang berbicara, berikan feedback visual yang halus.
+
+Jangan membuat portrait terlalu besar sehingga mengalahkan scene.
+
+---
+
+# 7. CHOICE / ACTION DECK
+
+Pilihan pemain harus terasa sebagai bagian dari narrative interaction.
+
+Gunakan hierarchy yang jelas.
+
+Contoh:
+
+`01` Choice
+
+`02` Choice
+
+`03` Choice
+
+Nomor dapat digunakan sebagai visual cue sekaligus membantu keyboard interaction.
+
+State yang harus jelas:
+
+* normal
+* hover
+* focus
+* selected
+* disabled
+* loading
+
+Choice UI jangan terlihat seperti kumpulan tombol form.
+
+---
+
+# 8. CHARACTER HUD
+
+Redesign CharacterHUD menjadi HUD yang minimal.
+
+Informasi utama:
+
+* avatar
+* character name
+* level
+* class
+* HP
+* Mana/Aether
+* Gold
+* Inventory
+
+Gunakan prinsip:
+
+> **Information density without visual noise.**
+
+HP dan mana harus mudah dikenali secara cepat.
+
+Gunakan warna secara semantic:
+
+* HP â†’ danger/rose
+* Mana/Aether â†’ magic/cyan
+* Gold â†’ gold
+* neutral information â†’ muted text
+
+Jangan membuat seluruh HUD berwarna.
+
+---
+
+# 9. INVENTORY / ITEM SLOT
+
+Inventory harus terasa seperti bagian dari fantasy world.
+
+Konsep visual:
+
+> **Adventurer's Satchel**
+
+Item slot harus memiliki:
+
+* clear icon
+* quantity
+* selected state
+* hover state
+* disabled state
+* usable feedback
+
+Jika item dapat digunakan, feedback harus jelas tetapi tidak mengganggu narrative.
+
+Jangan mengubah inventory logic.
+
+---
+
+# 10. COMBAT UI
+
+Combat harus terasa sebagai bagian dari universe yang sama tetapi memiliki intensity lebih tinggi.
+
+Prioritas:
+
+* enemy/player readability
+* HP state
+* action availability
+* combat log/feedback
+* damage feedback
+* victory/defeat state
+
+Gunakan motion lebih kuat daripada normal Visual Novel, tetapi tetap terkendali.
+
+Contoh motion:
+
+* damage feedback
+* HP reduction
+* attack feedback
+* action selection
+* victory state
+
+Jangan membuat setiap klik menghasilkan ledakan visual. Manusia sudah cukup menghasilkan ledakan sendiri.
+
+---
+
+# 11. COMBAT FEEDBACK
+
+Feedback harus segera memberi tahu pemain apa yang terjadi.
+
+Perhatikan:
+
+* damage
+* healing
+* mana change
+* item use
+* status effect
+* critical event
+* defeat
+* victory
+
+Gunakan animation singkat dan readable.
+
+Feedback tidak boleh hanya bergantung pada warna.
+
+---
+
+# 12. TRANSITION & MOTION
+
+Gunakan motion sebagai bagian dari storytelling.
+
+Timing guideline:
+
+* micro interaction: 120â€“180ms
+* normal transition: 200â€“300ms
+* scene transition: 400â€“700ms
+* major narrative transition: 600â€“1200ms
+
+Gunakan:
+
+* fade
+* slide
+* scale
+* opacity
+* subtle blur
+
+secara terkontrol.
+
+Dukung:
+
+`prefers-reduced-motion`
+
+Jika reduced motion aktif, kurangi atau hilangkan animasi non-esensial.
+
+---
+
+# 13. RESPONSIVE GAMEPLAY
+
+Gameplay harus dapat digunakan pada:
+
+* desktop
+* laptop
+* tablet
+* mobile
+
+Perhatikan khusus:
+
+* dialogue height
+* portrait positioning
+* choice button size
+* HUD density
+* inventory
+* combat actions
+* viewport height
+* landscape/portrait
+* touch target
+
+Jangan hanya melakukan `width: 100%` lalu menyebutnya responsive.
+
+---
+
+# 14. ACCESSIBILITY
+
+Pastikan:
+
+* keyboard navigation
+* visible focus
+* semantic buttons
+* aria-label untuk icon-only action
+* sufficient contrast
+* readable typography
+* disabled state
+* loading state
+* reduced motion
+* touch target sekitar 44px
+
+Keyboard user harus tetap dapat memainkan bagian penting dari game.
+
+---
+
+# 15. INTEGRASI DESIGN SYSTEM
+
+Gunakan design language yang dibuat oleh Agent 1.
+
+Jangan membuat:
+
+* warna baru tanpa alasan
+* button system baru
+* modal system baru
+* typography system baru
+* spacing system baru
+* icon style yang bertentangan
+
+Jika membutuhkan komponen reusable yang belum tersedia, buat dengan prinsip yang kompatibel dengan design system global.
+
+---
+
+# 16. COMMON COMPONENTS
+
+Komponen berikut berada dalam scope jika memang diperlukan untuk gameplay:
+
+* FantasyAvatar
+* ItemSlot
+* gameplay-related common UI
+* loading state
+* feedback indicator
+
+Jangan memindahkan logic gameplay ke common component hanya demi membuat file terlihat bersih.
+
+Common component harus tetap presentational/reusable.
+
+---
+
+# 17. BATASAN PENTING
+
+Jangan:
+
+* mengubah backend
+* mengubah API contract
+* mengubah database
+* mengubah game state engine
+* mengubah story generation
+* mengubah AI pipeline
+* mengubah combat mechanics
+* mengubah save/load logic
+* mengganti framework
+* melakukan architecture rewrite
+* membuat micro-component berlebihan
+* menghapus logic yang belum terbukti tidak digunakan
+
+Jika menemukan bug logic di luar scope UI, dokumentasikan.
+
+---
+
+# 18. VERIFICATION
+
+Setelah implementasi:
+
+1. Jalankan lint.
+2. Jalankan frontend tests.
+3. Jalankan production build.
+4. Periksa console error.
+5. Periksa React warning.
+6. Uji Visual Novel.
+7. Uji dialogue.
+8. Uji choices.
+9. Uji HUD.
+10. Uji inventory.
+11. Uji combat.
+12. Uji loading/error state.
+13. Uji keyboard navigation.
+14. Uji responsive layout.
+15. Pastikan tidak ada import mati.
+16. Pastikan tidak ada duplicate UI system.
+
+Periksa bahwa perubahan visual tidak merusak:
+
+* state rendering
+* event handling
+* choice selection
+* dialogue progression
+* combat action
+* item interaction
+* save/load trigger
+
+---
+
+# 19. HASIL AKHIR
+
+Gameplay harus terasa seperti satu pengalaman yang kohesif:
+
+**Scene â†’ Character â†’ Dialogue â†’ Choice â†’ HUD â†’ Combat â†’ Feedback**
+
+semuanya harus menggunakan bahasa visual yang sama.
+
+Target akhir:
+
+* lebih immersive
+* lebih clean
+* lebih professional
+* lebih readable
+* lebih responsive
+* lebih accessible
+* tetap fantasy
+* tetap terasa sebagai AetherMaster
+
+Jangan mengejar sebanyak mungkin perubahan.
+
+Kejar kualitas visual dan pengalaman bermain.
+
+Setelah selesai, berikan laporan singkat berisi:
+
+1. Area gameplay yang diubah.
+2. Komponen yang diperbaiki.
+3. Perubahan visual utama.
+4. Motion/transition yang ditambahkan.
+5. Responsive improvement.
+6. Accessibility improvement.
+7. Test/build yang berhasil.
+8. Masalah yang ditemukan tetapi sengaja tidak diubah karena berada di luar scope.

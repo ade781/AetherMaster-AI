@@ -121,7 +121,7 @@ export default function VisualNovelStage({
   return (
     <div className="relative w-full h-full flex flex-col md:flex-row overflow-hidden bg-black select-none">
       {/* LEFT PANEL: Visual Stage (52%-60% on desktop) */}
-      <div className="relative w-full md:w-[52%] lg:w-[56%] xl:w-[60%] h-[38vh] md:h-full overflow-hidden flex-shrink-0">
+      <div className="relative w-full md:w-[52%] lg:w-[56%] xl:w-[60%] h-[40vh] sm:h-[45vh] md:h-full overflow-hidden flex-shrink-0">
         <SceneBackground
           backgroundId={node?.backgroundId}
           campaign={campaign}

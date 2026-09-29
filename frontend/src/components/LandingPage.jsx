@@ -4,13 +4,18 @@ import {
   Menu,
   X,
   Scroll,
-  Compass,
-  ChevronDown,
   Play,
-  Sparkles
+  Shield,
+  Dices,
+  Sparkles,
+  Compass,
+  ChevronDown
 } from 'lucide-react';
 import { IconSwords } from './icons/FantasyIcons';
 import CampaignGrid from './landing/CampaignGrid';
+import FantasyButton from './common/FantasyButton';
+import FantasyModal from './common/FantasyModal';
+import FantasyBadge from './common/FantasyBadge';
 import audio from '../services/audioService';
 
 export default function LandingPage({
@@ -20,7 +25,7 @@ export default function LandingPage({
   onOpenSaveLoad
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [activeModal, setActiveModal] = useState(null);
+  const [activeModal, setActiveModal] = useState(null); // 'rules' | 'guide' | null
 
   const scrollToSection = (id) => {
     setMobileMenuOpen(false);
@@ -34,325 +39,327 @@ export default function LandingPage({
     <div className="relative min-h-screen bg-slate-950 text-slate-100 flex flex-col font-outfit selection:bg-amber-400 selection:text-slate-950 overflow-x-hidden">
 
       {/* Top Navigation Bar */}
-      <header className="fixed top-0 left-0 right-0 z-40 w-full px-6 py-4 md:px-12 flex items-center justify-between bg-slate-950/70 backdrop-blur-md border-b border-white/5">
+      <header className="fixed top-0 left-0 right-0 z-40 w-full px-5 py-3.5 md:px-10 flex items-center justify-between bg-slate-950/80 backdrop-blur-md border-b border-white/5">
         <div className="flex items-center gap-3">
           <a
             href="/"
-            className="group flex items-center gap-2.5 text-slate-100 hover:text-amber-400 transition-colors"
+            className="group flex items-center gap-3 text-slate-100 hover:text-amber-400 transition-colors"
           >
-            <div className="w-9 h-9 rounded-lg bg-slate-900 border border-amber-500/40 flex items-center justify-center p-1 shadow-sm group-hover:border-amber-400 transition-colors">
-              <IconSwords className="w-6 h-6" />
+            <div className="w-9 h-9 rounded-xl bg-slate-900 border border-amber-500/30 flex items-center justify-center p-1.5 shadow-sm group-hover:border-amber-400/70 transition-colors">
+              <IconSwords className="w-5 h-5 text-amber-400" />
             </div>
-            <span className="font-cinzel text-base md:text-lg font-bold tracking-wider text-white group-hover:text-amber-400 transition-colors">
-              AETHERMASTER AI
-            </span>
+            <div className="flex flex-col">
+              <span className="font-cinzel text-sm md:text-base font-bold tracking-widest text-white group-hover:text-amber-300 transition-colors">
+                AETHERMASTER
+              </span>
+              <span className="text-[9px] font-mono tracking-widest text-slate-400 uppercase -mt-0.5">
+                Fantasy Chronicle
+              </span>
+            </div>
           </a>
         </div>
 
-        {/* Desktop Nav Links */}
-        <nav className="hidden md:flex items-center gap-6 text-xs font-medium text-slate-300">
+        {/* Desktop Navigation Links */}
+        <nav className="hidden md:flex items-center gap-6 text-xs font-cinzel font-semibold tracking-wider text-slate-300">
           <button
+            type="button"
             onClick={() => scrollToSection('campaigns')}
-            className="flex items-center gap-1.5 hover:text-white transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 hover:text-amber-300 transition-colors cursor-pointer py-1"
           >
-            Pilih Kampanye ({campaigns.length})
-            <ChevronDown className="w-3.5 h-3.5 opacity-70" />
+            Modul Petualangan ({campaigns.length})
+            <ChevronDown className="w-3.5 h-3.5 opacity-60" />
           </button>
 
           <button
-            onClick={() => setActiveModal('rules')}
-            className="flex items-center gap-1.5 hover:text-white transition-colors cursor-pointer"
+            type="button"
+            onClick={() => { audio.playClick(); setActiveModal('rules'); }}
+            className="hover:text-amber-300 transition-colors cursor-pointer py-1"
           >
-            Sistem D&amp;D 5E
+            Aturan D&amp;D 5E
           </button>
 
           <button
-            onClick={() => setActiveModal('guide')}
-            className="hover:text-white transition-colors cursor-pointer"
+            type="button"
+            onClick={() => { audio.playClick(); setActiveModal('guide'); }}
+            className="hover:text-amber-300 transition-colors cursor-pointer py-1"
           >
-            Panduan
+            Panduan Bermain
           </button>
-
-          <span className="px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-[10px] font-bold tracking-wider text-amber-400 font-mono shadow-sm select-none">
-            MADE BY ADE7
-          </span>
         </nav>
 
-        {/* Top Right Save Load */}
+        {/* Top Right Action: Lanjutkan Permainan */}
         <div className="hidden md:flex items-center gap-3">
-          <button
-            onClick={() => { audio.playClick(); onOpenSaveLoad(); }}
-            className="px-4 py-2 rounded-full bg-white/10 hover:bg-white/15 border border-white/20 text-xs font-medium text-white backdrop-blur-md transition-all hover:scale-105 active:scale-95 flex items-center gap-2 shadow-lg min-h-[40px] cursor-pointer"
+          <FantasyButton
+            variant="secondary"
+            size="sm"
+            icon={BookOpen}
+            onClick={onOpenSaveLoad}
           >
-            <BookOpen className="w-3.5 h-3.5 text-amber-400" />
-            Lanjutkan Permainan
-          </button>
+            Arsip Simpanan
+          </FantasyButton>
         </div>
 
-        {/* Mobile Trigger */}
+        {/* Mobile Menu Trigger */}
         <div className="flex md:hidden items-center gap-2">
           <button
+            type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer"
-            aria-label="Toggle navigation menu"
+            className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-200 min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer"
+            aria-label="Buka menu navigasi"
           >
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
         </div>
       </header>
 
-      {/* Mobile Drawer */}
+      {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
         <div className="md:hidden fixed top-16 left-0 right-0 z-40 bg-slate-950/95 border-b border-slate-800 backdrop-blur-xl px-6 py-5 flex flex-col gap-4 text-sm animate-fadeIn">
           <button
+            type="button"
             onClick={() => scrollToSection('campaigns')}
-            className="text-left py-2 font-medium text-slate-200 hover:text-amber-400 min-h-[44px]"
+            className="text-left py-2 font-cinzel font-semibold text-slate-200 hover:text-amber-400 min-h-[44px]"
           >
-            Pilih Kampanye ({campaigns.length})
+            Modul Petualangan ({campaigns.length})
           </button>
           <button
-            onClick={() => { setMobileMenuOpen(false); setActiveModal('rules'); }}
-            className="text-left py-2 font-medium text-slate-200 hover:text-amber-400 min-h-[44px]"
+            type="button"
+            onClick={() => { setMobileMenuOpen(false); audio.playClick(); setActiveModal('rules'); }}
+            className="text-left py-2 font-cinzel font-semibold text-slate-200 hover:text-amber-400 min-h-[44px]"
           >
-            Sistem Aturan D&amp;D 5E
+            Aturan Sistem D&amp;D 5E
           </button>
-          <div className="flex items-center justify-between py-1 min-h-[44px]">
-            <button
-              onClick={() => { setMobileMenuOpen(false); setActiveModal('guide'); }}
-              className="text-left font-medium text-slate-200 hover:text-amber-400"
+          <button
+            type="button"
+            onClick={() => { setMobileMenuOpen(false); audio.playClick(); setActiveModal('guide'); }}
+            className="text-left py-2 font-cinzel font-semibold text-slate-200 hover:text-amber-400 min-h-[44px]"
+          >
+            Panduan Bermain
+          </button>
+          <div className="pt-2 border-t border-slate-800/80">
+            <FantasyButton
+              variant="secondary"
+              size="md"
+              icon={BookOpen}
+              className="w-full"
+              onClick={() => { setMobileMenuOpen(false); onOpenSaveLoad(); }}
             >
-              Panduan Bermain
-            </button>
-            <span className="px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-[10px] font-bold text-amber-400 font-mono select-none">
-              MADE BY ADE7
-            </span>
-          </div>
-          <div className="pt-2 border-t border-slate-800">
-            <button
-              onClick={() => { setMobileMenuOpen(false); audio.playClick(); onOpenSaveLoad(); }}
-              className="w-full py-2.5 rounded-xl bg-amber-500/20 border border-amber-500/50 text-amber-300 font-medium text-xs flex items-center justify-center gap-2 min-h-[44px]"
-            >
-              <BookOpen className="w-4 h-4" />
-              Lanjutkan Permainan (Load Save)
-            </button>
+              Arsip Simpanan (Load Game)
+            </FantasyButton>
           </div>
         </div>
       )}
 
-      {/* 1. Focused Cinematic Hero Banner */}
-      <section className="relative min-h-[92vh] md:min-h-screen w-full flex flex-col justify-between overflow-hidden">
-        {/* Background Image with Cinematic Scrim and Vignette */}
+      {/* Cinematic Hero Section */}
+      <section className="relative min-h-[90vh] md:min-h-screen w-full flex flex-col justify-between overflow-hidden">
+        {/* Background Atmosphere */}
         <div
           className="absolute inset-0 bg-cover bg-center bg-no-repeat z-0 transform scale-100"
           style={{ backgroundImage: "url('/assets/hero_bg.jpg')" }}
         >
-          <div className="absolute inset-0 bg-gradient-to-b from-slate-950/85 via-slate-950/50 to-slate-950" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_25%,rgba(9,10,15,0.85)_100%)]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-slate-950/90 via-slate-950/60 to-slate-950" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_20%,rgba(7,8,12,0.92)_100%)]" />
         </div>
 
-        {/* Center Hero Content */}
-        <div className="relative z-10 max-w-4xl mx-auto px-6 text-center my-auto pt-28 md:pt-32 pb-12 flex flex-col items-center">
-          {/* Feature Badges */}
-          <div className="flex items-center justify-center gap-2.5 mb-5 flex-wrap">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/80 border border-amber-500/40 text-amber-400 text-xs font-mono font-semibold tracking-wider shadow-lg backdrop-blur-md">
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              <span>D&amp;D 5E VTT Engine</span>
-            </div>
+        {/* Center Hero Content with Editorial Hierarchy */}
+        <div className="relative z-10 max-w-3xl mx-auto px-6 text-center my-auto pt-32 md:pt-36 pb-12 flex flex-col items-center">
+          
+          {/* Subtle Top Metadata */}
+          <div className="mb-6 flex items-center justify-center gap-2">
+            <FantasyBadge variant="gold" size="sm" icon={Sparkles}>
+              D&amp;D 5E Engine
+            </FantasyBadge>
             {campaigns.length > 0 && (
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/15 border border-amber-400/40 text-amber-300 text-xs font-mono font-semibold tracking-wider shadow-lg backdrop-blur-md">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span>{campaigns.length} Modul Petualangan Tersedia</span>
-              </div>
+              <FantasyBadge variant="neutral" size="sm">
+                {campaigns.length} Modul Tersedia
+              </FantasyBadge>
             )}
           </div>
 
-          {/* Main Display Headline */}
-          <h1 className="font-cinzel text-4xl sm:text-6xl md:text-7xl font-bold tracking-tight text-white drop-shadow-md leading-[1.1]">
-            AETHERMASTER AI
+          {/* Primary Display Title */}
+          <h1 className="font-cinzel text-4xl sm:text-6xl md:text-7xl font-black tracking-tight text-white drop-shadow-md leading-[1.08]">
+            AETHERMASTER
           </h1>
 
-          {/* Tagline */}
-          <p className="mt-4 max-w-2xl text-lg sm:text-xl md:text-2xl text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-300 to-amber-100 font-cinzel font-semibold tracking-wide drop-shadow-sm">
-            Visual Novel RPG dengan AI Dungeon Master
+          {/* Editorial Subtitle */}
+          <p className="mt-3 text-xs sm:text-sm md:text-base font-cinzel font-semibold tracking-[0.25em] text-amber-300/90 uppercase">
+            An AI-Driven Fantasy Chronicle
           </p>
 
-          <p className="mt-4 max-w-2xl text-sm md:text-base text-slate-300 font-light leading-relaxed">
-            Jelajahi petualangan fantasi interaktif berformat visual novel dengan narasi adaptif bercabang, keputusan taktis penuh konsekuensi, dan evaluasi aksi server-authoritative D&amp;D 5E.
+          <div className="w-16 h-0.5 bg-gradient-to-r from-transparent via-amber-500/50 to-transparent my-5" />
+
+          {/* Atmospheric Narrative Description */}
+          <p className="max-w-xl text-sm md:text-base text-slate-300/90 font-light leading-relaxed">
+            Mengarungi narasi visual novel interaktif berlatar fantasi gelap. Setiap keputusan melahirkan konsekuensi nyata, dievaluasi secara dinamis dengan aturan ketat Dungeons &amp; Dragons 5th Edition.
           </p>
 
-          {/* Dual Action CTA Buttons: Mulai Petualangan & Lanjutkan */}
+          {/* Dual Action CTAs */}
           <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-            <button
-              onClick={() => { audio.playSelect(); scrollToSection('campaigns'); }}
-              className="px-8 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-cinzel font-bold text-sm tracking-wider shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30 transition-all hover:scale-105 active:scale-95 flex items-center gap-2.5 min-h-[48px] cursor-pointer"
+            <FantasyButton
+              variant="primary"
+              size="lg"
+              icon={Play}
+              sound="select"
+              onClick={() => scrollToSection('campaigns')}
             >
-              <Play className="w-4 h-4 fill-slate-950" />
-              <span>Mulai Petualangan</span>
-            </button>
+              Mulai Petualangan
+            </FantasyButton>
 
-            <button
-              onClick={() => { audio.playClick(); onOpenSaveLoad(); }}
-              className="px-7 py-3.5 rounded-xl bg-slate-900/80 hover:bg-slate-800/90 border border-amber-500/40 hover:border-amber-400 text-amber-300 font-cinzel font-semibold text-xs tracking-wider backdrop-blur-md transition-all hover:scale-105 active:scale-95 flex items-center gap-2 min-h-[48px] cursor-pointer"
+            <FantasyButton
+              variant="secondary"
+              size="lg"
+              icon={BookOpen}
+              sound="click"
+              onClick={onOpenSaveLoad}
             >
-              <BookOpen className="w-4 h-4 text-amber-400" />
-              <span>Lanjutkan (Load Game)</span>
-            </button>
+              Arsip Simpanan
+            </FantasyButton>
           </div>
         </div>
 
-        {/* Bottom Hero Subtle Note */}
-        <div className="relative z-10 w-full pb-8 pt-4 px-6 text-center">
-          <p className="text-xs text-slate-400/80 font-normal max-w-xl mx-auto leading-relaxed">
-            Dungeon Master cerdas merespons segala aksi bebasmu secara hidup dan adaptif.
+        {/* Bottom Hero Scrim Note */}
+        <div className="relative z-10 w-full pb-8 pt-2 px-6 text-center">
+          <p className="text-xs text-slate-400 font-light max-w-md mx-auto leading-relaxed">
+            Dungeon Master menyusun alur cerita tak terduga berdasarkan pilihan dan lemparan dadu karaktermu.
           </p>
         </div>
       </section>
 
-      {/* 2. Dynamic Campaign Grid Component (Populated from DB) */}
+      {/* Dynamic Campaign Grid Component */}
       <CampaignGrid
         campaigns={campaigns}
         initLoading={initLoading}
         onSelectCampaign={onSelectCampaign}
       />
 
-      {/* 4. Footer */}
-      <footer className="relative z-20 w-full border-t border-slate-800/80 bg-slate-950 py-8 px-6 md:px-12 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-500 font-mono">
+      {/* Clean Editorial Footer */}
+      <footer className="relative z-20 w-full border-t border-white/5 bg-slate-950 py-8 px-6 md:px-12 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-400 font-outfit">
         <div className="flex items-center gap-2 flex-wrap">
-          <span>⚔️ AetherMaster VTT Platform</span>
+          <span className="font-cinzel font-semibold text-slate-300">AetherMaster AI</span>
           <span>•</span>
-          <span>D&amp;D 5E Virtual Tabletop Engine</span>
+          <span>Virtual Tabletop Fantasy Chronicle</span>
           <span>•</span>
-          <span className="text-amber-400 font-semibold">Dibuat oleh ADE7</span>
+          <span className="text-amber-400/90">Oleh ADE7</span>
         </div>
         <div className="flex items-center gap-6">
-          <button onClick={() => setActiveModal('rules')} className="hover:text-slate-300 transition-colors">
-            Aturan Sistem
+          <button
+            type="button"
+            onClick={() => { audio.playClick(); setActiveModal('rules'); }}
+            className="hover:text-amber-300 transition-colors cursor-pointer py-1"
+          >
+            Aturan D&amp;D 5E
           </button>
-          <button onClick={() => setActiveModal('guide')} className="hover:text-slate-300 transition-colors">
-            Panduan
+          <button
+            type="button"
+            onClick={() => { audio.playClick(); setActiveModal('guide'); }}
+            className="hover:text-amber-300 transition-colors cursor-pointer py-1"
+          >
+            Panduan Bermain
           </button>
         </div>
       </footer>
 
-      {/* 5. Standard Modal Overlays */}
-      {activeModal && (
-        <div
-          className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 animate-fadeIn"
-          onClick={() => setActiveModal(null)}
-        >
-          <div
-            className="bg-slate-900 border border-slate-700/80 rounded-2xl max-w-2xl w-full p-6 md:p-8 shadow-2xl relative max-h-[85vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={() => setActiveModal(null)}
-              className="absolute top-5 right-5 p-2 rounded-lg bg-slate-800 text-slate-300 hover:text-white"
-              aria-label="Tutup jendela modal"
-            >
-              <X className="w-5 h-5" />
-            </button>
+      {/* D&D 5E Rules Modal */}
+      <FantasyModal
+        isOpen={activeModal === 'rules'}
+        onClose={() => setActiveModal(null)}
+        title="Sistem Aturan D&D 5th Edition"
+        subtitle="Mekanika perhitungan status, pertarungan, dan keputusan"
+        icon={Dices}
+        maxWidth="max-w-2xl"
+      >
+        <div className="space-y-5 text-xs sm:text-sm">
+          <div className="p-4 rounded-xl bg-slate-900/80 border border-white/5 space-y-2">
+            <h3 className="font-cinzel font-bold text-amber-300 flex items-center gap-2">
+              <Shield className="w-4 h-4 text-amber-400" />
+              1. Enam Atribut Dasar (D&amp;D 5E)
+            </h3>
+            <p className="text-slate-300 font-light leading-relaxed">
+              Setiap karakter memiliki nilai atribut: <strong>STR</strong> (Kekuatan), <strong>DEX</strong> (Kelincahan), <strong>CON</strong> (Ketahanan fisik), <strong>INT</strong> (Pengetahuan sihir), <strong>WIS</strong> (Kepekaan naluri), dan <strong>CHA</strong> (Kharisma). Modifier dihitung dengan formula baku <code className="text-amber-300">Math.floor((Score - 10) / 2)</code>.
+            </p>
+          </div>
 
-            {/* Modal: Sistem 5E */}
-            {activeModal === 'rules' && (
-              <div className="space-y-5">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
-                    <Scroll className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="font-cinzel text-xl font-bold text-white">Sistem Aturan D&amp;D 5E</h3>
-                    <p className="text-xs text-slate-400">Implementasi kalkulasi mekanik meja</p>
-                  </div>
-                </div>
+          <div className="p-4 rounded-xl bg-slate-900/80 border border-white/5 space-y-2">
+            <h3 className="font-cinzel font-bold text-cyan-300 flex items-center gap-2">
+              <Dices className="w-4 h-4 text-cyan-400" />
+              2. Uji Kemampuan (Ability Check &amp; DC)
+            </h3>
+            <p className="text-slate-300 font-light leading-relaxed">
+              Saat melakukan tindakan kritis, sistem mengevaluasi lemparan dadu virtual <code className="text-cyan-300">d20 + Modifier</code> terhadap tingkat kesulitan (Difficulty Class/DC). Tindakan berhasil jika hasil lemparan mencapai atau melampaui DC.
+            </p>
+          </div>
 
-                <div className="space-y-3 text-xs text-slate-300 leading-relaxed">
-                  <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
-                    <h4 className="font-semibold text-white">1. Ability Checks &amp; Logika Tindakan</h4>
-                    <p>
-                      Setiap aksi pemain memiliki atribut terkait (Kekuatan, Ketangkasan, Konstitusi, Kecerdasan, Kebijaksanaan, Karisma). Keberhasilan aksi dievaluasi dari skor atribut dan modifier karakter melawan tingkat kesulitan skenario.
-                    </p>
-                  </div>
-
-                  <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
-                    <h4 className="font-semibold text-white">2. Logika Skenario &amp; Konteks Dunia</h4>
-                    <p>
-                      Keberhasilan atau konsekuensi aksi dievaluasi secara cerdas oleh Dungeon Master berdasarkan situasi lingkungan, kesiapan perlengkapan, dan kecerdikan keputusanmu.
-                    </p>
-                  </div>
-
-                  <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
-                    <h4 className="font-semibold text-white">3. Evaluasi Konsekuensi &amp; Narasi Adaptif</h4>
-                    <p>
-                      Dungeon Master mengevaluasi tindakan berdasarkan logika dunia dan latar situasi, membuka cabang cerita baru atau memicu konsekuensi yang masuk akal secara dinamis.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="pt-4 flex justify-end">
-                  <button
-                    onClick={() => setActiveModal(null)}
-                    className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-medium text-white transition-colors"
-                  >
-                    Mengerti
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Modal: Panduan Bermain */}
-            {activeModal === 'guide' && (
-              <div className="space-y-5">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-500/40 flex items-center justify-center text-blue-400">
-                    <Compass className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="font-cinzel text-xl font-bold text-white">Panduan Memulai Petualangan</h3>
-                    <p className="text-xs text-slate-400">Langkah mudah menjelajahi AetherMaster</p>
-                  </div>
-                </div>
-
-                <div className="space-y-3 text-xs text-slate-300 leading-relaxed">
-                  <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex gap-3">
-                    <span className="w-6 h-6 rounded-full bg-slate-800 flex items-center justify-center text-amber-400 font-bold shrink-0">1</span>
-                    <div>
-                      <h4 className="font-semibold text-white">Pilih Modul Kampanye</h4>
-                      <p>Pilih salah satu dari kampanye yang tersedia di arsip petualangan.</p>
-                    </div>
-                  </div>
-
-                  <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex gap-3">
-                    <span className="w-6 h-6 rounded-full bg-slate-800 flex items-center justify-center text-amber-400 font-bold shrink-0">2</span>
-                    <div>
-                      <h4 className="font-semibold text-white">Rakit Karakter Petualang</h4>
-                      <p>Tentukan Ras (Human, Elf, Dwarf, Tiefling, Dragonborn), Kelas (Paladin, Wizard, Rogue, Cleric, dll.), serta distribusikan atribut dasar.</p>
-                    </div>
-                  </div>
-
-                  <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex gap-3">
-                    <span className="w-6 h-6 rounded-full bg-slate-800 flex items-center justify-center text-amber-400 font-bold shrink-0">3</span>
-                    <div>
-                      <h4 className="font-semibold text-white">Tentukan Aksi Petualangan</h4>
-                      <p>Gunakan tombol pilihan aksi taktis atau ketik aksi bebas sesuka hati. Dungeon Master akan merespons konsekuensinya secara mendalam!</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-4 flex justify-end">
-                  <button
-                    onClick={() => setActiveModal(null)}
-                    className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-medium text-white transition-colors"
-                  >
-                    Siap Bertualang
-                  </button>
-                </div>
-              </div>
-            )}
-
+          <div className="p-4 rounded-xl bg-slate-900/80 border border-white/5 space-y-2">
+            <h3 className="font-cinzel font-bold text-rose-300 flex items-center gap-2">
+              <IconSwords className="w-4 h-4 text-rose-400" />
+              3. Pertarungan Taktis Berbasis Giliran
+            </h3>
+            <p className="text-slate-300 font-light leading-relaxed">
+              Dalam pertempuran, setiap giliran menentukan serangan terhadap <em>Armor Class (AC)</em> lawan, pengurangan HP, konsumsi Mana untuk mantra sihir, atau pemanfaatan item taktis dari tas petualang.
+            </p>
           </div>
         </div>
-      )}
+      </FantasyModal>
 
+      {/* Guide Modal */}
+      <FantasyModal
+        isOpen={activeModal === 'guide'}
+        onClose={() => setActiveModal(null)}
+        title="Panduan Bermain"
+        subtitle="Langkah-langkah memulai ekspedisi di benua Aether"
+        icon={Scroll}
+        maxWidth="max-w-2xl"
+      >
+        <div className="space-y-4 text-xs sm:text-sm">
+          <div className="flex gap-3 p-3.5 rounded-xl bg-slate-900/70 border border-white/5">
+            <div className="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-400 font-cinzel font-bold flex items-center justify-center shrink-0">
+              1
+            </div>
+            <div>
+              <h4 className="font-cinzel font-bold text-white mb-1">Pilih Modul Petualangan</h4>
+              <p className="text-slate-300 font-light leading-relaxed">
+                Tiap kampanye memiliki latar, atmosfer, dan ancaman unik—dari misteri ruang bawah tanah hingga ancaman eldritch laut dalam.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex gap-3 p-3.5 rounded-xl bg-slate-900/70 border border-white/5">
+            <div className="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-400 font-cinzel font-bold flex items-center justify-center shrink-0">
+              2
+            </div>
+            <div>
+              <h4 className="font-cinzel font-bold text-white mb-1">Susun Berkas Karakter (Dossier)</h4>
+              <p className="text-slate-300 font-light leading-relaxed">
+                Tentukan nama, ras, dan kelas pahlawanmu. Tiap kelas dilengkapi profil stat D&amp;D dan perlengkapan awal yang berbeda.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex gap-3 p-3.5 rounded-xl bg-slate-900/70 border border-white/5">
+            <div className="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-400 font-cinzel font-bold flex items-center justify-center shrink-0">
+              3
+            </div>
+            <div>
+              <h4 className="font-cinzel font-bold text-white mb-1">Ambil Pilihan atau Beraksi Bebas</h4>
+              <p className="text-slate-300 font-light leading-relaxed">
+                Pilih opsi aksi yang tersedia pada dek visual novel atau ketikkan aksi kustommu sendiri untuk direspons secara langsung oleh AI Dungeon Master.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex gap-3 p-3.5 rounded-xl bg-slate-900/70 border border-white/5">
+            <div className="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-400 font-cinzel font-bold flex items-center justify-center shrink-0">
+              4
+            </div>
+            <div>
+              <h4 className="font-cinzel font-bold text-white mb-1">Arsip Simpanan &amp; Rewind Takdir</h4>
+              <p className="text-slate-300 font-light leading-relaxed">
+                Gunakan 4 slot penyimpanan (Slot 0 Autosave) serta fitur Story Tree untuk memutar balik waktu (Rewind) jika menghadapi keputusan fatal.
+              </p>
+            </div>
+          </div>
+        </div>
+      </FantasyModal>
     </div>
   );
 }

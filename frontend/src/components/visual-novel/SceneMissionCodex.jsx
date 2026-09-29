@@ -1,86 +1,113 @@
-import React from 'react';
-import { BookOpen, Compass, Target } from 'lucide-react';
+import React, { useState } from 'react';
+import { BookOpen, Compass, Target, ChevronDown, ChevronUp, X } from 'lucide-react';
+import audio from '../../services/audioService';
 
 export default function SceneMissionCodex({ missionLog, character, session, campaign }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
   const paragraphs = String(missionLog?.prologue || '')
     .split('\n')
     .map(p => p.trim())
     .filter(Boolean);
 
+  const toggleExpand = () => {
+    audio.playClick();
+    setIsExpanded(prev => !prev);
+  };
+
   return (
-    <div className="absolute top-16 md:top-20 left-4 md:left-6 right-4 md:right-6 z-10 rounded-2xl bg-gradient-to-b from-slate-950/85 via-slate-900/75 to-slate-950/90 backdrop-blur-xl border border-amber-500/30 p-4 md:p-5 shadow-[0_12px_40px_rgba(0,0,0,0.7)] animate-fadeIn pointer-events-auto">
-      {/* Top Subtle Amber Horizon Line */}
-      <div className="absolute inset-x-6 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-amber-400/70 to-transparent" />
+    <div className="absolute top-14 md:top-16 left-3 md:left-6 right-3 md:right-6 z-10 pointer-events-auto select-none">
+      {/* Sleek Compact Banner (Scene/World remains visible) */}
+      <div className="flex items-center justify-between gap-2 px-3.5 py-1.5 rounded-full bg-slate-950/75 backdrop-blur-md border border-amber-500/25 shadow-lg">
+        <button
+          onClick={toggleExpand}
+          aria-expanded={isExpanded}
+          aria-label={isExpanded ? 'Tutup Catatan Misi' : 'Buka Catatan Misi'}
+          className="flex items-center gap-2 text-left min-w-0 flex-1 hover:opacity-90 transition-opacity cursor-pointer py-0.5"
+        >
+          <div className="p-1 rounded-md bg-amber-500/20 text-amber-300 shrink-0">
+            <Target className="w-3.5 h-3.5" />
+          </div>
+          <div className="min-w-0 flex items-center gap-2">
+            <span className="font-cinzel text-[11px] font-bold text-amber-300 uppercase tracking-wider shrink-0 hidden sm:inline">
+              Misi:
+            </span>
+            <span className="font-outfit text-xs text-slate-200 truncate">
+              {missionLog?.objective || 'Tuntaskan investigasi dan netralkan sumber krisis.'}
+            </span>
+          </div>
+        </button>
 
-      {/* Header Row */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-amber-500/15">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500/25 to-amber-900/30 border border-amber-400/40 flex items-center justify-center text-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.2)]">
-            <BookOpen className="w-4 h-4 text-amber-300" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400 font-bold px-2 py-0.5 rounded bg-amber-400/10 border border-amber-400/20">
-                Jurnal Misi
-              </span>
-              <h2 className="font-cinzel text-sm md:text-base font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-300 to-amber-100 tracking-wide">
-                {missionLog?.title || 'Jurnal Misi Petualang'}
-              </h2>
-            </div>
-            <div className="flex items-center gap-2 text-[11px] text-slate-300 mt-0.5">
-              <span className="text-amber-200/90 font-medium">
-                {character?.name || 'Petualang'} sang {character?.characterClass || 'Pengelana'}
-              </span>
-              <span className="text-white/30">•</span>
-              <span className="capitalize text-slate-400">{character?.race || 'Human'}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="px-3 py-1 rounded-full bg-amber-950/50 border border-amber-500/30 text-amber-300 text-xs font-semibold flex items-center gap-2 shadow-inner">
-            <Compass className="w-3.5 h-3.5 text-amber-400" />
-            <span>Babak {session?.turnCount || 1} dari {campaign?.totalActs || 12}</span>
-          </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-[10px] font-mono text-slate-400 bg-white/5 px-2 py-0.5 rounded-full hidden md:inline">
+            Babak {session?.turnCount || 1}/{campaign?.totalActs || 12}
+          </span>
+          <button
+            onClick={toggleExpand}
+            className="p-1 rounded-lg text-slate-400 hover:text-amber-300 hover:bg-white/10 transition-colors cursor-pointer"
+            title={isExpanded ? 'Tutup Jurnal' : 'Buka Jurnal Misi'}
+          >
+            {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </button>
         </div>
       </div>
 
-      {/* Narrative Prologue & Objectives Grid */}
-      <div className="mt-3.5 grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-        {/* Latar Belakang & Catatan Penugasan */}
-        <div className="lg:col-span-8 space-y-2">
-          <div className="flex items-center gap-2 text-[10px] uppercase font-bold tracking-widest text-amber-400/90">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.8)]" />
-            <span>Latar Belakang &amp; Catatan Penugasan</span>
+      {/* Expanded Codex Modal / Drawer (Only when player requests full context) */}
+      {isExpanded && (
+        <div className="mt-2 rounded-2xl bg-slate-950/95 backdrop-blur-xl border border-amber-500/30 p-4 md:p-5 shadow-2xl animate-fadeIn">
+          {/* Header Row */}
+          <div className="flex items-center justify-between pb-3 border-b border-white/10">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-400/30 flex items-center justify-center text-amber-300">
+                <BookOpen className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="font-cinzel text-sm font-bold text-amber-200">
+                  {missionLog?.title || 'Jurnal Misi Petualang'}
+                </h3>
+                <div className="text-[11px] text-slate-400">
+                  {character?.name || 'Petualang'} sang {character?.characterClass || 'Pengelana'} ({character?.race || 'Human'})
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={toggleExpand}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              aria-label="Tutup Jurnal Misi"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
-          <div className="space-y-1.5 text-slate-200 font-outfit text-xs md:text-sm leading-relaxed antialiased font-normal">
-            {paragraphs.length > 0 ? (
-              paragraphs.map((p, idx) => (
-                <p key={idx} className="first:text-slate-100 text-slate-300">
-                  {p}
-                </p>
-              ))
-            ) : (
-              <p className="text-slate-400 italic">
-                Belum ada berkas narasi prolog tercatat.
+
+          {/* Prologue Content */}
+          <div className="mt-3 grid grid-cols-1 md:grid-cols-12 gap-3 text-xs">
+            <div className="md:col-span-8 space-y-1.5 max-h-48 overflow-y-auto pr-1">
+              <span className="text-[10px] uppercase font-bold text-amber-400/80 tracking-wider block mb-1">
+                Latar Belakang & Dokumen Catatan
+              </span>
+              {paragraphs.length > 0 ? (
+                paragraphs.map((p, idx) => (
+                  <p key={idx} className="font-outfit text-slate-300 leading-relaxed">
+                    {p}
+                  </p>
+                ))
+              ) : (
+                <p className="text-slate-500 italic">Belum ada berkas narasi prolog tercatat.</p>
+              )}
+            </div>
+
+            <div className="md:col-span-4 bg-slate-900/80 border border-amber-500/20 rounded-xl p-3 flex flex-col gap-1.5">
+              <span className="text-[10px] uppercase font-bold text-amber-300 tracking-wider flex items-center gap-1.5">
+                <Compass className="w-3.5 h-3.5 text-amber-400" />
+                Objektif Utama
+              </span>
+              <p className="font-outfit text-xs text-amber-100/90 leading-relaxed">
+                {missionLog?.objective || 'Tuntaskan investigasi dan netralkan sumber krisis.'}
               </p>
-            )}
-          </div>
-        </div>
-
-        {/* Target Utama Misi */}
-        <div className="lg:col-span-4 bg-gradient-to-br from-amber-500/10 via-slate-900/60 to-black/60 border border-amber-500/30 rounded-xl p-3.5 flex flex-col gap-2 shadow-md">
-          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-amber-300 font-cinzel">
-            <div className="p-1 rounded-md bg-amber-500/20 text-amber-300">
-              <Target className="w-3.5 h-3.5" />
             </div>
-            <span>Objektif Utama Misi</span>
           </div>
-          <p className="font-outfit text-xs text-amber-100/90 leading-relaxed font-normal">
-            {missionLog?.objective || 'Tuntaskan investigasi dan netralkan sumber krisis.'}
-          </p>
         </div>
-      </div>
+      )}
     </div>
   );
 }

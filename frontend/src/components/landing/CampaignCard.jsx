@@ -1,5 +1,7 @@
 import React from 'react';
 import { Play, Sparkles } from 'lucide-react';
+import FantasyBadge from '../common/FantasyBadge';
+import FantasyButton from '../common/FantasyButton';
 import audio from '../../services/audioService';
 
 export default function CampaignCard({
@@ -23,35 +25,35 @@ export default function CampaignCard({
     return '/assets/backgrounds/bg_01_tavern.png';
   };
 
-  const getGenreColor = (genre) => {
+  const getGenreVariant = (genre) => {
     const g = String(genre || '').toLowerCase();
-    if (g.includes('gothic') || g.includes('horror') || g.includes('blood')) {
-      return 'bg-rose-950/80 border-rose-500/50 text-rose-300';
-    }
-    if (g.includes('eldritch') || g.includes('ocean') || g.includes('abyss')) {
-      return 'bg-cyan-950/80 border-cyan-500/50 text-cyan-300';
-    }
-    if (g.includes('arcana') || g.includes('magic')) {
-      return 'bg-purple-950/80 border-purple-500/50 text-purple-300';
-    }
-    if (g.includes('survival') || g.includes('wild')) {
-      return 'bg-emerald-950/80 border-emerald-500/50 text-emerald-300';
-    }
-    return 'bg-amber-950/80 border-amber-500/50 text-amber-300';
+    if (g.includes('gothic') || g.includes('horror') || g.includes('blood')) return 'crimson';
+    if (g.includes('eldritch') || g.includes('ocean') || g.includes('abyss')) return 'cyan';
+    if (g.includes('survival') || g.includes('wild')) return 'emerald';
+    return 'gold';
   };
 
   const threatLevel = campaign.threatLevel || 'Tier 1 (Level 1-3)';
 
   return (
     <div
+      role="button"
+      tabIndex={0}
       onClick={() => {
         audio.playClick();
         onSelect(campaign);
       }}
-      className={`group relative rounded-2xl overflow-hidden cursor-pointer border transition-all duration-300 flex flex-col justify-between ${
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          audio.playClick();
+          onSelect(campaign);
+        }
+      }}
+      className={`group relative rounded-2xl overflow-hidden cursor-pointer border transition-all duration-300 flex flex-col justify-between select-none ${
         isSelected
-          ? 'bg-slate-900 border-amber-400 shadow-xl shadow-amber-500/10 scale-[1.02]'
-          : 'bg-slate-950/80 border-slate-800 hover:border-slate-600 hover:bg-slate-900/60'
+          ? 'bg-slate-900 border-amber-400 shadow-xl shadow-amber-500/10 scale-[1.01]'
+          : 'bg-slate-950/80 border-white/10 hover:border-white/20 hover:bg-slate-900/60'
       }`}
     >
       {/* Top Image Banner */}
@@ -71,16 +73,16 @@ export default function CampaignCard({
 
         {/* Badges on Top */}
         <div className="absolute top-3 left-3 right-3 flex items-center justify-between gap-2">
-          <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border backdrop-blur-md ${getGenreColor(campaign.genre)}`}>
+          <FantasyBadge variant={getGenreVariant(campaign.genre)} size="sm">
             {String(campaign.genre || 'Dark Fantasy').replace(/_/g, ' ')}
-          </span>
-          <span className="text-[10px] font-mono font-medium px-2.5 py-1 rounded-full bg-black/60 border border-white/10 text-slate-300 backdrop-blur-md">
+          </FantasyBadge>
+          <FantasyBadge variant="neutral" size="sm">
             {threatLevel}
-          </span>
+          </FantasyBadge>
         </div>
 
         {/* Campaign Icon */}
-        <div className="absolute -bottom-4 left-4 w-11 h-11 rounded-xl bg-slate-950 border border-amber-400/60 p-1 flex items-center justify-center text-xl shadow-lg backdrop-blur-md">
+        <div className="absolute -bottom-4 left-4 w-11 h-11 rounded-xl bg-slate-950 border border-amber-400/50 p-1 flex items-center justify-center text-xl shadow-lg backdrop-blur-md">
           {campaign.icon && campaign.icon.length <= 4 ? (
             <span>{campaign.icon}</span>
           ) : (
@@ -91,7 +93,7 @@ export default function CampaignCard({
 
       {/* Card Content */}
       <div className="p-5 pt-6 flex-1 flex flex-col justify-between gap-4">
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <h3 className="font-cinzel text-base font-bold text-white group-hover:text-amber-300 transition-colors line-clamp-1">
             {campaign.title}
           </h3>
@@ -100,22 +102,24 @@ export default function CampaignCard({
           </p>
         </div>
 
-        {/* Action Button */}
-        <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-2">
+        {/* Action Bottom Row */}
+        <div className="pt-3 border-t border-white/5 flex items-center justify-between gap-2">
           <span className="text-[11px] text-slate-400 font-mono">
             {campaign.primarySkill ? `Uji: ${campaign.primarySkill}` : 'Sistem D&D 5E'}
           </span>
-          <button
+
+          <FantasyButton
+            variant={isSelected ? 'primary' : 'secondary'}
+            size="sm"
+            icon={Play}
+            sound="select"
             onClick={(e) => {
               e.stopPropagation();
-              audio.playSelect();
               onStart(campaign);
             }}
-            className="px-3.5 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-slate-950 border border-amber-500/40 text-xs font-semibold font-cinzel transition-all flex items-center gap-1.5 min-h-[36px]"
           >
-            <Play className="w-3 h-3 fill-current" />
-            <span>Pilih</span>
-          </button>
+            Pilih
+          </FantasyButton>
         </div>
       </div>
     </div>
