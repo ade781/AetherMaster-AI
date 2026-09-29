@@ -5,7 +5,7 @@ const storyController = require('../controllers/storyController');
 const saveLoadController = require('../controllers/saveLoadController');
 const ttsController = require('../controllers/ttsController');
 
-// Rate limiter for LLM / narrative endpoints (Fase 6: Max 30 req/min per IP)
+// Rate limiter for LLM / narrative endpoints (Max 30 req/min per IP)
 const storyAiLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 30,
@@ -27,6 +27,7 @@ router.get('/tree/:sessionId', storyController.getStoryTree);
 router.post('/rewind', storyController.rewindToNode);
 router.get('/backlog/:sessionId', storyController.getBacklog);
 router.get('/session/:sessionId', storyController.getSession);
+router.get('/summary/:sessionId', storyController.getSessionSummary);
 
 // Multi-Slot Save / Load Routes
 router.get('/saves', saveLoadController.getSaveSlots);

@@ -1,8 +1,12 @@
 const { MsEdgeTTS, OUTPUT_FORMAT } = require('msedge-tts');
 
+const DEFAULT_VOICE = 'id-ID-ArdiNeural';
+const DEFAULT_PITCH = '-25Hz';
+const DEFAULT_RATE = '-10%';
+
 /**
  * Controller for Neural AI Text-to-Speech (Edge TTS)
- * Generates natural deep voice for Dark Fantasy Elder Narrator
+ * Generates natural deep voice for Dark Fantasy Elder Narrator.
  */
 exports.synthesizeSpeech = async (req, res) => {
   try {
@@ -21,15 +25,10 @@ exports.synthesizeSpeech = async (req, res) => {
       return res.status(400).json({ success: false, error: 'Text cannot be empty' });
     }
 
-    // Default configuration: Indonesian Male, Deep Pitch (-25Hz), Calm Elder Pace (-10%)
-    const voice = req.body?.voice || req.query?.voice || 'id-ID-ArdiNeural';
-    const pitch = req.body?.pitch || req.query?.pitch || '-25Hz';
-    const rate = req.body?.rate || req.query?.rate || '-10%';
-
     const tts = new MsEdgeTTS();
-    await tts.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
+    await tts.setMetadata(DEFAULT_VOICE, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
 
-    const { audioStream } = tts.toStream(cleanText, { pitch, rate });
+    const { audioStream } = tts.toStream(cleanText, { pitch: DEFAULT_PITCH, rate: DEFAULT_RATE });
 
     res.setHeader('Content-Type', 'audio/mpeg');
     res.setHeader('Cache-Control', 'public, max-age=86400');

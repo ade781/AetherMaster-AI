@@ -94,4 +94,70 @@ describe('Narrative Orchestration & Security Tests', () => {
       assert.strictEqual(sanitized.normalField, 'Player attacked goblin');
     });
   });
+
+  // Service Layer & Thin Controller Architecture
+  describe('Phase 2 & 3: Service Layer & Single Source of Truth', () => {
+    const storyService = require('../src/services/storyService');
+    const saveLoadService = require('../src/services/saveLoadService');
+    const storyController = require('../src/controllers/storyController');
+    const saveLoadController = require('../src/controllers/saveLoadController');
+    const { resolveItemById, parseSceneJson } = require('../src/services/narrative/sceneSchema');
+
+    it('storyService provides expected core methods and storyController is thin', () => {
+      assert.strictEqual(typeof storyService.startCampaign, 'function');
+      assert.strictEqual(typeof storyService.submitAction, 'function');
+      assert.strictEqual(typeof storyService.combatAction, 'function');
+      assert.strictEqual(typeof storyService.useItem, 'function');
+      assert.strictEqual(typeof storyService.rewindToNode, 'function');
+      assert.strictEqual(typeof storyService.getStoryTree, 'function');
+      assert.strictEqual(typeof storyService.getBacklog, 'function');
+      assert.strictEqual(typeof storyService.getSession, 'function');
+      assert.strictEqual(typeof storyService.getSessionSummary, 'function');
+
+      assert.strictEqual(typeof storyController.startCampaign, 'function');
+      assert.strictEqual(typeof storyController.submitAction, 'function');
+      assert.strictEqual(typeof storyController.combatAction, 'function');
+      assert.strictEqual(typeof storyController.getSessionSummary, 'function');
+    });
+
+    it('saveLoadService provides expected core methods and saveLoadController is thin', () => {
+      assert.strictEqual(typeof saveLoadService.getSaveSlots, 'function');
+      assert.strictEqual(typeof saveLoadService.saveToSlot, 'function');
+      assert.strictEqual(typeof saveLoadService.loadFromSlot, 'function');
+      assert.strictEqual(typeof saveLoadService.exportSessionJson, 'function');
+      assert.strictEqual(typeof saveLoadService.importSessionJson, 'function');
+
+      assert.strictEqual(typeof saveLoadController.getSaveSlots, 'function');
+      assert.strictEqual(typeof saveLoadController.saveToSlot, 'function');
+      assert.strictEqual(typeof saveLoadController.loadFromSlot, 'function');
+    });
+
+    it('sceneSchema resolves items dynamically via itemMaster without hardcoded duplicate registries', () => {
+      const healPotion = resolveItemById('item_01_potion_heal');
+      assert.ok(healPotion, 'Must resolve heal potion');
+      assert.strictEqual(healPotion.id, 'item_01_potion_heal');
+
+      // Test alias resolution via itemMaster
+      const aliasPotion = resolveItemById('potion_heal');
+      assert.ok(aliasPotion, 'Must resolve alias via itemMaster');
+      assert.strictEqual(aliasPotion.id, 'item_01_potion_heal');
+
+      // Test parsing scene json with item
+      const parsed = parseSceneJson(JSON.stringify({
+        chapterTitle: 'Babak Baru',
+        location: 'Kedai Aether',
+        dialogue: 'Kamu menemukan ramuan di meja.',
+        choices: [{ id: 'c1', text: 'Ambil ramuan', tone: 'cautious' }],
+        stateUpdates: {
+          receivedItemId: 'item_01_potion_heal',
+          proposedHpChange: 5
+        }
+      }));
+
+      assert.strictEqual(parsed.stateUpdates.receivedItemId, 'item_01_potion_heal');
+      assert.strictEqual(parsed.stateUpdates.hpChange, 5);
+      assert.ok(parsed.stateUpdates.receivedItem);
+    });
+  });
 });
+
