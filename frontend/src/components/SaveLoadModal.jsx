@@ -192,11 +192,11 @@ export default function SaveLoadModal({
                         <div className="text-xs text-slate-400 flex items-center gap-3">
                           <span className="flex items-center gap-1 text-slate-300 truncate">
                             <MapPin className="w-3 h-3 text-amber-400 shrink-0" />
-                            {slotData.currentLocation || 'Lokasi Tak Dikenal'}
+                            {slotData.location || 'Lokasi Tak Dikenal'}
                           </span>
                           <span className="text-rose-400 flex items-center gap-1 font-mono">
                             <Heart className="w-3 h-3 fill-rose-500" />
-                            {slotData.characterHp}/{slotData.characterMaxHp} HP
+                            {slotData.hp}/{slotData.maxHp} HP
                           </span>
                           <span className="text-slate-400 font-mono">
                             Babak #{slotData.turnCount || 1}

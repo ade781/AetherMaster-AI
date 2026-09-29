@@ -74,10 +74,10 @@ export default function SceneMissionCodex({ missionLog, character, session, camp
             <div className="p-1 rounded-md bg-amber-500/20 text-amber-300">
               <Target className="w-3.5 h-3.5" />
             </div>
-            <span>Target Utama Misi</span>
+            <span>Objektif Utama Misi</span>
           </div>
           <p className="font-outfit text-xs text-amber-100/90 leading-relaxed font-normal">
-            {missionLog?.targetGoal || 'Tuntaskan investigasi dan netralkan sumber krisis.'}
+            {missionLog?.objective || missionLog?.targetGoal || 'Tuntaskan investigasi dan netralkan sumber krisis.'}
           </p>
         </div>
       </div>

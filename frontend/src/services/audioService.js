@@ -347,15 +347,6 @@ class AudioService {
     }
   }
 
-  // Clean wrappers for backward compatibility
-  playBGM(type = 'tavern') {
-    this.startAmbient(type);
-  }
-
-  stopBGM() {
-    this.stopAmbient();
-  }
-
   // --- NEURAL AI & WEB SPEECH NARRATION ---
 
   toggleSpeech() {
@@ -364,10 +355,6 @@ class AudioService {
       this.stopSpeech();
     }
     return this.isSpeechEnabled;
-  }
-
-  setVoiceConfig(config = {}) {
-    this.voiceConfig = { ...this.voiceConfig, ...config };
   }
 
   async speakNarration(text) {
@@ -384,12 +371,7 @@ class AudioService {
       const response = await fetch(`${API_BASE}/tts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: clean,
-          voice: this.voiceConfig.voice,
-          pitch: this.voiceConfig.pitch,
-          rate: this.voiceConfig.rate
-        }),
+        body: JSON.stringify({ text: clean }),
         signal: this.speechAbortController.signal
       });
 
