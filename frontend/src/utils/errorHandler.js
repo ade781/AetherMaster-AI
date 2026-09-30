@@ -4,7 +4,7 @@
  * instead of raw strings.
  */
 
-export function formatErrorMessage(error, fallback = 'Terjadi kesalahan pada sistem.') {
+export function formatErrorMessage(error, fallback = 'Terjadi kesalahan pada sistem. !!!') {
   if (!error) return fallback;
 
   if (typeof error === 'string') {
