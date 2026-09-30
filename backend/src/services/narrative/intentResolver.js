@@ -13,11 +13,14 @@ const INTENT_TYPES = [
 
 // Patterns representing non-diegetic, modern, or anachronistic concepts
 const ANACHRONISTIC_PATTERNS = [
-  // Modern Tech & Devices
-  /\b(smartphone|handphone|hp|ponsel|iphone|android|laptop|komputer|pc|gadget|tablet|ipad)\b/i,
+  // Modern Tech & Devices (excluding bare 'hp' and 'pc' which conflict with RPG Health Points / Player Character)
+  /\b(smartphone|handphone|ponsel|iphone|android|laptop|komputer|gadget|tablet|ipad)\b/i,
+  /\b(senter\s+hp|layar\s+hp|buka\s+hp|main\s+hp|cas\s+hp|charger\s+hp|notif\s+hp|pesan\s+hp|kamera\s+hp|telepon\s+hp)\b/i,
+  /\bhp\s+(android|iphone|rusak|mati\s+total|lowbat|baterai)\b/i,
+  /\b(personal\s+computer|rakit\s+pc|pc\s+gaming)\b/i,
   /\b(internet|wifi|bluetooth|hotspot|charger|baterai|kamera\s+digital)\b/i,
-  // Modern Firearms & Explosives
-  /\b(senjata\s+api|pistol|revolver|shotgun|senapan|ak-?47|m16|bazooka|granat|bom\s+atom|nuklir|misil|roket|rpg)\b/i,
+  // Modern Firearms & Explosives (using rpg-7 / senjata rpg to avoid conflict with RPG acronym)
+  /\b(senjata\s+api|pistol|revolver|shotgun|senapan|ak-?47|m16|bazooka|granat|bom\s+atom|nuklir|misil|roket|rpg-?7|senjata\s+rpg)\b/i,
   // Modern Vehicles & Infrastructure
   /\b(mobil|motor|sepeda\s+motor|truk|bus|pesawat|helikopter|kereta\s+listrik|kapal\s+selam\s+modern)\b/i,
   /\b(kantor\s+polisi|gedung\s+dpr|presiden|menteri|polisi|satpam)\b/i,

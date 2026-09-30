@@ -1,4 +1,4 @@
-const { describe, it } = require('node:test');
+const { describe, it, before } = require('node:test');
 const assert = require('node:assert');
 const {
   sequelize,
@@ -15,7 +15,22 @@ const slotService = require('../src/services/saveLoad/slotService');
 const saveFileService = require('../src/services/saveLoad/saveFileService');
 
 describe('Save/Load Round-Trip & Graph Cloning Tests (Stage 3)', () => {
-  it('1. SaveToSlot and LoadFromSlot round-trip preserves state accurately', async () => {
+  let isDbAvailable = false;
+
+  before(async () => {
+    try {
+      await sequelize.authenticate();
+      isDbAvailable = true;
+    } catch {
+      isDbAvailable = false;
+    }
+  });
+
+  it('1. SaveToSlot and LoadFromSlot round-trip preserves state accurately', async (t) => {
+    if (!isDbAvailable) {
+      t.skip('Database connection unavailable; skipping persistent DB round-trip test.');
+      return;
+    }
     // A. Setup test campaign, character, and session in SQLite
     const testCampaign = await Campaign.findByPk('whispering_tavern') || await Campaign.create({
       id: 'whispering_tavern',
@@ -105,7 +120,11 @@ describe('Save/Load Round-Trip & Graph Cloning Tests (Stage 3)', () => {
     assert.strictEqual(freshSlots[1].hp, 28, 'Slot 1 saved HP must remain unchanged at 28');
   });
 
-  it('2. Graph cloning correctly clones nodes, choices, and remaps parentNodeId without collision', async () => {
+  it('2. Graph cloning correctly clones nodes, choices, and remaps parentNodeId without collision', async (t) => {
+    if (!isDbAvailable) {
+      t.skip('Database connection unavailable; skipping persistent DB graph cloning test.');
+      return;
+    }
     const dummyChar = await Character.create({
       name: 'CloneHero',
       characterClass: 'warrior',
@@ -161,7 +180,11 @@ describe('Save/Load Round-Trip & Graph Cloning Tests (Stage 3)', () => {
     assert.strictEqual(targetSession.currentSceneId, idMap[node2.id], 'Target session currentSceneId must point to clonedNode2');
   });
 
-  it('3. JSON Export & Import round-trip with schema validation and stat clamping', async () => {
+  it('3. JSON Export & Import round-trip with schema validation and stat clamping', async (t) => {
+    if (!isDbAvailable) {
+      t.skip('Database connection unavailable; skipping persistent DB JSON export/import test.');
+      return;
+    }
     const testChar = await Character.create({
       name: 'ExportHero',
       characterClass: 'mage',

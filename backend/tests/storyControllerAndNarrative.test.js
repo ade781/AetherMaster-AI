@@ -70,6 +70,17 @@ describe('Narrative Orchestration & Security Tests', () => {
       assert.strictEqual(resolvedResponse.hpPenalty, 0, 'No arbitrary HP penalty for modern/invalid input');
       assert.ok(resolvedResponse.diegeticFallback.length > 20);
     });
+
+    it('intentResolver does not misidentify RPG Health Points (HP) as modern smartphone', () => {
+      const { resolvePlayerIntent } = require('../src/services/narrative/intentResolver');
+      
+      const rpgAction = resolvePlayerIntent('minum ramuan untuk memulihkan hp');
+      assert.strictEqual(rpgAction.isAnachronistic, false, 'RPG HP recovery must not be flagged as anachronistic');
+      assert.strictEqual(rpgAction.intent, 'USE_ITEM');
+
+      const modernAction = resolvePlayerIntent('Buka smartphone dan nyalakan senter HP');
+      assert.strictEqual(modernAction.isAnachronistic, true, 'Smartphone must be flagged as anachronistic');
+    });
   });
 
   // Security & Sensitive Data Redaction Test
