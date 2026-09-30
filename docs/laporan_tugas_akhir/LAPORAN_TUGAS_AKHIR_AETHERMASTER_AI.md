@@ -7,7 +7,7 @@
 Diajukan Sebagai Salah Satu Syarat untuk Memperoleh Gelar Sarjana Komputer (S.Kom.) pada Program Studi Teknik Informatika
 
 **Disusun Oleh:**
-**Ade Kurniawan (Tim Pengembang AetherMaster AI)**
+**ADE7 Asli (Tim Pengembang AetherMaster AI)**
 **NIM: 2201010892**
 
 **PROGRAM STUDI TEKNIK INFORMATIKA
@@ -20,7 +20,7 @@ FAKULTAS ILMU KOMPUTER
 ## LEMBAR PENGESAHAN
 
 Judul Tugas Akhir : Rancang Bangun Sistem Virtual Tabletop Role-Playing Game Interaktif Menggunakan Large Language Model Google Gemini 2.0 dan Simulasi Fisika Dadu 3D Three.js (Studi Kasus: Platform AetherMaster AI)
-Nama Penyusun     : Ade Kurniawan
+Nama Penyusun     : ADE7 Asli
 NIM               : 2201010892
 Program Studi     : Teknik Informatika
 Fakultas          : Ilmu Komputer
@@ -59,7 +59,7 @@ Penulis menyadari sepenuhnya bahwa laporan dan sistem ini masih memiliki keterba
 Jakarta, 25 September 2026
 
 
-Ade Kurniawan
+ADE7 Asli
 
 
 ---
