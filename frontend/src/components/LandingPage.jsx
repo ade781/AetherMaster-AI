@@ -22,7 +22,10 @@ export default function LandingPage({
   campaigns = [],
   initLoading = false,
   onSelectCampaign,
-  onOpenSaveLoad
+  onOpenSaveLoad,
+  autosaveRecoveryAvailable = null,
+  onRecoverFromAutosave,
+  onDismissAutosaveRecovery
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeModal, setActiveModal] = useState(null); // 'rules' | 'guide' | null
@@ -164,6 +167,39 @@ export default function LandingPage({
         {/* Center Hero Content with Editorial Hierarchy */}
         <div className="relative z-10 max-w-3xl mx-auto px-6 text-center my-auto pt-32 md:pt-36 pb-12 flex flex-col items-center">
           
+          {/* Autosave Recovery Banner */}
+          {autosaveRecoveryAvailable && (
+            <div className="mb-6 p-4 rounded-2xl bg-cyan-950/80 border border-cyan-400/40 backdrop-blur-md shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-4 text-left max-w-xl w-full animate-fadeIn">
+              <div className="space-y-1 min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <FantasyBadge variant="cyan" size="sm">Autosave Ditemukan</FantasyBadge>
+                  <span className="text-[11px] text-cyan-200/80 font-mono">
+                    {autosaveRecoveryAvailable.location || 'Lokasi Terakhir'}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-200 truncate">
+                  Petualangan <strong className="text-amber-300">{autosaveRecoveryAvailable.characterName}</strong> (Lvl {autosaveRecoveryAvailable.characterLevel} {autosaveRecoveryAvailable.characterClass}) di {autosaveRecoveryAvailable.campaignTitle}.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                <FantasyButton
+                  size="xs"
+                  variant="secondary"
+                  onClick={onDismissAutosaveRecovery}
+                >
+                  Abaikan
+                </FantasyButton>
+                <FantasyButton
+                  size="sm"
+                  variant="primary"
+                  onClick={onRecoverFromAutosave}
+                >
+                  Lanjutkan
+                </FantasyButton>
+              </div>
+            </div>
+          )}
+
           {/* Subtle Top Metadata */}
           <div className="mb-6 flex items-center justify-center gap-2">
             <FantasyBadge variant="gold" size="sm" icon={Sparkles}>

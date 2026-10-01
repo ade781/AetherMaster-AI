@@ -1,6 +1,7 @@
 import React from 'react';
-import { Volume2, VolumeX, Mic, MicOff, GitFork, Save, LogOut, MapPin } from 'lucide-react';
+import { Volume2, VolumeX, Mic, MicOff, GitFork, Save, LogOut, MapPin, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
 import audio from '../../services/audioService';
+import { useGameStore } from '../../store/GameContext';
 
 export default function SceneHeader({
   chapterTitle,
@@ -13,6 +14,8 @@ export default function SceneHeader({
   onOpenSaveLoad,
   onExitSession
 }) {
+  const { saveStatus } = useGameStore();
+
   return (
     <header className="absolute top-0 left-0 right-0 z-20 px-3 md:px-6 py-2.5 md:py-3.5 flex items-center justify-between gap-3 pointer-events-none">
       {/* Location & Chapter Context: Minimal, atmospheric fantasy watermark */}
@@ -22,9 +25,37 @@ export default function SceneHeader({
           {chapterTitle || 'Babak I'}
         </span>
         <span className="text-white/20 text-xs">•</span>
-        <span className="text-xs text-slate-300 font-medium truncate max-w-[130px] sm:max-w-[220px]">
+        <span className="text-xs text-slate-300 font-medium truncate max-w-[110px] sm:max-w-[200px]">
           {location || 'Aetheria'}
         </span>
+      </div>
+
+      {/* Save Status Indicator */}
+      <div className="hidden sm:flex items-center gap-2 bg-slate-950/70 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-full shadow-lg pointer-events-auto">
+        {saveStatus === 'saving' && (
+          <span className="flex items-center gap-1.5 text-[11px] text-amber-300 font-medium animate-pulse">
+            <RefreshCw className="w-3 h-3 animate-spin text-amber-400" />
+            <span>Menyimpan...</span>
+          </span>
+        )}
+        {saveStatus === 'saved' && (
+          <span className="flex items-center gap-1.5 text-[11px] text-emerald-400 font-medium animate-fadeIn">
+            <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+            <span>Tersimpan</span>
+          </span>
+        )}
+        {saveStatus === 'error' && (
+          <span className="flex items-center gap-1.5 text-[11px] text-rose-400 font-medium" title="Autosave belum berhasil, sistem akan mencoba kembali pada tindakan berikutnya">
+            <AlertCircle className="w-3 h-3 text-rose-400" />
+            <span>Gagal simpan</span>
+          </span>
+        )}
+        {saveStatus === 'idle' && (
+          <span className="flex items-center gap-1.5 text-[11px] text-slate-400 font-medium">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/70" />
+            <span>Tersimpan</span>
+          </span>
+        )}
       </div>
 
       {/* Action Controls: Compact, floating, accessible tools */}

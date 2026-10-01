@@ -1,0 +1,1412 @@
+# Implementation Plan
+
+## Unified Save System: Manual Save, Autosave, Load & Persistence Reliability
+
+### 1. Tujuan Utama
+
+Perbaiki keseluruhan sistem penyimpanan AetherMaster-AI agar fitur **Save, Autosave, Load, dan pemulihan sesi** bekerja sebagai satu sistem persistence yang konsisten.
+
+Target akhirnya:
+
+* Player dapat melakukan **Manual Save** ke Slot 1, 2, atau 3.
+* Sistem melakukan **Autosave otomatis** ke Slot 0 setelah perubahan gameplay penting.
+* Autosave tidak mengganggu gameplay dan tidak menyebabkan request berulang secara berlebihan.
+* Manual Save dan Autosave memiliki perilaku yang jelas dan tidak saling menimpa.
+* Load dari slot harus benar-benar mengembalikan state permainan pada saat penyimpanan.
+* Jika browser ditutup atau halaman direfresh, sesi terakhir dapat dipulihkan dengan aman.
+* UI selalu menunjukkan status penyimpanan secara jelas.
+* Kegagalan save tidak boleh menyebabkan state gameplay rusak.
+* Sistem harus tetap kompatibel dengan mekanisme graph cloning, Story Tree, World Ledger, inventory, combat state, quest state, dan JSON export/import yang sudah ada.
+
+---
+
+# 2. Kondisi Sistem Saat Ini
+
+Audit awal menunjukkan arsitektur save/load sudah cukup lengkap.
+
+Komponen utama yang sudah tersedia:
+
+### Frontend
+
+* `frontend/src/components/SaveLoadModal.jsx`
+* `frontend/src/store/GameContext.jsx`
+* `frontend/src/services/api.js`
+
+### Backend
+
+* `backend/src/controllers/saveLoadController.js`
+* `backend/src/services/saveLoadService.js`
+* `backend/src/services/saveLoad/slotService.js`
+* `backend/src/services/saveLoad/saveFileService.js`
+* `backend/src/services/saveLoad/graphCloneService.js`
+
+### Database
+
+Sistem menggunakan `GameSession` dengan konsep:
+
+* Slot `0` = Autosave
+* Slot `1` = Manual Save
+* Slot `2` = Manual Save
+* Slot `3` = Manual Save
+
+Sistem juga sudah menggunakan cloning untuk membuat save slot terisolasi dari active session.
+
+---
+
+# 3. Masalah Utama yang Harus Diperbaiki
+
+## 3.1 Slot 0 didefinisikan sebagai Autosave tetapi belum dapat digunakan oleh fungsi save utama
+
+`getSaveSlots()` sudah menganggap:
+
+```text
+0 = Auto Save
+1 = Manual Slot 1
+2 = Manual Slot 2
+3 = Manual Slot 3
+```
+
+Namun `saveToSlot()` saat ini memvalidasi:
+
+```text
+slotNumber < 1 || slotNumber > 3
+```
+
+Artinya Slot 0 selalu ditolak.
+
+Jangan sekadar mengubah validasi menjadi menerima `0`.
+
+Autosave sebaiknya memiliki jalur service yang jelas dan berbeda secara semantik dari Manual Save.
+
+Gunakan konsep:
+
+```text
+saveToSlot()
+    -> manual save, Slot 1-3
+
+autoSave()
+    -> automatic save, Slot 0
+```
+
+Keduanya boleh menggunakan internal persistence logic yang sama, tetapi API dan perilakunya harus dibedakan.
+
+---
+
+# 4. Arsitektur Save yang Diinginkan
+
+Gunakan konsep:
+
+```text
+                    GAME STATE
+                        │
+             ┌──────────┴──────────┐
+             │                     │
+       Manual Save             Autosave
+             │                     │
+       Slot 1 / 2 / 3           Slot 0
+             │                     │
+             └──────────┬──────────┘
+                        │
+                  Save Persistence
+                        │
+                  GameSession Clone
+                        │
+              Story Graph / Snapshot
+                        │
+                     Database
+```
+
+Active session tetap menjadi sumber state gameplay aktif.
+
+Save slot adalah **frozen copy** dari active session.
+
+Jangan membuat active session berubah menjadi slot hanya karena proses save.
+
+---
+
+# 5. Manual Save
+
+Manual Save harus tetap menggunakan Slot 1-3.
+
+Perilaku:
+
+```text
+Player membuka Save/Load
+        ↓
+Memilih Slot 1 / 2 / 3
+        ↓
+Sistem membaca active session
+        ↓
+Membuat snapshot/frozen copy
+        ↓
+Slot lama diganti
+        ↓
+Save berhasil
+```
+
+Jika slot sudah berisi data:
+
+```text
+Slot 1
+[Data lama]
+
+        ↓ Save
+
+Slot 1
+[Data terbaru]
+```
+
+Tidak boleh menghasilkan beberapa record aktif untuk slot yang sama.
+
+Gunakan transaksi database seperti mekanisme yang sudah ada.
+
+---
+
+# 6. Autosave
+
+Autosave harus benar-benar otomatis.
+
+Autosave tidak boleh bergantung pada player membuka Save/Load Modal.
+
+Autosave dilakukan ketika terjadi **meaningful gameplay state change**.
+
+Minimal trigger:
+
+### Setelah memilih action / choice
+
+Setelah:
+
+```text
+handleChooseAction()
+```
+
+berhasil dan state baru sudah diterima dari backend.
+
+Urutannya:
+
+```text
+Player memilih action
+        ↓
+Backend memproses action
+        ↓
+Frontend menerima state baru
+        ↓
+Update React state
+        ↓
+Schedule Autosave
+```
+
+---
+
+### Setelah combat action
+
+Setelah:
+
+```text
+handleCombatAction()
+```
+
+berhasil.
+
+Autosave harus menangkap:
+
+* HP
+* Mana
+* inventory
+* status effects
+* combat state
+* turn count
+* quest state
+* world ledger
+* current scene
+* story progression
+
+---
+
+### Setelah menggunakan item
+
+Setelah:
+
+```text
+handleUseItem()
+```
+
+berhasil dan state character berubah.
+
+---
+
+### Setelah rewind
+
+Setelah:
+
+```text
+handleRewind()
+```
+
+berhasil.
+
+Autosave harus menyimpan kondisi baru setelah rewind, bukan kondisi sebelum rewind.
+
+---
+
+### Setelah state gameplay lain yang bersifat persisten
+
+Audit seluruh `GameContext.jsx` dan action handler.
+
+Jika sebuah operasi mengubah data yang harus bertahan setelah refresh/load, operasi tersebut harus menjadi kandidat autosave.
+
+Jangan autosave untuk perubahan UI murni seperti:
+
+* membuka modal
+* menutup modal
+* membuka inventory
+* membuka Story Tree
+* tooltip
+* audio toggle
+* animasi
+* loading state
+
+---
+
+# 7. Jangan Autosave Setiap Render
+
+Jangan menggunakan pola:
+
+```javascript
+useEffect(() => {
+    autoSave();
+}, [session, character, currentNode]);
+```
+
+secara langsung.
+
+Pendekatan tersebut berisiko menyebabkan:
+
+* request berlebihan
+* race condition
+* cloning graph berkali-kali
+* database load tinggi
+* autosave berjalan ketika state belum stabil
+
+Autosave harus menggunakan **explicit save scheduling**.
+
+Contoh konsep:
+
+```text
+state-changing action
+        ↓
+scheduleAutosave()
+        ↓
+debounce 500-1500 ms
+        ↓
+save
+```
+
+Jika beberapa perubahan terjadi berdekatan:
+
+```text
+Action A
+Action B
+Action C
+    ↓
+satu autosave final
+```
+
+bukan:
+
+```text
+Save A
+Save B
+Save C
+```
+
+---
+
+# 8. Autosave Queue / Race Condition Protection
+
+Autosave harus memiliki protection terhadap concurrent save.
+
+Gunakan konsep:
+
+```text
+autosaveInProgress
+autosaveQueued
+```
+
+Jika autosave sedang berjalan dan perubahan baru terjadi:
+
+```text
+Save sedang berjalan
+        ↓
+Gameplay berubah
+        ↓
+Jangan membuat request kedua langsung
+        ↓
+Mark queued = true
+        ↓
+Save pertama selesai
+        ↓
+Jika queued:
+    lakukan autosave terbaru
+```
+
+Tujuannya memastikan autosave terakhir selalu merepresentasikan state terbaru.
+
+Jangan membiarkan:
+
+```text
+Save A
+Save B
+Save C
+Save D
+```
+
+berjalan bersamaan.
+
+---
+
+# 9. Jangan Menyimpan State yang Setengah Jadi
+
+Autosave hanya boleh dilakukan setelah backend mengonfirmasi bahwa state gameplay telah berhasil diproses.
+
+Contoh yang benar:
+
+```text
+chooseAction()
+    ↓
+backend
+    ↓
+success
+    ↓
+setSession()
+setCharacter()
+setCurrentNode()
+setCombatState()
+    ↓
+scheduleAutosave()
+```
+
+Bukan:
+
+```text
+Player click
+    ↓
+langsung autosave
+    ↓
+backend action belum selesai
+```
+
+---
+
+# 10. Autosave Metadata
+
+Slot 0 harus memiliki metadata yang jelas.
+
+Contoh:
+
+```text
+Slot 0
+Autosave
+
+Campaign:
+Bisikan Kedai Terkutuk
+
+Character:
+Arya
+
+Level:
+5
+
+Location:
+Ruang Bawah Tanah
+
+Chapter:
+Babak IV
+
+HP:
+28 / 35
+
+Turn:
+14
+
+Saved:
+1 Oct 2026, 15:20
+```
+
+Tambahkan metadata yang memang berguna untuk player.
+
+Jangan menampilkan terlalu banyak data internal database.
+
+---
+
+# 11. UI Save/Load
+
+`SaveLoadModal.jsx` perlu diperbaiki agar perbedaan Autosave dan Manual Save lebih jelas.
+
+## Slot 0
+
+Tampilkan:
+
+```text
+AUTOSAVE
+Automatically saved
+```
+
+Tidak perlu tombol:
+
+```text
+Simpan
+```
+
+Karena player tidak seharusnya melakukan manual save ke autosave.
+
+Yang tersedia:
+
+```text
+Muat
+```
+
+Jika autosave tersedia.
+
+---
+
+## Slot 1-3
+
+Tampilkan:
+
+```text
+SLOT 1
+Manual Save
+```
+
+Button:
+
+```text
+Simpan
+```
+
+atau:
+
+```text
+Timpa
+```
+
+Jika slot sudah berisi data.
+
+Button:
+
+```text
+Muat
+```
+
+jika data tersedia.
+
+---
+
+# 12. Save Status Indicator
+
+Tambahkan status kecil di UI utama.
+
+Contoh state:
+
+```text
+● Tersimpan
+```
+
+```text
+◌ Menyimpan...
+```
+
+```text
+✓ Tersimpan 3 detik lalu
+```
+
+```text
+! Gagal menyimpan
+```
+
+Status tidak perlu besar.
+
+Cukup menjadi indikator kecil pada area UI yang sudah memiliki informasi session/gameplay.
+
+Tujuannya memberi player kepastian bahwa progress mereka benar-benar tersimpan.
+
+---
+
+# 13. Manual Save Feedback
+
+Setelah manual save:
+
+```text
+Progress tersimpan ke Slot 2
+```
+
+Setelah autosave:
+
+```text
+Autosave diperbarui
+```
+
+Jangan menggunakan alert browser untuk operasi normal.
+
+Gunakan sistem toast/notification yang sudah tersedia di aplikasi.
+
+Browser `alert()` hanya membuat aplikasi terasa seperti website tahun 2007 yang baru menemukan JavaScript.
+
+---
+
+# 14. Error Handling
+
+Jika autosave gagal:
+
+```text
+Gameplay tetap berjalan.
+```
+
+Jangan rollback state gameplay hanya karena autosave gagal.
+
+Tampilkan:
+
+```text
+Autosave gagal
+```
+
+dan berikan kesempatan autosave berikutnya untuk mencoba kembali.
+
+Autosave error tidak boleh:
+
+* mereset character
+* mengubah current node
+* menghapus session
+* memblokir player
+* membuat game crash
+
+Manual Save memiliki error feedback yang lebih eksplisit karena merupakan aksi yang disengaja player.
+
+---
+
+# 15. Active Session Recovery
+
+Saat aplikasi dibuka kembali:
+
+```text
+localStorage
+    ↓
+aethermaster_active_session_id
+    ↓
+GET /session/:id
+    ↓
+restore active session
+```
+
+Mekanisme yang sudah ada di `GameContext.jsx` dipertahankan.
+
+Namun tambahkan fallback yang lebih robust:
+
+```text
+Active Session masih valid
+        ↓
+Restore active session
+
+Active Session tidak valid
+        ↓
+Cari Autosave Slot 0
+
+Autosave tersedia
+        ↓
+Tawarkan / lakukan recovery sesuai UX
+```
+
+Jangan otomatis menimpa state player tanpa alasan yang jelas.
+
+Jika active session hilang tetapi autosave ada, UI sebaiknya dapat memberitahu:
+
+```text
+Petualangan terakhir ditemukan.
+
+Pulihkan dari Autosave?
+```
+
+---
+
+# 16. Browser Refresh / Tab Close
+
+Autosave utama tetap menggunakan backend/database.
+
+Jangan menjadikan `localStorage` sebagai database save utama.
+
+`localStorage` hanya digunakan untuk:
+
+```text
+active session ID
+```
+
+dan metadata ringan yang memang diperlukan.
+
+Jangan menyimpan keseluruhan story graph ke localStorage jika backend persistence sudah tersedia.
+
+Untuk tab close:
+
+gunakan mekanisme browser hanya sebagai **best-effort safety**, bukan sebagai satu-satunya mekanisme persistence.
+
+Jangan menggunakan `beforeunload` untuk mengirim request besar atau cloning graph secara paksa.
+
+---
+
+# 17. Backend Refactor
+
+Refactor `slotService.js` agar memiliki internal method yang dapat digunakan bersama.
+
+Contoh arsitektur:
+
+```javascript
+async persistSessionToSlot({
+    sessionId,
+    slotNumber,
+    saveTitle,
+    mode
+})
+```
+
+Kemudian:
+
+```javascript
+async saveToSlot({
+    sessionId,
+    slotNumber,
+    saveTitle
+}) {
+    // validate 1-3
+    return this.persistSessionToSlot({
+        sessionId,
+        slotNumber,
+        saveTitle,
+        mode: 'manual'
+    });
+}
+```
+
+dan:
+
+```javascript
+async autoSave(sessionId) {
+    return this.persistSessionToSlot({
+        sessionId,
+        slotNumber: 0,
+        saveTitle: 'Autosave',
+        mode: 'auto'
+    });
+}
+```
+
+Internal persistence logic tetap menggunakan transaction dan graph cloning yang sudah ada.
+
+---
+
+# 18. Autosave Slot Isolation
+
+Autosave Slot 0 harus memiliki isolation yang sama seperti Manual Save.
+
+Jika active session berubah:
+
+```text
+Active Session
+HP = 20
+```
+
+Autosave:
+
+```text
+HP = 20
+```
+
+Kemudian player bermain:
+
+```text
+HP = 5
+```
+
+Autosave lama tetap:
+
+```text
+HP = 20
+```
+
+sampai autosave berikutnya berhasil.
+
+Ini penting untuk memastikan slot benar-benar menjadi snapshot.
+
+---
+
+# 19. Save Title
+
+Manual save dapat menggunakan:
+
+```text
+Slot 1: Nama Karakter
+```
+
+atau title yang sudah disediakan sistem.
+
+Autosave gunakan title tetap:
+
+```text
+Autosave
+```
+
+Metadata waktu digunakan untuk membedakan snapshot.
+
+Jangan membuat title autosave berubah-ubah secara tidak perlu.
+
+---
+
+# 20. Load Behavior
+
+Load harus tetap membuat active session baru dari save slot.
+
+Flow:
+
+```text
+Save Slot
+    ↓
+Load
+    ↓
+Clone saved character
+    ↓
+Clone saved session
+    ↓
+Clone story graph
+    ↓
+Set currentSceneId
+    ↓
+Return hydrated state
+    ↓
+Frontend replace active state
+```
+
+Pertahankan isolation yang sudah diuji pada `saveLoadRoundTrip.test.js`.
+
+Jangan mengubah save slot secara langsung ketika load.
+
+---
+
+# 21. Save Slot Overwrite
+
+Manual Save:
+
+Jika slot kosong:
+
+```text
+Simpan
+```
+
+Jika slot berisi:
+
+```text
+Timpa
+```
+
+Untuk overwrite, tampilkan confirmation ringan:
+
+```text
+Timpa Slot 1?
+
+Progress lama pada slot ini akan digantikan.
+```
+
+Actions:
+
+```text
+Batal
+Timpa
+```
+
+Autosave tidak memerlukan confirmation.
+
+---
+
+# 22. API
+
+Tambahkan endpoint khusus autosave jika arsitektur routing saat ini mendukungnya.
+
+Contoh:
+
+```text
+POST /saves/autosave
+```
+
+Payload:
+
+```json
+{
+  "sessionId": "..."
+}
+```
+
+Manual:
+
+```text
+POST /saves/save
+```
+
+Payload:
+
+```json
+{
+  "sessionId": "...",
+  "slotNumber": 1
+}
+```
+
+Load tetap:
+
+```text
+GET /saves/:slot
+```
+
+atau pertahankan endpoint existing jika struktur API saat ini sudah berbeda.
+
+Jangan membuat endpoint baru jika existing architecture dapat menangani kebutuhan ini secara bersih.
+
+---
+
+# 23. API Client
+
+Di:
+
+```text
+frontend/src/services/api.js
+```
+
+tambahkan method:
+
+```javascript
+autoSave(sessionId)
+```
+
+yang memanggil endpoint autosave.
+
+Pertahankan:
+
+```javascript
+saveToSlot(sessionId, slotNumber)
+loadFromSlot(slotNumber)
+getSaveSlots()
+```
+
+Jangan mencampur autosave dengan method manual save hanya demi mengurangi jumlah fungsi.
+
+Semantic separation lebih penting daripada tiga baris kode yang dihemat.
+
+---
+
+# 24. GameContext Integration
+
+`GameContext.jsx` menjadi orchestrator utama untuk autosave.
+
+Tambahkan mekanisme:
+
+```text
+scheduleAutosave()
+performAutosave()
+```
+
+Gunakan `useCallback` dan `useRef` untuk menjaga:
+
+* timer
+* request state
+* queued state
+* unmount safety
+
+Jangan membuat autosave dependency chain yang menyebabkan infinite loop.
+
+---
+
+# 25. Save Trigger Matrix
+
+Implementasikan trigger berikut:
+
+| Event               | Autosave |
+| ------------------- | -------- |
+| Start Adventure     | Ya       |
+| Choose Story Action | Ya       |
+| Combat Action       | Ya       |
+| Use Item            | Ya       |
+| Rewind              | Ya       |
+| Game Over           | Ya       |
+| Combat Victory      | Ya       |
+| Flee Combat         | Ya       |
+| Open Inventory      | Tidak    |
+| Close Inventory     | Tidak    |
+| Open Save Modal     | Tidak    |
+| Open Story Tree     | Tidak    |
+| Audio Toggle        | Tidak    |
+| UI Modal Change     | Tidak    |
+
+Jika ditemukan gameplay mutation lain selama audit kode, masukkan sebagai autosave trigger bila perubahan tersebut harus persistent.
+
+---
+
+# 26. Debounce Strategy
+
+Gunakan delay pendek, misalnya:
+
+```text
+750-1500 ms
+```
+
+setelah state-changing operation.
+
+Tujuannya bukan membuat autosave terasa lambat, tetapi menghindari beberapa save identik ketika satu action menghasilkan beberapa update state.
+
+Autosave harus tetap berjalan otomatis tanpa membutuhkan player menunggu.
+
+---
+
+# 27. Initial Game Save
+
+Setelah `handleStartGame()` berhasil:
+
+```text
+startAdventure success
+    ↓
+set active session
+    ↓
+schedule autosave
+```
+
+Dengan demikian jika player langsung refresh setelah membuat character, progress awal tetap memiliki recovery point.
+
+---
+
+# 28. Save Status Lifecycle
+
+Gunakan lifecycle:
+
+```text
+idle
+  ↓
+pending
+  ↓
+saving
+  ↓
+saved
+```
+
+Error:
+
+```text
+saving
+  ↓
+error
+```
+
+UI cukup menampilkan status ringkas.
+
+Contoh:
+
+```text
+Autosave...
+```
+
+kemudian:
+
+```text
+Saved
+```
+
+dan setelah beberapa detik kembali menjadi:
+
+```text
+Ready
+```
+
+---
+
+# 29. Testing
+
+Perlu menambah atau memperbarui test di:
+
+```text
+backend/tests/saveLoadRoundTrip.test.js
+```
+
+Minimal test:
+
+### Test 1
+
+Manual Save Slot 1 berhasil.
+
+### Test 2
+
+Manual Save Slot 2 dan Slot 3 tetap independent.
+
+### Test 3
+
+Autosave Slot 0 berhasil.
+
+### Test 4
+
+Autosave menggantikan snapshot Slot 0 sebelumnya.
+
+### Test 5
+
+Autosave tidak mengubah Manual Slot 1-3.
+
+### Test 6
+
+Load Autosave mengembalikan state yang benar.
+
+### Test 7
+
+Manual Save tetap immutable setelah active session berubah.
+
+### Test 8
+
+Autosave tetap immutable sampai autosave berikutnya.
+
+### Test 9
+
+Concurrent autosave tidak menghasilkan duplicate active slot records.
+
+### Test 10
+
+Malformed save tetap ditolak.
+
+### Test 11
+
+Graph story tetap lengkap setelah autosave/load.
+
+### Test 12
+
+Current scene tetap benar setelah load.
+
+### Test 13
+
+World Ledger tetap sama.
+
+### Test 14
+
+Combat state tetap sama jika autosave dilakukan ketika combat berlangsung.
+
+### Test 15
+
+Inventory dan equipped items tetap sama.
+
+---
+
+# 30. Frontend Testing
+
+Jika frontend test infrastructure tersedia, tambahkan test untuk:
+
+```text
+scheduleAutosave()
+```
+
+Pastikan:
+
+* beberapa trigger dalam waktu singkat menghasilkan satu save
+* save error tidak mengubah gameplay state
+* autosave tidak dipanggil untuk UI-only changes
+* queued autosave berjalan setelah save sebelumnya selesai
+* component unmount tidak menyebabkan state update ilegal
+* manual save tidak memicu autosave tambahan secara tidak sengaja
+
+---
+
+# 31. Regression Testing
+
+Setelah implementasi, jalankan:
+
+```text
+backend tests
+```
+
+dan seluruh test yang tersedia.
+
+Pastikan fitur berikut tidak rusak:
+
+* Start Adventure
+* Story progression
+* Combat
+* Inventory
+* Quest
+* Story Tree
+* Rewind
+* JSON Export
+* JSON Import
+* Manual Save
+* Load
+* Active Session Recovery
+
+Jangan hanya menguji tombol Save. Persistence system menyentuh hampir seluruh state game.
+
+---
+
+# 32. Acceptance Criteria
+
+Implementasi dianggap selesai jika seluruh kondisi berikut terpenuhi:
+
+### Autosave
+
+* Slot 0 benar-benar terisi otomatis.
+* Autosave terjadi setelah gameplay mutation penting.
+* Tidak ada autosave request untuk perubahan UI biasa.
+* Tidak ada request autosave paralel.
+* Autosave terbaru menggantikan autosave sebelumnya.
+* Autosave tidak mengubah Manual Slot 1-3.
+
+### Manual Save
+
+* Slot 1-3 dapat digunakan.
+* Slot dapat ditimpa.
+* Overwrite memiliki confirmation.
+* Manual Save memiliki feedback sukses/gagal.
+* Manual Save tidak merusak active session.
+
+### Load
+
+* Semua slot dapat dimuat.
+* Load membuat active session baru.
+* Save slot tetap immutable setelah load.
+* Story graph tetap konsisten.
+* Current scene benar.
+* Character state benar.
+* Inventory benar.
+* Quest state benar.
+* World Ledger benar.
+* Combat state benar.
+
+### Recovery
+
+* Refresh browser dapat memulihkan active session.
+* Jika active session tidak tersedia tetapi autosave tersedia, player dapat melakukan recovery dari autosave.
+* Tidak ada kehilangan progress karena perubahan UI atau modal.
+
+### UX
+
+* Player dapat mengetahui kapan game sedang menyimpan.
+* Player dapat mengetahui kapan save berhasil.
+* Player dapat mengetahui ketika save gagal.
+* Autosave tidak mengganggu gameplay.
+* Tidak menggunakan browser `alert()` untuk feedback normal.
+
+---
+
+# 33. Files yang Kemungkinan Perlu Diubah
+
+Prioritaskan audit dan perubahan pada:
+
+```text
+frontend/src/store/GameContext.jsx
+frontend/src/components/SaveLoadModal.jsx
+frontend/src/services/api.js
+
+backend/src/controllers/saveLoadController.js
+backend/src/services/saveLoadService.js
+backend/src/services/saveLoad/slotService.js
+backend/src/routes/storyRoutes.js
+
+backend/tests/saveLoadRoundTrip.test.js
+```
+
+File lain hanya diubah jika diperlukan setelah audit dependency.
+
+Jangan melakukan refactor besar terhadap engine gameplay yang tidak berkaitan langsung dengan persistence.
+
+---
+
+# 34. Prinsip Implementasi
+
+1. **Jangan menghapus mekanisme graph cloning yang sudah bekerja.**
+2. **Jangan menjadikan localStorage sebagai database game.**
+3. **Jangan melakukan autosave pada setiap React render.**
+4. **Jangan melakukan autosave paralel.**
+5. **Jangan membuat autosave mengganggu action gameplay.**
+6. **Jangan mengubah Manual Save menjadi Autosave hanya demi reuse code.**
+7. **Jangan memodifikasi save slot ketika melakukan Load.**
+8. **Jangan mengorbankan data integrity demi UI yang lebih sederhana.**
+9. **Gunakan database transaction untuk persistence.**
+10. **Pertahankan compatibility dengan JSON Export/Import.**
+11. **Pertahankan existing tests dan tambahkan regression tests.**
+12. **Audit existing code sebelum membuat abstraction baru.**
+
+---
+
+# 35. Expected Final User Experience
+
+Player memainkan game:
+
+```text
+[Gameplay]
+     ↓
+Memilih pilihan
+     ↓
+Game berubah
+     ↓
+✓ Autosaved
+```
+
+Player kemudian membuka Save:
+
+```text
+┌──────────────────────────────────────┐
+│ Chronicle Archive                    │
+│                                      │
+│ AUTOSAVE                             │
+│ Babak IV • Ruang Bawah Tanah         │
+│ HP 28/35 • Level 5                   │
+│ Saved 15:20                          │
+│                          [MUAT]       │
+│                                      │
+│ SLOT 1                               │
+│ Babak III • Kedai Aether             │
+│ HP 35/35 • Level 5                   │
+│              [TIMPA] [MUAT]          │
+│                                      │
+│ SLOT 2                               │
+│ Slot Kosong                          │
+│                          [SIMPAN]     │
+│                                      │
+│ SLOT 3                               │
+│ Slot Kosong                          │
+│                          [SIMPAN]     │
+│                                      │
+│        Ekspor JSON   Impor JSON      │
+└──────────────────────────────────────┘
+```
+
+Player tidak perlu berpikir:
+
+> "Sudah kesimpan belum?"
+
+Karena sistem memberi kepastian.
+
+---
+
+# 36. Urutan Pengerjaan Agent
+
+Implementasi dilakukan dalam urutan berikut:
+
+### Phase 1 — Audit
+
+Audit semua jalur perubahan game state dan seluruh endpoint save/load yang sudah ada.
+
+Jangan langsung melakukan refactor.
+
+Identifikasi:
+
+* state mutation
+* save endpoint
+* load endpoint
+* slot persistence
+* graph cloning
+* session recovery
+
+### Phase 2 — Backend Autosave
+
+Implementasikan:
+
+```text
+autoSave()
+```
+
+dan persistence Slot 0.
+
+Tambahkan test.
+
+### Phase 3 — Frontend Autosave Orchestrator
+
+Implementasikan:
+
+```text
+scheduleAutosave()
+performAutosave()
+queue handling
+```
+
+di `GameContext`.
+
+Integrasikan dengan gameplay mutations.
+
+### Phase 4 — Save UI
+
+Perjelas:
+
+* Autosave
+* Manual Slot
+* Save status
+* Overwrite confirmation
+* Loading state
+* Error state
+
+### Phase 5 — Recovery
+
+Perbaiki active-session recovery dan fallback ke Autosave.
+
+### Phase 6 — Regression
+
+Jalankan seluruh backend/frontend tests.
+
+Lakukan manual test:
+
+```text
+Start game
+→ action
+→ refresh
+→ load
+→ combat
+→ refresh
+→ rewind
+→ refresh
+→ manual save
+→ progress lanjut
+→ load manual save
+→ pastikan state kembali
+```
+
+### Phase 7 — Cleanup
+
+Hapus:
+
+* duplicate save logic
+* unused autosave code
+* dead state
+* browser alert untuk save feedback
+* debug logging yang tidak diperlukan
+
+Jangan meninggalkan dua sistem persistence berbeda yang melakukan hal yang sama.
+
+---
+
+# 37. Definition of Done
+
+Fitur dianggap selesai apabila AetherMaster-AI memiliki **satu sistem persistence yang konsisten**:
+
+```text
+                 AETHERMASTER SAVE SYSTEM
+
+                       GAME STATE
+                           │
+               ┌───────────┴───────────┐
+               │                       │
+           AUTOSAVE                MANUAL SAVE
+               │                       │
+            SLOT 0                SLOT 1 / 2 / 3
+               │                       │
+               └───────────┬───────────┘
+                           │
+                     LOAD / RECOVERY
+                           │
+                    ACTIVE SESSION
+```
+
+Player cukup bermain.
+
+Autosave bekerja sendiri.
+
+Manual Save bekerja ketika diminta.
+
+Load mengembalikan state dengan benar.
+
+Dan yang paling penting, tidak ada lagi fitur bernama "Autosave" yang sebenarnya menunggu manusia menekan tombol. Itu agak memalukan untuk sebuah game yang mengaku punya AI.

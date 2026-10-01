@@ -95,6 +95,13 @@ export const storyApi = {
     });
   },
 
+  async autoSave(sessionId) {
+    return request('/saves/autosave', {
+      method: 'POST',
+      body: JSON.stringify({ sessionId })
+    });
+  },
+
   async loadFromSlot(slotNumber) {
     return request(`/saves/load/${slotNumber}`);
   },

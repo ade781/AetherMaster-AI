@@ -24,6 +24,18 @@ exports.saveToSlot = async (req, res) => {
   }
 };
 
+exports.autoSave = async (req, res) => {
+  try {
+    const { sessionId } = req.body;
+    const savedSession = await saveLoadService.autoSave(sessionId);
+    return successResponse(res, savedSession, 'Autosave berhasil diperbarui.');
+  } catch (err) {
+    logger.error('autoSave error:', err);
+    const statusCode = err.statusCode || 500;
+    return errorResponse(res, statusCode, err.code || ERROR_CODES.SAVE_FAILED, err.message || 'Gagal melakukan autosave.');
+  }
+};
+
 exports.loadFromSlot = async (req, res) => {
   try {
     const { slotNumber } = req.params;

@@ -146,7 +146,7 @@ Jika ingin menjalankan secara terpisah:
 
 ## Pengujian Otomatis
 
-Repositori ini menyertakan 62 pengujian otomatis (51 pada backend dan 11 pada frontend) yang menggunakan test runner bawaan Node.js tanpa dependensi pengujian eksternal:
+Repositori ini menyertakan 69 pengujian otomatis (54 pada backend dan 15 pada frontend) yang menggunakan test runner bawaan Node.js tanpa dependensi pengujian eksternal:
 
 ```bash
 # Menjalankan seluruh pengujian (backend dan frontend)
@@ -162,7 +162,8 @@ npm run test:frontend
 Cakupan pengujian mencakup:
 * Logika resolusi aksi dan snapshot state
 * Batasan invarian status (HP, mana, reputasi, level)
-* Validasi kontrak skema kanonikal save/load
+* Validasi kontrak skema kanonikal save/load dan isolasi slot
+* Orkestrasi autosave, pencegahan konkurensi, dan penjadwalan debounce
 * Redaksi kredensial rahasia pada logger backend
 * Penanganan aksi di luar konteks (*out-of-context action handling*)
 * Perhitungan modifier D&D 5E dan penanganan error di frontend

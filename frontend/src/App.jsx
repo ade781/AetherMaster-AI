@@ -28,6 +28,9 @@ function MainGame() {
     isLoading,
     initLoading,
     toast,
+    autosaveRecoveryAvailable,
+    handleRecoverFromAutosave,
+    handleDismissAutosaveRecovery,
     handleSelectCampaign,
     handleStartGame,
     handleChooseAction,
@@ -66,6 +69,9 @@ function MainGame() {
           initLoading={initLoading}
           onSelectCampaign={handleSelectCampaign}
           onOpenSaveLoad={() => setIsSaveLoadOpen(true)}
+          autosaveRecoveryAvailable={autosaveRecoveryAvailable}
+          onRecoverFromAutosave={handleRecoverFromAutosave}
+          onDismissAutosaveRecovery={handleDismissAutosaveRecovery}
         />
 
         {/* Character Creation Modal */}

@@ -13,6 +13,7 @@ import {
   Skull
 } from 'lucide-react';
 import audio from '../services/audioService';
+import { useGameStore } from '../store/GameContext';
 
 export default function CombatStage({
   character,
@@ -23,6 +24,7 @@ export default function CombatStage({
   onFleeCombat,
   isLoading = false
 }) {
+  const { saveStatus } = useGameStore();
   const enemyData = combatState?.enemy || {
     name: 'Musuh Misterius',
     sprite: 'monster_01_skeleton',
@@ -148,10 +150,38 @@ export default function CombatStage({
         </div>
 
         {/* Top Encounter Header */}
-        <div className="relative z-10 flex items-center justify-between">
+        <div className="relative z-10 flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-950/80 border border-rose-500/40 text-rose-300 text-xs font-cinzel font-bold shadow-lg">
             <Swords className="w-4 h-4 text-rose-400 animate-pulse" />
             <span>Pertempuran Taktis • Ronde {round}</span>
+          </div>
+
+          {/* Save Status Indicator */}
+          <div className="hidden sm:flex items-center gap-2 bg-slate-950/80 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-full shadow-lg text-[11px]">
+            {saveStatus === 'saving' && (
+              <span className="flex items-center gap-1.5 text-amber-300 font-medium animate-pulse">
+                <Loader2 className="w-3 h-3 animate-spin text-amber-400" />
+                <span>Menyimpan...</span>
+              </span>
+            )}
+            {saveStatus === 'saved' && (
+              <span className="flex items-center gap-1.5 text-emerald-400 font-medium animate-fadeIn">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                <span>Tersimpan</span>
+              </span>
+            )}
+            {saveStatus === 'error' && (
+              <span className="flex items-center gap-1.5 text-rose-400 font-medium" title="Autosave belum berhasil, akan dicoba kembali otomatis">
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+                <span>Gagal simpan</span>
+              </span>
+            )}
+            {saveStatus === 'idle' && (
+              <span className="flex items-center gap-1.5 text-slate-400 font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/70" />
+                <span>Tersimpan</span>
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-2 text-xs font-mono text-slate-300 bg-slate-950/80 px-3 py-1.5 rounded-full border border-white/10 shadow-sm">

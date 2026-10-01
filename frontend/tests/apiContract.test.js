@@ -15,6 +15,7 @@ describe('Frontend API Contract & Endpoint Signatures', () => {
       'useItem',
       'getSaveSlots',
       'saveToSlot',
+      'autoSave',
       'loadFromSlot',
       'importSession',
       'getSessionSummary'

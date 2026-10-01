@@ -64,9 +64,10 @@ class SlotService {
   }
 
   /**
-   * Saves active session into specified slot (0 for auto, 1-3 for manual).
+   * Internal persistence method for freezing an active session into a target slot.
+   * Shared by both manual save (slots 1-3) and autosave (slot 0).
    */
-  async saveToSlot({ sessionId, slotNumber, saveTitle }) {
+  async persistSessionToSlot({ sessionId, slotNumber, saveTitle, mode = 'manual' }) {
     if (!sessionId) {
       const err = new Error('sessionId wajib disertakan.');
       err.statusCode = 400;
@@ -74,8 +75,8 @@ class SlotService {
     }
 
     const slotNum = parseInt(slotNumber, 10);
-    if (isNaN(slotNum) || slotNum < 1 || slotNum > 3) {
-      const err = new Error('Nomor slot tidak valid. Penyimpanan manual hanya diizinkan untuk Slot 1, 2, dan 3 (Slot 0 dikhususkan untuk auto-save).');
+    if (isNaN(slotNum) || slotNum < 0 || slotNum > 3) {
+      const err = new Error('Nomor slot tidak valid (0 untuk autosave, 1-3 untuk manual).');
       err.statusCode = 400;
       throw err;
     }
@@ -137,6 +138,10 @@ class SlotService {
       }, { transaction: t });
 
       // 3. Create frozen slot session
+      const defaultTitle = mode === 'auto'
+        ? 'Autosave'
+        : `Slot ${slotNum}: ${session.Character.name} (Babak ke-${session.turnCount})`;
+
       const newSlotSession = await GameSession.create({
         campaignId: session.campaignId,
         characterId: charClone.id,
@@ -148,7 +153,7 @@ class SlotService {
         combatState: session.combatState ? JSON.parse(JSON.stringify(session.combatState)) : null,
         isGameOver: session.isGameOver,
         slotNumber: slotNum,
-        saveTitle: saveTitle || `Slot ${slotNum}: ${session.Character.name} (Babak ke-${session.turnCount})`,
+        saveTitle: saveTitle || defaultTitle,
         savedAt: new Date()
       }, { transaction: t });
 
@@ -161,6 +166,44 @@ class SlotService {
       });
 
       return newSlotSession;
+    });
+  }
+
+  /**
+   * Saves active session into a manual save slot (1, 2, or 3).
+   * Slot 0 is strictly rejected here and reserved for autoSave.
+   */
+  async saveToSlot({ sessionId, slotNumber, saveTitle }) {
+    const slotNum = parseInt(slotNumber, 10);
+    if (isNaN(slotNum) || slotNum < 1 || slotNum > 3) {
+      const err = new Error('Nomor slot tidak valid. Penyimpanan manual hanya diizinkan untuk Slot 1, 2, dan 3 (Slot 0 dikhususkan untuk auto-save).');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    return await this.persistSessionToSlot({
+      sessionId,
+      slotNumber: slotNum,
+      saveTitle,
+      mode: 'manual'
+    });
+  }
+
+  /**
+   * Automatically saves active session into Slot 0.
+   */
+  async autoSave(sessionId) {
+    if (!sessionId) {
+      const err = new Error('sessionId wajib disertakan untuk autosave.');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    return await this.persistSessionToSlot({
+      sessionId,
+      slotNumber: 0,
+      saveTitle: 'Autosave',
+      mode: 'auto'
     });
   }
 

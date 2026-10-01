@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import audio from '../services/audioService';
 import storyApi, { API_BASE } from '../services/api';
 import { formatErrorMessage } from '../utils/errorHandler';
@@ -25,6 +25,32 @@ export function GameProvider({ children }) {
   const [initLoading, setInitLoading] = useState(true);
   const [toast, setToast] = useState(null);
 
+  // Persistence & Save Status Lifecycle ('idle' | 'saving' | 'saved' | 'error')
+  const [saveStatus, setSaveStatus] = useState('idle');
+  const [lastSavedAt, setLastSavedAt] = useState(null);
+  const [autosaveRecoveryAvailable, setAutosaveRecoveryAvailable] = useState(null);
+
+  // Orchestrator refs to guarantee race-condition free and debounce-safe autosaving
+  const autosaveTimerRef = useRef(null);
+  const isAutosavingRef = useRef(false);
+  const queuedAutosaveRef = useRef(false);
+  const sessionRef = useRef(session);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    sessionRef.current = session;
+  }, [session]);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      if (autosaveTimerRef.current) {
+        clearTimeout(autosaveTimerRef.current);
+      }
+    };
+  }, []);
+
   const showToast = useCallback((rawMessage, type = 'error') => {
     const fallback = type === 'error' ? 'Terjadi kesalahan pada sistem.' : 'Operasi berhasil.';
     const message = formatErrorMessage(rawMessage, fallback);
@@ -32,7 +58,73 @@ export function GameProvider({ children }) {
     setTimeout(() => setToast(null), 3500);
   }, []);
 
-  // Fetch campaigns and restore session if available on mount
+  /**
+   * Internal executor for Slot 0 Autosave.
+   * Protects against concurrent saves and processes queued updates sequentially.
+   */
+  const performAutosave = useCallback(async () => {
+    const activeSessionId = sessionRef.current?.id;
+    if (!activeSessionId) return;
+
+    if (isAutosavingRef.current) {
+      queuedAutosaveRef.current = true;
+      return;
+    }
+
+    isAutosavingRef.current = true;
+    if (isMountedRef.current) {
+      setSaveStatus('saving');
+    }
+
+    try {
+      const data = await storyApi.autoSave(activeSessionId);
+      if (data && data.success) {
+        if (isMountedRef.current) {
+          setSaveStatus('saved');
+          setLastSavedAt(new Date());
+          setTimeout(() => {
+            if (isMountedRef.current) {
+              setSaveStatus(prev => (prev === 'saved' ? 'idle' : prev));
+            }
+          }, 3000);
+        }
+      } else {
+        if (isMountedRef.current) {
+          setSaveStatus('error');
+        }
+      }
+    } catch (err) {
+      console.warn('Autosave error (non-blocking):', err);
+      if (isMountedRef.current) {
+        setSaveStatus('error');
+      }
+    } finally {
+      isAutosavingRef.current = false;
+      if (queuedAutosaveRef.current) {
+        queuedAutosaveRef.current = false;
+        performAutosave();
+      }
+    }
+  }, []);
+
+  /**
+   * Debounced autosave scheduler.
+   * Collapses rapid mutations into a single persistent save (1000ms delay).
+   */
+  const scheduleAutosave = useCallback((targetSessionId) => {
+    const idToSave = targetSessionId || sessionRef.current?.id;
+    if (!idToSave) return;
+
+    if (autosaveTimerRef.current) {
+      clearTimeout(autosaveTimerRef.current);
+    }
+
+    autosaveTimerRef.current = setTimeout(() => {
+      performAutosave();
+    }, 1000);
+  }, [performAutosave]);
+
+  // Fetch campaigns and check active session or autosave recovery on mount
   useEffect(() => {
     storyApi.getCampaigns()
       .then(data => {
@@ -42,6 +134,16 @@ export function GameProvider({ children }) {
       })
       .catch(err => console.error('Gagal mengambil kampanye:', err))
       .finally(() => setInitLoading(false));
+
+    const checkAutosaveFallback = () => {
+      storyApi.getSaveSlots()
+        .then(slotsRes => {
+          if (slotsRes.success && slotsRes.data?.[0]) {
+            setAutosaveRecoveryAvailable(slotsRes.data[0]);
+          }
+        })
+        .catch(err => console.warn('Gagal memeriksa slot autosave:', err));
+    };
 
     const savedSessionId = localStorage.getItem('aethermaster_active_session_id');
     if (savedSessionId) {
@@ -57,22 +159,31 @@ export function GameProvider({ children }) {
             }
           } else {
             localStorage.removeItem('aethermaster_active_session_id');
+            checkAutosaveFallback();
           }
         })
         .catch(err => {
           console.warn('Gagal memulihkan sesi aktif:', err);
+          localStorage.removeItem('aethermaster_active_session_id');
+          checkAutosaveFallback();
         });
+    } else {
+      checkAutosaveFallback();
     }
   }, []);
 
   // Exit active session and return to Landing Page
   const handleExitSession = useCallback(() => {
+    if (autosaveTimerRef.current) {
+      clearTimeout(autosaveTimerRef.current);
+    }
     localStorage.removeItem('aethermaster_active_session_id');
     setSession(null);
     setCharacter(null);
     setCurrentNode(null);
     setCombatState(null);
     setSelectedCampaign(null);
+    setSaveStatus('idle');
   }, []);
 
   // Start campaign selection
@@ -82,21 +193,26 @@ export function GameProvider({ children }) {
     setIsCharCreationOpen(true);
   }, []);
 
-  // Start new game
+  // Start new game with initial autosave
   const handleStartGame = useCallback(async (characterData) => {
     if (!selectedCampaign) return;
     setIsLoading(true);
     try {
       const data = await storyApi.startAdventure(selectedCampaign.id, characterData);
       if (data.success) {
-        if (data.data.session?.id) {
-          localStorage.setItem('aethermaster_active_session_id', data.data.session.id);
+        const newSessionId = data.data.session?.id;
+        if (newSessionId) {
+          localStorage.setItem('aethermaster_active_session_id', newSessionId);
         }
         setSession(data.data.session);
         setCharacter(data.data.character);
         setCurrentNode(data.data.currentNode);
         setCombatState(data.data.session?.combatState || null);
         setIsCharCreationOpen(false);
+        setAutosaveRecoveryAvailable(null);
+
+        // Schedule initial autosave for fresh adventure
+        scheduleAutosave(newSessionId);
       } else {
         showToast(data.error || 'Gagal memulai petualangan.', 'error');
       }
@@ -105,9 +221,9 @@ export function GameProvider({ children }) {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedCampaign, showToast]);
+  }, [selectedCampaign, showToast, scheduleAutosave]);
 
-  // Execute narrative action
+  // Execute narrative action and trigger autosave
   const handleChooseAction = useCallback(async (choice) => {
     if (!session || isLoading) return;
     setIsLoading(true);
@@ -124,6 +240,9 @@ export function GameProvider({ children }) {
         setCharacter(data.data.character);
         setCurrentNode(data.data.currentNode);
         setCombatState(data.data.session?.combatState || null);
+
+        // Schedule autosave after confirmed state mutation
+        scheduleAutosave(data.data.session?.id || session.id);
       } else {
         showToast(data.error || 'Gagal mengambil tindakan.', 'error');
       }
@@ -132,9 +251,9 @@ export function GameProvider({ children }) {
     } finally {
       setIsLoading(false);
     }
-  }, [session, isLoading, showToast]);
+  }, [session, isLoading, showToast, scheduleAutosave]);
 
-  // Server-Side Tactical Combat Action Dispatcher
+  // Server-Side Tactical Combat Action Dispatcher with autosave
   const handleCombatAction = useCallback(async (action, itemId = null) => {
     if (!session || isLoading) return null;
     setIsLoading(true);
@@ -154,6 +273,8 @@ export function GameProvider({ children }) {
           showToast('Berhasil meloloskan diri!', 'success');
         }
 
+        // Schedule autosave after combat turn resolution
+        scheduleAutosave(data.data.session?.id || session.id);
         return data.data;
       } else {
         showToast(data.error || 'Aksi pertarungan ditolak oleh server.', 'error');
@@ -165,9 +286,9 @@ export function GameProvider({ children }) {
     } finally {
       setIsLoading(false);
     }
-  }, [session, isLoading, showToast]);
+  }, [session, isLoading, showToast, scheduleAutosave]);
 
-  // Use item from inventory
+  // Use item from inventory with autosave
   const handleUseItem = useCallback(async (item) => {
     if (!character || !session) return;
 
@@ -184,15 +305,17 @@ export function GameProvider({ children }) {
         setCharacter(data.data.character);
         audio.playHeal();
         showToast(data.message || `Memulihkan status dengan ${item.name}!`, 'success');
+        // Schedule autosave after item consumption
+        scheduleAutosave(session.id);
       } else {
         showToast(data.error || 'Gagal menggunakan item.', 'error');
       }
     } catch (err) {
       showToast('Koneksi ke backend gagal saat menggunakan item.', 'error');
     }
-  }, [character, session, showToast]);
+  }, [character, session, showToast, scheduleAutosave]);
 
-  // Rewind to specific node
+  // Rewind to specific node with autosave
   const handleRewind = useCallback(async (targetNodeId) => {
     if (!session) return;
     setIsLoading(true);
@@ -204,6 +327,8 @@ export function GameProvider({ children }) {
         setCurrentNode(data.data.currentNode);
         setCombatState(data.data.session?.combatState || null);
         setIsStoryTreeOpen(false);
+        // Schedule autosave after rewind
+        scheduleAutosave(data.data.session?.id || session.id);
       } else {
         showToast(data.error || 'Gagal memulihkan ke node target.', 'error');
       }
@@ -212,9 +337,9 @@ export function GameProvider({ children }) {
     } finally {
       setIsLoading(false);
     }
-  }, [session, showToast]);
+  }, [session, showToast, scheduleAutosave]);
 
-  // Load session
+  // Load session from slot
   const handleLoadSession = useCallback((loadedData) => {
     if (loadedData.session?.id) {
       localStorage.setItem('aethermaster_active_session_id', loadedData.session.id);
@@ -227,6 +352,29 @@ export function GameProvider({ children }) {
       setSelectedCampaign(loadedData.campaign);
     }
     setIsSaveLoadOpen(false);
+    setAutosaveRecoveryAvailable(null);
+  }, []);
+
+  // Recover session from Autosave Slot 0
+  const handleRecoverFromAutosave = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const res = await storyApi.loadFromSlot(0);
+      if (res.success && res.data) {
+        handleLoadSession(res.data);
+        showToast('Petualangan berhasil dipulihkan dari Autosave!', 'success');
+      } else {
+        showToast(res.error || 'Gagal memulihkan autosave.', 'error');
+      }
+    } catch (err) {
+      showToast('Koneksi server terganggu saat memulihkan autosave.', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [handleLoadSession, showToast]);
+
+  const handleDismissAutosaveRecovery = useCallback(() => {
+    setAutosaveRecoveryAvailable(null);
   }, []);
 
   // Narrative transition after confirmed combat victory
@@ -287,6 +435,12 @@ export function GameProvider({ children }) {
     initLoading,
     toast,
     showToast,
+    saveStatus,
+    lastSavedAt,
+    scheduleAutosave,
+    autosaveRecoveryAvailable,
+    handleRecoverFromAutosave,
+    handleDismissAutosaveRecovery,
     handleSelectCampaign,
     handleStartGame,
     handleChooseAction,

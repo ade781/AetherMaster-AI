@@ -38,6 +38,7 @@ router.get('/summary/:sessionId', storyController.getSessionSummary);
 // Multi-Slot Save / Load Routes
 router.get('/saves', saveLoadController.getSaveSlots);
 router.post('/saves/save', saveLoadController.saveToSlot);
+router.post('/saves/autosave', saveLoadController.autoSave);
 router.get('/saves/load/:slotNumber', saveLoadController.loadFromSlot);
 router.get('/saves/export/:sessionId', saveLoadController.exportSessionJson);
 router.post('/saves/import', saveLoadController.importSessionJson);

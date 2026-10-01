@@ -22,6 +22,13 @@ class SaveLoadService {
   }
 
   /**
+   * Automatically saves current game session into Slot 0.
+   */
+  async autoSave(sessionId) {
+    return await slotService.autoSave(sessionId);
+  }
+
+  /**
    * Loads state from save slot into an active game session.
    */
   async loadFromSlot(slotNumber) {

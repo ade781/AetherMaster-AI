@@ -231,4 +231,252 @@ describe('Save/Load Round-Trip & Graph Cloning Tests (Stage 3)', () => {
       await saveLoadService.importSessionJson({ invalidPayload: true });
     }, /Data simpanan tidak valid|Format data JSON tidak valid/i);
   });
+
+  it('4. Semantic separation: Manual save rejects Slot 0, AutoSave targets Slot 0, input validated', async () => {
+    // A. Manual save strictly rejects Slot 0
+    await assert.rejects(async () => {
+      await saveLoadService.saveToSlot({ sessionId: 'sess_test_123', slotNumber: 0 });
+    }, (err) => {
+      assert.strictEqual(err.statusCode, 400);
+      assert.match(err.message, /Slot 0 dikhususkan untuk auto-save/i);
+      return true;
+    });
+
+    // B. Manual save rejects out-of-bounds slot numbers
+    await assert.rejects(async () => {
+      await saveLoadService.saveToSlot({ sessionId: 'sess_test_123', slotNumber: 4 });
+    }, (err) => {
+      assert.strictEqual(err.statusCode, 400);
+      return true;
+    });
+
+    await assert.rejects(async () => {
+      await saveLoadService.saveToSlot({ sessionId: 'sess_test_123', slotNumber: -1 });
+    }, (err) => {
+      assert.strictEqual(err.statusCode, 400);
+      return true;
+    });
+
+    // C. Missing sessionId is rejected
+    await assert.rejects(async () => {
+      await saveLoadService.saveToSlot({ slotNumber: 1 });
+    }, (err) => {
+      assert.strictEqual(err.statusCode, 400);
+      assert.match(err.message, /sessionId wajib disertakan/i);
+      return true;
+    });
+
+    await assert.rejects(async () => {
+      await saveLoadService.autoSave('');
+    }, (err) => {
+      assert.strictEqual(err.statusCode, 400);
+      assert.match(err.message, /sessionId wajib disertakan/i);
+      return true;
+    });
+
+    // D. Load slot rejects out-of-bounds slot numbers
+    await assert.rejects(async () => {
+      await saveLoadService.loadFromSlot(-1);
+    }, (err) => {
+      assert.strictEqual(err.statusCode, 400);
+      return true;
+    });
+
+    await assert.rejects(async () => {
+      await saveLoadService.loadFromSlot(4);
+    }, (err) => {
+      assert.strictEqual(err.statusCode, 400);
+      return true;
+    });
+  });
+
+  it('5. Autosave Slot 0 round-trip, isolation, and overwrite handling', async (t) => {
+    if (!isDbAvailable) {
+      t.skip('Database connection unavailable; skipping persistent DB autosave test.');
+      return;
+    }
+
+    const testCampaign = await Campaign.findByPk('whispering_tavern') || await Campaign.create({
+      id: 'whispering_tavern',
+      title: 'Bisikan Kedai Terkutuk',
+      premise: 'Misteri kedai terkutuk.',
+      defaultBackgroundId: 'bg_01_tavern'
+    });
+
+    const testChar = await Character.create({
+      name: 'AutosaveHero',
+      characterClass: 'rogue',
+      level: 3,
+      hp: 22,
+      maxHp: 25,
+      mana: 8,
+      maxMana: 10,
+      gold: 50,
+      inventory: [{ itemId: 'item_01_potion_heal', quantity: 1 }]
+    });
+
+    const testSession = await GameSession.create({
+      campaignId: testCampaign.id,
+      characterId: testChar.id,
+      turnCount: 7,
+      activeBranchId: 'main',
+      worldLedger: { flags: { solved_puzzle: true } },
+      combatState: { inCombat: true, round: 2 },
+      isGameOver: false
+    });
+
+    const testNode = await StoryNode.create({
+      sessionId: testSession.id,
+      chapterTitle: 'Babak VII: Lorong Rahasia',
+      location: 'Lorong Bawah Tanah',
+      backgroundId: 'bg_02_dungeon',
+      speaker: 'Narator',
+      turnNumber: 7,
+      dialogueText: 'Langkah kaki berderap di lorong sunyi.'
+    });
+
+    testSession.currentSceneId = testNode.id;
+    await testSession.save();
+
+    // A. Perform AutoSave (Slot 0)
+    const savedAutoSlot = await saveLoadService.autoSave(testSession.id);
+    assert.ok(savedAutoSlot, 'Autosave must succeed');
+    assert.strictEqual(savedAutoSlot.slotNumber, 0);
+    assert.strictEqual(savedAutoSlot.saveTitle, 'Autosave');
+
+    // B. Verify Slot 0 exists in getSaveSlots
+    const slots = await saveLoadService.getSaveSlots();
+    assert.ok(slots[0], 'Slot 0 (Autosave) must be populated');
+    assert.strictEqual(slots[0].characterName, 'AutosaveHero');
+    assert.strictEqual(slots[0].hp, 22);
+    assert.strictEqual(slots[0].turnCount, 7);
+    assert.strictEqual(slots[0].location, 'Lorong Bawah Tanah');
+
+    // C. Load from Slot 0
+    const loaded = await saveLoadService.loadFromSlot(0);
+    assert.ok(loaded.session, 'Loaded session from Slot 0 must exist');
+    assert.strictEqual(loaded.character.name, 'AutosaveHero');
+    assert.strictEqual(loaded.character.hp, 22);
+    assert.strictEqual(loaded.session.combatState.inCombat, true);
+    assert.strictEqual(loaded.session.worldLedger.flags.solved_puzzle, true);
+
+    // D. Overwrite Autosave Slot 0
+    testChar.hp = 15;
+    await testChar.save();
+    testSession.turnCount = 8;
+    await testSession.save();
+
+    await saveLoadService.autoSave(testSession.id);
+    const updatedSlots = await saveLoadService.getSaveSlots();
+    assert.strictEqual(updatedSlots[0].hp, 15, 'Updated Autosave HP must be 15');
+    assert.strictEqual(updatedSlots[0].turnCount, 8, 'Updated Autosave turnCount must be 8');
+
+    // E. Verify only one session exists with slotNumber: 0
+    const slot0Sessions = await GameSession.findAll({ where: { slotNumber: 0 } });
+    assert.strictEqual(slot0Sessions.length, 1, 'Only one record must exist for slotNumber 0');
+  });
+
+  it('6. Manual Slot independence (Slot 2 & 3), non-interference with Autosave Slot 0, and inventory immutability', async (t) => {
+    if (!isDbAvailable) {
+      t.skip('Database connection unavailable; skipping persistent DB slot independence test.');
+      return;
+    }
+
+    const testCampaign = await Campaign.findByPk('whispering_tavern') || await Campaign.create({
+      id: 'whispering_tavern',
+      title: 'Bisikan Kedai Terkutuk',
+      premise: 'Misteri kedai terkutuk.'
+    });
+
+    // Character & Session for Slot 2
+    const charSlot2 = await Character.create({
+      name: 'MageSlot2',
+      characterClass: 'mage',
+      level: 4,
+      hp: 24,
+      maxHp: 24,
+      gold: 250,
+      inventory: [{ itemId: 'item_01_potion_heal', quantity: 3 }]
+    });
+
+    const sessionSlot2 = await GameSession.create({
+      campaignId: testCampaign.id,
+      characterId: charSlot2.id,
+      turnCount: 5,
+      activeBranchId: 'main'
+    });
+
+    const nodeSlot2 = await StoryNode.create({
+      sessionId: sessionSlot2.id,
+      chapterTitle: 'Babak V: Perpustakaan Purba',
+      location: 'Perpustakaan Purba',
+      turnNumber: 5,
+      dialogueText: 'Buku-buku berdebu tersusun di rak tinggi.'
+    });
+    sessionSlot2.currentSceneId = nodeSlot2.id;
+    await sessionSlot2.save();
+
+    // Character & Session for Slot 3
+    const charSlot3 = await Character.create({
+      name: 'FighterSlot3',
+      characterClass: 'fighter',
+      level: 5,
+      hp: 45,
+      maxHp: 45,
+      gold: 600,
+      inventory: [{ itemId: 'item_02_potion_mana', quantity: 2 }]
+    });
+
+    const sessionSlot3 = await GameSession.create({
+      campaignId: testCampaign.id,
+      characterId: charSlot3.id,
+      turnCount: 9,
+      activeBranchId: 'main'
+    });
+
+    const nodeSlot3 = await StoryNode.create({
+      sessionId: sessionSlot3.id,
+      chapterTitle: 'Babak IX: Benteng Besi',
+      location: 'Benteng Besi',
+      turnNumber: 9,
+      dialogueText: 'Dinding benteng menjulang kukuh.'
+    });
+    sessionSlot3.currentSceneId = nodeSlot3.id;
+    await sessionSlot3.save();
+
+    // A. Save to Slot 2 and Slot 3
+    await saveLoadService.saveToSlot({ sessionId: sessionSlot2.id, slotNumber: 2 });
+    await saveLoadService.saveToSlot({ sessionId: sessionSlot3.id, slotNumber: 3 });
+
+    const slotsBeforeAuto = await saveLoadService.getSaveSlots();
+    assert.strictEqual(slotsBeforeAuto[2].characterName, 'MageSlot2');
+    assert.strictEqual(slotsBeforeAuto[2].gold, 250);
+    assert.strictEqual(slotsBeforeAuto[3].characterName, 'FighterSlot3');
+    assert.strictEqual(slotsBeforeAuto[3].gold, 600);
+
+    // B. Trigger Autosave on Slot 0
+    await saveLoadService.autoSave(sessionSlot2.id);
+
+    // C. Non-interference: Slot 2 and Slot 3 must remain intact and identical
+    const slotsAfterAuto = await saveLoadService.getSaveSlots();
+    assert.ok(slotsAfterAuto[0], 'Autosave Slot 0 must exist');
+    assert.strictEqual(slotsAfterAuto[2].characterName, 'MageSlot2', 'Slot 2 must not be modified by autosave');
+    assert.strictEqual(slotsAfterAuto[2].gold, 250);
+    assert.strictEqual(slotsAfterAuto[3].characterName, 'FighterSlot3', 'Slot 3 must not be modified by autosave');
+    assert.strictEqual(slotsAfterAuto[3].gold, 600);
+
+    // D. Mutating active character does not alter saved slot inventory or stats
+    charSlot2.hp = 1;
+    charSlot2.gold = 0;
+    await charSlot2.save();
+
+    const loadedSlot2 = await saveLoadService.loadFromSlot(2);
+    assert.strictEqual(loadedSlot2.character.hp, 24, 'Saved Slot 2 HP must remain 24');
+    assert.strictEqual(loadedSlot2.character.gold, 250, 'Saved Slot 2 Gold must remain 250');
+    assert.ok(Array.isArray(loadedSlot2.character.inventory), 'Inventory must be an array');
+    const healPotion = loadedSlot2.character.inventory.find(i => i.id === 'item_01_potion_heal');
+    assert.ok(healPotion, 'Inventory must contain item_01_potion_heal');
+    assert.strictEqual(healPotion.quantity, 3, 'Quantity must be preserved as 3');
+  });
 });
+
