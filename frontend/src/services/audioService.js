@@ -19,17 +19,42 @@ class AudioService {
       pitch: '-25Hz',            // Deep / Bass tua
       rate: '-10%'               // Tenang, lambat berwibawa
     };
+    this.isUnlocked = false;
+
+    // Attach global first-interaction unlock listeners for modern browser autoplay policies
+    if (typeof window !== 'undefined') {
+      const unlockAudio = () => {
+        this.unlock();
+        window.removeEventListener('click', unlockAudio);
+        window.removeEventListener('keydown', unlockAudio);
+        window.removeEventListener('touchstart', unlockAudio);
+      };
+      window.addEventListener('click', unlockAudio, { passive: true });
+      window.addEventListener('keydown', unlockAudio, { passive: true });
+      window.addEventListener('touchstart', unlockAudio, { passive: true });
+    }
+  }
+
+  unlock() {
+    this.init();
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume().then(() => {
+        this.isUnlocked = true;
+      }).catch(() => {});
+    } else if (this.ctx) {
+      this.isUnlocked = true;
+    }
   }
 
   init() {
-    if (!this.ctx) {
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      if (AudioContext) {
-        this.ctx = new AudioContext();
+    if (!this.ctx && typeof window !== 'undefined') {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtx) {
+        this.ctx = new AudioCtx();
       }
     }
     if (this.ctx && this.ctx.state === 'suspended') {
-      this.ctx.resume();
+      this.ctx.resume().catch(() => {});
     }
   }
 
@@ -65,6 +90,13 @@ class AudioService {
     osc.connect(gain);
     gain.connect(this.ctx.destination);
 
+    osc.onended = () => {
+      try {
+        osc.disconnect();
+        gain.disconnect();
+      } catch (e) {}
+    };
+
     osc.start(now);
     osc.stop(now + 0.04);
   }
@@ -90,6 +122,13 @@ class AudioService {
 
     osc.connect(gain);
     gain.connect(this.ctx.destination);
+
+    osc.onended = () => {
+      try {
+        osc.disconnect();
+        gain.disconnect();
+      } catch (e) {}
+    };
 
     osc.start(now);
     osc.stop(now + 0.26);
@@ -118,6 +157,13 @@ class AudioService {
     osc.connect(gain);
     gain.connect(this.ctx.destination);
 
+    osc.onended = () => {
+      try {
+        osc.disconnect();
+        gain.disconnect();
+      } catch (e) {}
+    };
+
     osc.start(now);
     osc.stop(now + 0.42);
   }
@@ -140,6 +186,13 @@ class AudioService {
 
       osc.connect(gain);
       gain.connect(this.ctx.destination);
+
+      osc.onended = () => {
+        try {
+          osc.disconnect();
+          gain.disconnect();
+        } catch (e) {}
+      };
 
       osc.start(now + idx * 0.05);
       osc.stop(now + idx * 0.05 + 0.38);
@@ -165,34 +218,122 @@ class AudioService {
       osc.connect(gain);
       gain.connect(this.ctx.destination);
 
+      osc.onended = () => {
+        try {
+          osc.disconnect();
+          gain.disconnect();
+        } catch (e) {}
+      };
+
       osc.start(now + i * 0.05);
       osc.stop(now + i * 0.05 + 0.22);
     });
   }
 
-  playCriticalSuccess() {
+  // --- D20 DICE ROLLER AUDIO SYNTH ---
+
+  playDiceRoll() {
     if (this.isMuted) return;
     this.init();
     if (!this.ctx) return;
 
     const now = this.ctx.currentTime;
-    const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51]; // C major fanfare
-
-    notes.forEach((freq, idx) => {
+    // Rapid tumbling wooden / polyhedral clatter
+    const clicks = [0, 0.04, 0.09, 0.15, 0.22, 0.30, 0.40];
+    clicks.forEach((timeOffset, idx) => {
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, now + idx * 0.07);
+      osc.type = 'triangle';
 
-      gain.gain.setValueAtTime(0.25, now + idx * 0.07);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.07 + 0.4);
+      const f = 600 + (idx % 3) * 220 + Math.random() * 80;
+      osc.frequency.setValueAtTime(f, now + timeOffset);
+      osc.frequency.exponentialRampToValueAtTime(180, now + timeOffset + 0.035);
+
+      const vol = 0.18 * (1 - (idx / clicks.length) * 0.5);
+      gain.gain.setValueAtTime(vol, now + timeOffset);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + timeOffset + 0.035);
 
       osc.connect(gain);
       gain.connect(this.ctx.destination);
 
-      osc.start(now + idx * 0.07);
-      osc.stop(now + idx * 0.07 + 0.45);
+      osc.onended = () => {
+        try {
+          osc.disconnect();
+          gain.disconnect();
+        } catch (e) {}
+      };
+
+      osc.start(now + timeOffset);
+      osc.stop(now + timeOffset + 0.04);
     });
+  }
+
+  playCriticalHit() {
+    if (this.isMuted) return;
+    this.init();
+    if (!this.ctx) return;
+
+    // Resonant golden chord + triumphant chime
+    const now = this.ctx.currentTime;
+    const chords = [523.25, 659.25, 783.99, 1046.50, 1318.51, 1567.98]; // C Major arpeggio + high sparkle
+    chords.forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.06);
+
+      gain.gain.setValueAtTime(0.3, now + idx * 0.06);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.06 + 0.65);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      osc.onended = () => {
+        try {
+          osc.disconnect();
+          gain.disconnect();
+        } catch (e) {}
+      };
+
+      osc.start(now + idx * 0.06);
+      osc.stop(now + idx * 0.06 + 0.7);
+    });
+  }
+
+  playCriticalMiss() {
+    if (this.isMuted) return;
+    this.init();
+    if (!this.ctx) return;
+
+    const now = this.ctx.currentTime;
+    // Heavy metallic clank + dissonant descending tone
+    const notes = [293.66, 277.18, 220.00, 155.56, 92.50]; // Dissonant drop
+    notes.forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+
+      gain.gain.setValueAtTime(0.32, now + idx * 0.08);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.45);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      osc.onended = () => {
+        try {
+          osc.disconnect();
+          gain.disconnect();
+        } catch (e) {}
+      };
+
+      osc.start(now + idx * 0.08);
+      osc.stop(now + idx * 0.08 + 0.5);
+    });
+  }
+
+  playCriticalSuccess() {
+    this.playCriticalHit();
   }
 
   playSuccess() {
@@ -200,28 +341,43 @@ class AudioService {
   }
 
   playCriticalFailure() {
+    this.playCriticalMiss();
+  }
+
+  playFailure() {
+    this.playCriticalFailure();
+  }
+
+  // --- PROCEDURAL NPC VOICE PREVIEW SYNTHESIS ---
+
+  playNpcVoiceSample(voiceConfig = {}, greeting = 'Salam, petualang!') {
     if (this.isMuted) return;
-    this.init();
-    if (!this.ctx) return;
+    const { pitch = 1.0, rate = 1.0, tone = 'neutral' } = voiceConfig;
 
-    const now = this.ctx.currentTime;
-    const notes = [220, 207.65, 196, 174.61]; // descending dissonance
+    // Web Speech API sample playback with tailored pitch/rate
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(greeting);
+      utterance.lang = 'id-ID';
+      utterance.pitch = Math.max(0.4, Math.min(1.8, pitch));
+      utterance.rate = Math.max(0.6, Math.min(1.4, rate));
 
-    notes.forEach((freq, idx) => {
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(freq, now + idx * 0.12);
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length > 0) {
+        if (tone === 'deep' || tone === 'gruff') {
+          const male = voices.find(v => v.lang.startsWith('id') && !v.name.toLowerCase().includes('gadis'));
+          if (male) utterance.voice = male;
+        } else if (tone === 'melodic' || tone === 'gentle') {
+          const female = voices.find(v => v.lang.startsWith('id') && v.name.toLowerCase().includes('gadis'));
+          if (female) utterance.voice = female;
+        }
+      }
 
-      gain.gain.setValueAtTime(0.25, now + idx * 0.12);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.12 + 0.5);
-
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
-
-      osc.start(now + idx * 0.12);
-      osc.stop(now + idx * 0.12 + 0.55);
-    });
+      window.speechSynthesis.speak(utterance);
+    } else {
+      // Fallback: procedural harmonic chime preview
+      this.playMagic();
+    }
   }
 
   playFailure() {
