@@ -31,6 +31,9 @@ class CampaignBuilderController {
 
       const id = campaignData.id || `camp_custom_${Math.random().toString(36).substring(2, 9)}`;
 
+      // Guarantee idempotency in persistent MySQL storage
+      await CustomCampaignRepository.deleteById(id).catch(() => {});
+
       const savedRecord = await CustomCampaignRepository.createCampaign({
         id,
         title: campaignData.title,

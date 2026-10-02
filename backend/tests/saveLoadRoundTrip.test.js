@@ -20,9 +20,16 @@ describe('Save/Load Round-Trip & Graph Cloning Tests (Stage 3)', () => {
   before(async () => {
     try {
       await sequelize.authenticate();
-      await sequelize.sync({ force: true });
+      if (sequelize.getDialect() === 'mysql') {
+        await sequelize.query('SET FOREIGN_KEY_CHECKS = 0');
+      }
+      await sequelize.sync();
+      if (sequelize.getDialect() === 'mysql') {
+        await sequelize.query('SET FOREIGN_KEY_CHECKS = 1');
+      }
       isDbAvailable = true;
-    } catch {
+    } catch (err) {
+      console.error('[SaveLoadRoundTrip Test DB Error]:', err.message);
       isDbAvailable = false;
     }
   });

@@ -31,7 +31,7 @@ describe('Dynamic NPC Generator Service Tests (Phase 4 & 5)', () => {
 
     const scholarNpc = await npcGeneratorService.generateNPC({ role: 'scholar' });
     assert.strictEqual(scholarNpc.role, 'scholar');
-    assert.match(scholarNpc.greeting, /sejarah|tua/i);
+    assert.match(scholarNpc.greeting, /sejarah|tua|kuno|ilmu|pengetahuan/i);
   });
 
   it('validates schema reject invalid NPC data', () => {

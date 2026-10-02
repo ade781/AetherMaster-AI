@@ -6,7 +6,8 @@ const { sequelize, CustomCampaign } = require('../src/models');
 describe('Campaign Builder Controller & Endpoints (Phase 5)', () => {
   before(async () => {
     await sequelize.authenticate();
-    await sequelize.sync();
+    await CustomCampaign.sync();
+    await CustomCampaign.destroy({ where: { id: 'camp_custom_test_99a' } }).catch(() => {});
   });
 
   // Mock response helper

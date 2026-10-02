@@ -44,14 +44,6 @@ if (process.env.DATABASE_URL) {
     pool,
     logging
   });
-} else if (process.env.NODE_ENV === 'test') {
-  // In-Memory SQLite for automated test suites
-  sequelize = new Sequelize({
-    dialect: 'sqlite',
-    storage: ':memory:',
-    logging,
-    dialectModule: require('sqlite3')
-  });
 } else {
   // Local or standard connection: MySQL (default) or PostgreSQL based on DB_DIALECT
   const dialect = (process.env.DB_DIALECT || 'mysql').toLowerCase();
