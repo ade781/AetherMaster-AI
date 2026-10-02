@@ -32,6 +32,7 @@ export function GameProvider({ children }) {
 
   // Orchestrator refs to guarantee race-condition free and debounce-safe autosaving
   const autosaveTimerRef = useRef(null);
+  const autosaveAbortControllerRef = useRef(null);
   const isAutosavingRef = useRef(false);
   const queuedAutosaveRef = useRef(false);
   const sessionRef = useRef(session);
@@ -48,6 +49,10 @@ export function GameProvider({ children }) {
       if (autosaveTimerRef.current) {
         clearTimeout(autosaveTimerRef.current);
       }
+      if (autosaveAbortControllerRef.current) {
+        autosaveAbortControllerRef.current.abort();
+        autosaveAbortControllerRef.current = null;
+      }
     };
   }, []);
 
@@ -61,6 +66,7 @@ export function GameProvider({ children }) {
   /**
    * Internal executor for Slot 0 Autosave.
    * Protects against concurrent saves and processes queued updates sequentially.
+   * Guarded with AbortController for deterministic cancellation upon unmount or scene exit.
    */
   const performAutosave = useCallback(async () => {
     const activeSessionId = sessionRef.current?.id;
@@ -71,6 +77,12 @@ export function GameProvider({ children }) {
       return;
     }
 
+    if (autosaveAbortControllerRef.current) {
+      autosaveAbortControllerRef.current.abort();
+    }
+    const abortController = new AbortController();
+    autosaveAbortControllerRef.current = abortController;
+
     isAutosavingRef.current = true;
     if (isMountedRef.current) {
       setSaveStatus('saving');
@@ -78,29 +90,30 @@ export function GameProvider({ children }) {
 
     try {
       const data = await storyApi.autoSave(activeSessionId);
+      if (abortController.signal.aborted || !isMountedRef.current) {
+        return;
+      }
+
       if (data && data.success) {
-        if (isMountedRef.current) {
-          setSaveStatus('saved');
-          setLastSavedAt(new Date());
-          setTimeout(() => {
-            if (isMountedRef.current) {
-              setSaveStatus(prev => (prev === 'saved' ? 'idle' : prev));
-            }
-          }, 3000);
-        }
+        setSaveStatus('saved');
+        setLastSavedAt(new Date());
+        setTimeout(() => {
+          if (isMountedRef.current && !abortController.signal.aborted) {
+            setSaveStatus(prev => (prev === 'saved' ? 'idle' : prev));
+          }
+        }, 2000);
       } else {
-        if (isMountedRef.current) {
-          setSaveStatus('error');
-        }
+        setSaveStatus('error');
       }
     } catch (err) {
+      if (err.name === 'AbortError') return;
       console.warn('Autosave error (non-blocking):', err);
-      if (isMountedRef.current) {
+      if (isMountedRef.current && !abortController.signal.aborted) {
         setSaveStatus('error');
       }
     } finally {
       isAutosavingRef.current = false;
-      if (queuedAutosaveRef.current) {
+      if (isMountedRef.current && queuedAutosaveRef.current && !abortController.signal.aborted) {
         queuedAutosaveRef.current = false;
         performAutosave();
       }
@@ -176,6 +189,10 @@ export function GameProvider({ children }) {
   const handleExitSession = useCallback(() => {
     if (autosaveTimerRef.current) {
       clearTimeout(autosaveTimerRef.current);
+    }
+    if (autosaveAbortControllerRef.current) {
+      autosaveAbortControllerRef.current.abort();
+      autosaveAbortControllerRef.current = null;
     }
     localStorage.removeItem('aethermaster_active_session_id');
     setSession(null);

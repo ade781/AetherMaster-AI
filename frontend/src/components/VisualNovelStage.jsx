@@ -168,7 +168,7 @@ export default function VisualNovelStage({
             onSkipTypewriter={handleSkipTypewriter}
           />
 
-          <div className="mt-auto">
+          <div id="scene-action-deck" className="mt-auto">
             <SceneActionDeck
               choices={choices}
               character={character}

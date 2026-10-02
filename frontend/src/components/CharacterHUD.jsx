@@ -4,6 +4,9 @@ import audio from '../services/audioService';
 import { calculateMod } from '../utils/rpgMath';
 import FantasyAvatar from './common/FantasyAvatar';
 import ItemSlot from './common/ItemSlot';
+import DirectorTensionBadge from './hud/DirectorTensionBadge';
+import AutosaveBadge from './hud/AutosaveBadge';
+import { useGameStore } from '../store/GameContext';
 
 export default function CharacterHUD({
   character,
@@ -12,6 +15,18 @@ export default function CharacterHUD({
   onToggleInventory
 }) {
   const [selectedItem, setSelectedItem] = useState(null);
+
+  let saveStatus = 'idle';
+  let currentNode = null;
+  let session = null;
+  try {
+    const store = useGameStore();
+    saveStatus = store?.saveStatus || 'idle';
+    currentNode = store?.currentNode || null;
+    session = store?.session || null;
+  } catch (e) {
+    // If rendered standalone
+  }
 
   // Close inventory drawer on Escape key
   useEffect(() => {
@@ -91,8 +106,16 @@ export default function CharacterHUD({
             </div>
           </div>
 
-          {/* Gold & Inventory Trigger */}
+          {/* Tension, Autosave, Gold & Inventory Trigger */}
           <div className="flex items-center gap-2 shrink-0">
+            <AutosaveBadge status={saveStatus} />
+
+            <DirectorTensionBadge
+              tension={session?.pacingMetrics?.tension ?? 3}
+              inCombat={false}
+              mood={currentNode?.mood || 'tenang'}
+            />
+
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 font-mono text-xs font-bold shadow-sm">
               <Coins className="w-3.5 h-3.5 text-amber-400" />
               <span>{character.gold ?? 50} G</span>

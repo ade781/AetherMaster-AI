@@ -53,12 +53,80 @@ export default function StoryTreeModal({
       accentColor="cyan"
       maxWidth="max-w-4xl"
     >
+      {/* Branching Minimap Scroller */}
+      <div className="mb-4 p-3 bg-slate-950/80 rounded-2xl border border-white/10 shadow-inner">
+        <div className="flex items-center justify-between pb-2 border-b border-white/5 text-[11px] font-mono text-slate-400">
+          <span className="flex items-center gap-1.5 text-cyan-300 font-cinzel font-bold">
+            <GitFork className="w-3.5 h-3.5 text-cyan-400" />
+            Minimap Alur Cerita
+          </span>
+          <div className="flex items-center gap-3 text-[10px]">
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-slate-500" />
+              Masa Lalu
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+              Saat Ini
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-cyan-400" />
+              Tersedia Rewind
+            </span>
+          </div>
+        </div>
+
+        {/* Drag-scrollable horizontal node track */}
+        <div className="overflow-x-auto py-3 px-2 flex items-center gap-2 custom-scrollbar">
+          {treeNodes.map((node, idx) => {
+            const isCurrent = node.id === currentNodeId;
+            const isSelected = selectedNode?.id === node.id;
+            const isPast = idx < treeNodes.findIndex(n => n.id === currentNodeId);
+
+            return (
+              <React.Fragment key={node.id}>
+                {idx > 0 && (
+                  <div className={`h-0.5 w-6 shrink-0 transition-colors ${
+                    isPast ? 'bg-cyan-500/40' : isCurrent ? 'bg-amber-400/80' : 'bg-white/10'
+                  }`} />
+                )}
+                <button
+                  type="button"
+                  onClick={() => { audio.playClick(); setSelectedNode(node); }}
+                  className={`group relative shrink-0 flex flex-col items-center gap-1 p-1.5 rounded-xl transition-all cursor-pointer ${
+                    isSelected ? 'scale-110' : 'hover:scale-105'
+                  }`}
+                  title={`${node.chapterTitle || 'Adegan'} (Babak #${idx + 1})`}
+                >
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-mono text-xs font-bold transition-all shadow-md ${
+                    isCurrent
+                      ? 'bg-amber-500 text-slate-950 ring-4 ring-amber-400/40 animate-pulse'
+                      : isSelected
+                      ? 'bg-cyan-500 text-slate-950 ring-2 ring-cyan-300'
+                      : isPast
+                      ? 'bg-slate-800 text-cyan-300 border border-cyan-500/30 hover:border-cyan-400'
+                      : 'bg-slate-900 text-slate-400 border border-white/10'
+                  }`}>
+                    {idx + 1}
+                  </div>
+                  <span className={`text-[9px] font-cinzel max-w-[64px] truncate text-center ${
+                    isCurrent ? 'text-amber-300 font-bold' : isSelected ? 'text-cyan-300' : 'text-slate-400'
+                  }`}>
+                    {node.chapterTitle?.split(' ')[0] || `Node ${idx + 1}`}
+                  </span>
+                </button>
+              </React.Fragment>
+            );
+          })}
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {/* Left: Node Timeline List */}
-        <div className="md:col-span-1 border-b md:border-b-0 md:border-r border-white/5 pb-4 md:pb-0 md:pr-4 space-y-2 max-h-[55vh] overflow-y-auto custom-scrollbar">
+        <div className="md:col-span-1 border-b md:border-b-0 md:border-r border-white/5 pb-4 md:pb-0 md:pr-4 space-y-2 max-h-[46vh] overflow-y-auto custom-scrollbar">
           <div className="flex items-center justify-between pb-1">
             <span className="text-[11px] font-bold font-cinzel text-slate-400 uppercase tracking-wider">
-              Garis Waktu ({treeNodes.length} Adegan)
+              Daftar Babak ({treeNodes.length})
             </span>
           </div>
 
@@ -71,6 +139,7 @@ export default function StoryTreeModal({
             treeNodes.map((node, index) => {
               const isCurrent = node.id === currentNodeId;
               const isSelected = selectedNode?.id === node.id;
+              const isPast = index < treeNodes.findIndex(n => n.id === currentNodeId);
 
               return (
                 <button
@@ -81,16 +150,24 @@ export default function StoryTreeModal({
                     isSelected
                       ? 'bg-cyan-950/60 border-cyan-400 text-cyan-200 shadow-sm'
                       : isCurrent
-                      ? 'bg-amber-950/30 border-amber-500/40 text-amber-200'
-                      : 'bg-slate-900/60 border-white/5 text-slate-400 hover:border-white/20'
+                      ? 'bg-amber-950/40 border-amber-500/60 text-amber-200 shadow-md ring-1 ring-amber-500/30'
+                      : isPast
+                      ? 'bg-slate-900/60 border-cyan-950/60 text-slate-300 hover:border-cyan-500/40'
+                      : 'bg-slate-900/40 border-white/5 text-slate-400 hover:border-white/20'
                   }`}
                 >
                   <div className="flex items-center justify-between text-[11px] font-mono mb-1">
                     <span>Babak #{index + 1}</span>
-                    {isCurrent && (
+                    {isCurrent ? (
                       <FantasyBadge variant="gold" size="sm">
-                        Aktif
+                        Saat Ini
                       </FantasyBadge>
+                    ) : isPast ? (
+                      <FantasyBadge variant="cyan" size="sm">
+                        Rewind
+                      </FantasyBadge>
+                    ) : (
+                      <span className="text-[10px] text-slate-500">Masa Depan</span>
                     )}
                   </div>
 

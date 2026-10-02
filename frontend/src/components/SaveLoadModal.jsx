@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { BookOpen, Download, Upload, Clock, MapPin, Heart, Check, AlertCircle, RefreshCw, AlertTriangle } from 'lucide-react';
+import { BookOpen, Download, Upload, Clock, MapPin, Heart, Check, AlertCircle, RefreshCw, AlertTriangle, ArrowRight, Shield } from 'lucide-react';
 import FantasyModal from './common/FantasyModal';
 import FantasyButton from './common/FantasyButton';
 import FantasyBadge from './common/FantasyBadge';
 import audio from '../services/audioService';
 import storyApi, { API_BASE } from '../services/api';
 import { formatErrorMessage } from '../utils/errorHandler';
+import { useGameStore } from '../store/GameContext';
 
 export default function SaveLoadModal({
   isOpen,
@@ -20,6 +21,16 @@ export default function SaveLoadModal({
   const [notification, setNotification] = useState(null); // { message, type: 'success' | 'error' }
   const [overwriteConfirmSlot, setOverwriteConfirmSlot] = useState(null);
   const fileInputRef = useRef(null);
+
+  let activeChar = null;
+  let activeNode = null;
+  try {
+    const store = useGameStore();
+    activeChar = store?.character || null;
+    activeNode = store?.currentNode || null;
+  } catch (e) {
+    // If mounted outside GameProvider (e.g. standalone test)
+  }
 
   const fetchSlots = () => {
     setLoading(true);
@@ -266,14 +277,71 @@ export default function SaveLoadModal({
                     </div>
                   </div>
 
-                  {/* Overwrite Confirmation Panel */}
+                  {/* Diegetic Overwrite Comparison Panel */}
                   {isConfirmingOverwrite && (
-                    <div className="p-3 bg-amber-500/10 border border-amber-400/30 rounded-xl space-y-2 mt-1 animate-fadeIn">
-                      <div className="flex items-center gap-2 text-xs text-amber-200 font-medium">
+                    <div className="p-3.5 bg-amber-950/40 border border-amber-500/40 rounded-xl space-y-3 mt-1 animate-fadeIn">
+                      <div className="flex items-center gap-2 text-xs text-amber-300 font-bold">
                         <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
-                        <span>Timpa Slot {slotNum}? Progress lama pada slot ini akan digantikan.</span>
+                        <span>Konfirmasi Penimpaan Arsip Slot {slotNum}</span>
                       </div>
-                      <div className="flex items-center gap-2 justify-end">
+
+                      {/* Diegetic Side-by-Side Comparison Grid */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-[11px] font-sans">
+                        {/* Old Record Card */}
+                        <div className="p-2.5 rounded-lg bg-slate-950/80 border border-rose-500/30 space-y-1.5">
+                          <span className="text-[10px] uppercase font-bold text-rose-400 tracking-wider block border-b border-rose-500/20 pb-1">
+                            Arsip Lama (Akan Digantikan)
+                          </span>
+                          <div className="text-slate-200 font-cinzel font-semibold truncate">
+                            {slotData?.characterName || 'Karakter'}
+                          </div>
+                          <div className="text-slate-400 flex items-center justify-between">
+                            <span>Tingkat:</span>
+                            <span className="font-mono text-rose-300">Lvl {slotData?.characterLevel || 1} {slotData?.characterClass}</span>
+                          </div>
+                          <div className="text-slate-400 flex items-center justify-between">
+                            <span>Lokasi:</span>
+                            <span className="text-slate-300 truncate max-w-[120px]">{slotData?.location || '-'}</span>
+                          </div>
+                          <div className="text-slate-400 flex items-center justify-between">
+                            <span>Kondisi HP:</span>
+                            <span className="font-mono text-rose-400">{slotData?.hp}/{slotData?.maxHp} HP</span>
+                          </div>
+                          <div className="text-slate-500 text-[10px] flex items-center gap-1 pt-0.5">
+                            <Clock className="w-3 h-3 text-slate-500" />
+                            <span>{formatDate(slotData?.savedAt)}</span>
+                          </div>
+                        </div>
+
+                        {/* New Active Session Card */}
+                        <div className="p-2.5 rounded-lg bg-emerald-950/30 border border-emerald-500/30 space-y-1.5">
+                          <span className="text-[10px] uppercase font-bold text-emerald-400 tracking-wider block border-b border-emerald-500/20 pb-1">
+                            Data Baru (Sesi Aktif)
+                          </span>
+                          <div className="text-slate-200 font-cinzel font-semibold truncate">
+                            {activeChar?.name || 'Petualang Saat Ini'}
+                          </div>
+                          <div className="text-slate-400 flex items-center justify-between">
+                            <span>Tingkat:</span>
+                            <span className="font-mono text-emerald-300">Lvl {activeChar?.level || 1} {activeChar?.characterClass}</span>
+                          </div>
+                          <div className="text-slate-400 flex items-center justify-between">
+                            <span>Lokasi:</span>
+                            <span className="text-slate-300 truncate max-w-[120px]">{activeNode?.location || 'Wilayah Petualangan'}</span>
+                          </div>
+                          <div className="text-slate-400 flex items-center justify-between">
+                            <span>Kondisi HP:</span>
+                            <span className="font-mono text-emerald-400">{activeChar?.hp ?? 20}/{activeChar?.maxHp ?? 20} HP</span>
+                          </div>
+                          <div className="text-emerald-400/80 text-[10px] flex items-center gap-1 pt-0.5">
+                            <Clock className="w-3 h-3 text-emerald-400" />
+                            <span>Waktu Saat Ini (Sesi Berjalan)</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Confirmation Action Buttons */}
+                      <div className="flex items-center gap-2 justify-end pt-1">
                         <FantasyButton
                           size="xs"
                           variant="secondary"
@@ -283,11 +351,11 @@ export default function SaveLoadModal({
                         </FantasyButton>
                         <FantasyButton
                           size="xs"
-                          variant="primary"
+                          variant="danger"
                           loading={savingSlot === slotNum}
                           onClick={() => executeSaveToSlot(slotNum)}
                         >
-                          Ya, Timpa
+                          Ya, Timpa Slot Ini
                         </FantasyButton>
                       </div>
                     </div>
