@@ -8,8 +8,12 @@ import StoryTreeModal from './components/StoryTreeModal';
 import SaveLoadModal from './components/SaveLoadModal';
 import GameOverModal from './components/GameOverModal';
 import LandingPage from './components/LandingPage';
+import CampaignBuilderStudio from './components/campaign-builder/CampaignBuilderStudio';
+import { CampaignProvider } from './store/CampaignContext';
 
 function MainGame() {
+  const [isCampaignStudioOpen, setIsCampaignStudioOpen] = React.useState(false);
+
   const {
     campaigns,
     selectedCampaign,
@@ -69,9 +73,17 @@ function MainGame() {
           initLoading={initLoading}
           onSelectCampaign={handleSelectCampaign}
           onOpenSaveLoad={() => setIsSaveLoadOpen(true)}
+          onOpenCampaignStudio={() => setIsCampaignStudioOpen(true)}
           autosaveRecoveryAvailable={autosaveRecoveryAvailable}
           onRecoverFromAutosave={handleRecoverFromAutosave}
           onDismissAutosaveRecovery={handleDismissAutosaveRecovery}
+        />
+
+        {/* Dynamic Campaign Builder Studio */}
+        <CampaignBuilderStudio
+          isOpen={isCampaignStudioOpen}
+          onClose={() => setIsCampaignStudioOpen(false)}
+          onStartCampaign={handleSelectCampaign}
         />
 
         {/* Character Creation Modal */}
@@ -172,7 +184,9 @@ function MainGame() {
 export default function App() {
   return (
     <GameProvider>
-      <MainGame />
+      <CampaignProvider>
+        <MainGame />
+      </CampaignProvider>
     </GameProvider>
   );
 }

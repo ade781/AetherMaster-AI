@@ -23,6 +23,7 @@ export default function LandingPage({
   initLoading = false,
   onSelectCampaign,
   onOpenSaveLoad,
+  onOpenCampaignStudio,
   autosaveRecoveryAvailable = null,
   onRecoverFromAutosave,
   onDismissAutosaveRecovery
@@ -75,6 +76,15 @@ export default function LandingPage({
 
           <button
             type="button"
+            onClick={() => { audio.playClick(); onOpenCampaignStudio?.(); }}
+            className="flex items-center gap-1.5 text-cyan-300 hover:text-cyan-200 transition-colors cursor-pointer py-1 font-bold"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+            Studio Kampanye AI
+          </button>
+
+          <button
+            type="button"
             onClick={() => { audio.playClick(); setActiveModal('rules'); }}
             className="hover:text-amber-300 transition-colors cursor-pointer py-1"
           >
@@ -92,6 +102,14 @@ export default function LandingPage({
 
         {/* Top Right Action: Lanjutkan Permainan */}
         <div className="hidden md:flex items-center gap-3">
+          <FantasyButton
+            variant="cyan"
+            size="sm"
+            icon={Sparkles}
+            onClick={onOpenCampaignStudio}
+          >
+            Buat Petualangan
+          </FantasyButton>
           <FantasyButton
             variant="secondary"
             size="sm"
@@ -134,10 +152,11 @@ export default function LandingPage({
           </button>
           <button
             type="button"
-            onClick={() => { setMobileMenuOpen(false); audio.playClick(); setActiveModal('guide'); }}
-            className="text-left py-2 font-cinzel font-semibold text-slate-200 hover:text-amber-400 min-h-[44px]"
+            onClick={() => { setMobileMenuOpen(false); audio.playClick(); onOpenCampaignStudio?.(); }}
+            className="text-left py-2 font-cinzel font-semibold text-cyan-300 hover:text-cyan-200 min-h-[44px] flex items-center gap-2"
           >
-            Panduan Bermain
+            <Sparkles className="w-4 h-4 text-cyan-400" />
+            <span>Studio Kampanye AI (Buat Cerita)</span>
           </button>
           <div className="pt-2 border-t border-slate-800/80">
             <FantasyButton
@@ -230,7 +249,7 @@ export default function LandingPage({
           </p>
 
           {/* Dual Action CTAs */}
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3.5">
             <FantasyButton
               variant="primary"
               size="lg"
@@ -239,6 +258,16 @@ export default function LandingPage({
               onClick={() => scrollToSection('campaigns')}
             >
               Mulai Petualangan
+            </FantasyButton>
+
+            <FantasyButton
+              variant="cyan"
+              size="lg"
+              icon={Sparkles}
+              sound="select"
+              onClick={onOpenCampaignStudio}
+            >
+              Buat Petualangan Baru (Studio AI)
             </FantasyButton>
 
             <FantasyButton

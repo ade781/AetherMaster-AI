@@ -3,6 +3,8 @@
  * Centralized API client for all backend endpoints.
  */
 
+import * as campaignMockApi from './campaignMockApi.js';
+
 export const API_BASE = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE) || '/api/story';
 
 async function request(endpoint, options = {}) {
@@ -119,4 +121,61 @@ export const storyApi = {
   }
 };
 
+export const campaignApi = {
+  generateCampaign: async (payload) => {
+    try {
+      const response = await fetch(`${API_BASE}/api/campaigns/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return await response.json();
+    } catch {
+      // Fallback ke mock payload lokal jika backend belum online
+      return campaignMockApi.mockGenerateCampaign(payload);
+    }
+  },
+
+  saveCustomCampaign: async (campaignData) => {
+    try {
+      const response = await fetch(`${API_BASE}/api/campaigns/save`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(campaignData)
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return await response.json();
+    } catch {
+      return campaignMockApi.mockSaveCustomCampaign(campaignData);
+    }
+  },
+
+  getCustomCampaigns: async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/campaigns/custom`);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return await response.json();
+    } catch {
+      return campaignMockApi.mockGetCustomCampaigns();
+    }
+  },
+
+  generateDynamicNpc: async (criteria) => {
+    try {
+      const response = await fetch(`${API_BASE}/api/campaigns/npc/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(criteria)
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return await response.json();
+    } catch {
+      return campaignMockApi.mockGenerateDynamicNpc(criteria);
+    }
+  }
+};
+
 export default storyApi;
+
+
