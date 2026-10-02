@@ -14,6 +14,9 @@ import {
 } from 'lucide-react';
 import audio from '../services/audioService';
 import { useGameStore } from '../store/GameContext';
+import DiceRoller from './combat/DiceRoller';
+import TurnOrderBar from './combat/TurnOrderBar';
+import StatusEffectBadge from './combat/StatusEffectBadge';
 
 export default function CombatStage({
   character,
@@ -42,9 +45,11 @@ export default function CombatStage({
   const [showSpellMenu, setShowSpellMenu] = useState(false);
   const [isConcluding, setIsConcluding] = useState(false);
   const [enemyHitShake, setEnemyHitShake] = useState(false);
+  const [isDiceRollerOpen, setIsDiceRollerOpen] = useState(false);
 
   const enemyHpPercent = Math.max(0, Math.min(100, Math.round((enemyHp / maxEnemyHp) * 100)));
   const playerHpPercent = Math.max(0, Math.min(100, Math.round((playerHp / maxPlayerHp) * 100)));
+  const statMod = Math.max(0, Math.floor(((character?.str ?? 14) - 10) / 2));
 
   const round = combatState?.round || 1;
   const combatLog = combatState?.combatLog || [
@@ -137,6 +142,16 @@ export default function CombatStage({
     }
   };
 
+  const handleDiceRollComplete = async (rollData) => {
+    setIsDiceRollerOpen(false);
+    if (rollData.isCriticalHit) {
+      addFloating('NATURAL 20!', 'crit', 'enemy');
+    } else if (rollData.isCriticalMiss) {
+      addFloating('FUMBLE 1!', 'miss', 'player');
+    }
+    await handleAction('ATTACK');
+  };
+
   return (
     <div className="relative w-full h-full flex flex-col lg:flex-row bg-slate-950 overflow-hidden select-none">
       {/* LEFT: Combat Arena Stage */}
@@ -151,10 +166,12 @@ export default function CombatStage({
 
         {/* Top Encounter Header */}
         <div className="relative z-10 flex items-center justify-between gap-2 flex-wrap">
-          <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-950/80 border border-rose-500/40 text-rose-300 text-xs font-cinzel font-bold shadow-lg">
-            <Swords className="w-4 h-4 text-rose-400 animate-pulse" />
-            <span>Pertempuran Taktis • Ronde {round}</span>
-          </div>
+          <TurnOrderBar
+            round={round}
+            activeTurn="player"
+            character={character}
+            enemy={enemyData}
+          />
 
           {/* Save Status Indicator */}
           <div className="hidden sm:flex items-center gap-2 bg-slate-950/80 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-full shadow-lg text-[11px]">
@@ -219,6 +236,13 @@ export default function CombatStage({
                   transition={{ duration: 0.25 }}
                 />
               </div>
+            </div>
+
+            {/* Enemy Status Effect Badges */}
+            <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+              {(enemyData.statusEffects || (enemyHpPercent <= 30 ? ['weakened'] : [])).map((eff, i) => (
+                <StatusEffectBadge key={i} effectId={eff} />
+              ))}
             </div>
           </div>
 
@@ -288,6 +312,13 @@ export default function CombatStage({
             <span className="text-amber-300">{character?.gold || 0} G</span>
           </div>
 
+          {/* Player Status Effect Badges */}
+          <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+            {(character?.statusEffects || (playerHpPercent <= 25 ? ['weakened'] : ['blessed'])).map((eff, i) => (
+              <StatusEffectBadge key={i} effectId={eff} />
+            ))}
+          </div>
+
           {/* Floating Damage on Player */}
           <AnimatePresence>
             {floatingTexts.filter(f => f.target === 'player').map(f => (
@@ -335,11 +366,11 @@ export default function CombatStage({
         <div className="pt-3 border-t border-white/10 space-y-2.5">
           {/* Action Grid */}
           <div className="grid grid-cols-2 gap-2.5">
-            {/* 1. Attack */}
+            {/* 1. Attack with Animated D20 Roller */}
             <button
               disabled={isLoading || isConcluding || enemyHp <= 0}
-              onClick={() => handleAction('ATTACK')}
-              aria-label="Lakukan serangan fisik senjata"
+              onClick={() => setIsDiceRollerOpen(true)}
+              aria-label="Lakukan serangan fisik senjata dengan lemparan dadu D20"
               className="py-3 px-3 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-cinzel font-bold text-xs tracking-wider shadow-md flex items-center justify-center gap-2 transition-all min-h-[48px] cursor-pointer"
             >
               {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Swords className="w-4 h-4" />}
@@ -408,6 +439,15 @@ export default function CombatStage({
           )}
         </div>
       </div>
+
+      {/* Animated 3D D20 Dice Roller Modal */}
+      <DiceRoller
+        isOpen={isDiceRollerOpen}
+        onClose={() => setIsDiceRollerOpen(false)}
+        targetAc={enemyData.ac || 12}
+        statModifier={statMod}
+        onRollComplete={handleDiceRollComplete}
+      />
     </div>
   );
 }
