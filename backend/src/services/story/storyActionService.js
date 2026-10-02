@@ -9,6 +9,7 @@ const { sequelize } = require('../../config/database');
 const geminiService = require('../geminiService');
 const gameStateEngine = require('../../engine/gameStateEngine');
 const questEngine = require('../../engine/questEngine');
+const aiDirectorEngine = require('../../engine/aiDirectorEngine');
 const logger = require('../../utils/logger');
 const {
   ItemRepository,
@@ -306,6 +307,8 @@ class StoryActionService {
         narrativeResult: nextScene.dialogue?.substring(0, 100)
       });
 
+      const directorPacing = aiDirectorEngine.evaluatePacing({ session, character });
+
       return {
         session,
         character: {
@@ -313,7 +316,8 @@ class StoryActionService {
           inventory: hydratedInv
         },
         currentNode: newNode,
-        checkResult: null
+        checkResult: null,
+        directorPacing
       };
     } catch (err) {
       await transaction.rollback();

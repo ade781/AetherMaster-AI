@@ -11,7 +11,8 @@ const SENSITIVE_PATTERNS = [
   /token/i,
   /authorization/i,
   /bearer\s+[a-zA-Z0-9_\-\.]+/i,
-  /AIzaSy[a-zA-Z0-9_\-]{30,40}/g // Google Gemini API Key pattern
+  /AIzaSy[a-zA-Z0-9_\-]{30,40}/g, // Google Gemini API Key legacy pattern
+  /AQ\.[a-zA-Z0-9_\-]{20,80}/g     // Google GenAI API Key new pattern
 ];
 
 /**
@@ -23,8 +24,13 @@ function sanitizeData(data, depth = 0) {
 
   if (typeof data === 'string') {
     let sanitized = data;
+    const envKey = process.env.GEMINI_API_KEY;
+    if (envKey && envKey.length > 5) {
+      sanitized = sanitized.split(envKey).join('***REDACTED_API_KEY***');
+    }
     // Mask explicit Gemini API Keys
     sanitized = sanitized.replace(/AIzaSy[a-zA-Z0-9_\-]{30,40}/g, '***REDACTED_API_KEY***');
+    sanitized = sanitized.replace(/AQ\.[a-zA-Z0-9_\-]{20,80}/g, '***REDACTED_API_KEY***');
     // Mask Bearer tokens
     sanitized = sanitized.replace(/Bearer\s+[a-zA-Z0-9_\-\.]+/gi, 'Bearer ***REDACTED_TOKEN***');
     return sanitized;

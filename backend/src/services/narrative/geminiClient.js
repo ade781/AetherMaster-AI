@@ -14,11 +14,13 @@ const ERROR_TYPES = {
 function sanitizeLog(message, apiKey) {
   if (!message) return '';
   let str = typeof message === 'string' ? message : message.stack || message.message || JSON.stringify(message);
-  if (apiKey && apiKey.length > 5) {
-    str = str.split(apiKey).join('[REDACTED_API_KEY]');
+  const currentKey = apiKey || process.env.GEMINI_API_KEY;
+  if (currentKey && currentKey.length > 5) {
+    str = str.split(currentKey).join('[REDACTED_API_KEY]');
   }
-  // Also mask any standard Gemini key pattern AIzaSy...
+  // Also mask any standard Gemini key pattern AIzaSy and AQ.
   str = str.replace(/AIzaSy[A-Za-z0-9_-]{33}/g, '[REDACTED_API_KEY]');
+  str = str.replace(/AQ\.[A-Za-z0-9_-]{20,80}/g, '[REDACTED_API_KEY]');
   return str;
 }
 
@@ -151,7 +153,7 @@ class GeminiClient {
             config: requestConfig
           });
 
-          const timeoutMs = options.timeoutMs || 25000;
+          const timeoutMs = options.timeoutMs || 8000;
           const timeoutPromise = new Promise((_, reject) =>
             setTimeout(() => reject(new Error(`Timeout: Model ${model} took longer than ${timeoutMs}ms`)), timeoutMs)
           );
