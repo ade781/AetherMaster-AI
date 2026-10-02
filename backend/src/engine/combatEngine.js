@@ -6,6 +6,7 @@
  */
 
 const { getEffectiveStats } = require('../utils/statEngine');
+const { hasStatusEffect, evaluateSavingThrow, calculateSpellSaveDC } = require('./savingThrowEvaluator');
 
 /**
  * Validates whether the current story node or session has an active combat encounter.
@@ -116,6 +117,35 @@ function executeCombatAction({ session, character, currentNode, action = 'ATTACK
   const upperAction = String(action).toUpperCase();
   const enemy = combatState.enemy;
 
+  // --- Step 2.1: Turn-based Status Effect: Poisoned ---
+  // Takes 1d4 damage over time at start of turn
+  if (hasStatusEffect(character, 'poisoned')) {
+    const poisonDmg = rollDice(4);
+    character.hp = Math.max(0, character.hp - poisonDmg);
+    const poisonLog = `Ronde ${combatState.round}: Efek racun (Poisoned) menggerogoti tubuh ${character.name}, menorehkan ${poisonDmg} damage! (Sisa HP: ${character.hp}/${character.maxHp})`;
+    combatState.combatLog.unshift(poisonLog);
+
+    if (character.hp <= 0) {
+      character.hp = 0;
+      session.isGameOver = true;
+      combatState.inCombat = false;
+      combatState.isDefeat = true;
+      const defeatLog = `💀 ${character.name} tumbang binasa akibat racun mematikan... Game Over.`;
+      combatState.combatLog.unshift(defeatLog);
+
+      return {
+        success: true,
+        combatState,
+        character,
+        session,
+        isGameOver: true,
+        isVictory: false,
+        isFled: false,
+        actionLog: `${poisonLog}\n${defeatLog}`
+      };
+    }
+  }
+
   let playerTurnResult = {
     action: upperAction,
     success: false,
@@ -127,13 +157,31 @@ function executeCombatAction({ session, character, currentNode, action = 'ATTACK
     log: ''
   };
 
-  // Step 3: Execute Player Action
-  if (upperAction === 'ATTACK') {
+  // --- Step 2.2: Turn-based Status Effect: Stunned ---
+  // Skips player action completely
+  const isStunned = hasStatusEffect(character, 'stunned');
+  if (isStunned) {
+    playerTurnResult = {
+      action: 'STUNNED',
+      success: true,
+      hit: false,
+      crit: false,
+      damageDealt: 0,
+      healAmount: 0,
+      manaSpent: 0,
+      log: `Ronde ${combatState.round}: ${character.name} tertegun (Stunned) dan tidak berdaya mengambil tindakan pada giliran ini!`
+    };
+    combatState.combatLog.unshift(playerTurnResult.log);
+  } else if (upperAction === 'ATTACK') {
+    // Step 3: Execute Player Action
     const d20 = rollDice(20);
     const strMod = effectiveChar.modifiers?.str || Math.floor(((character.str || 10) - 10) / 2);
-    const attackRoll = d20 + strMod;
+    const isBlessed = hasStatusEffect(character, 'blessed');
+    const blessedBonus = isBlessed ? rollDice(4) : 0;
+    const attackRoll = d20 + strMod + blessedBonus;
     const isCrit = d20 === 20;
     const isHit = isCrit || (d20 !== 1 && attackRoll >= enemy.ac);
+    const blessedText = isBlessed ? `+${blessedBonus}(blessed)` : '';
 
     if (isHit) {
       const baseDmg = rollDice(8) + Math.max(1, strMod);
@@ -148,7 +196,7 @@ function executeCombatAction({ session, character, currentNode, action = 'ATTACK
         damageDealt: finalDmg,
         healAmount: 0,
         manaSpent: 0,
-        log: `Ronde ${combatState.round}: ${isCrit ? 'CRITICAL HIT! ' : ''}${character.name} melancarkan tebasan presisi (D20: ${d20}+${strMod}=${attackRoll} vs AC ${enemy.ac}), menorehkan ${finalDmg} damage pada ${enemy.name}!`
+        log: `Ronde ${combatState.round}: ${isCrit ? 'CRITICAL HIT! ' : ''}${character.name} melancarkan tebasan presisi (D20: ${d20}+${strMod}${blessedText}=${attackRoll} vs AC ${enemy.ac}), menorehkan ${finalDmg} damage pada ${enemy.name}!`
       };
     } else {
       playerTurnResult = {
@@ -159,11 +207,10 @@ function executeCombatAction({ session, character, currentNode, action = 'ATTACK
         damageDealt: 0,
         healAmount: 0,
         manaSpent: 0,
-        log: `Ronde ${combatState.round}: Ayunan senjata ${character.name} meleset (D20: ${d20}+${strMod}=${attackRoll} vs AC ${enemy.ac}) dari celah pertahanan ${enemy.name}.`
+        log: `Ronde ${combatState.round}: Ayunan senjata ${character.name} meleset (D20: ${d20}+${strMod}${blessedText}=${attackRoll} vs AC ${enemy.ac}) dari celah pertahanan ${enemy.name}.`
       };
     }
     combatState.combatLog.unshift(playerTurnResult.log);
-
   } else if (upperAction === 'CAST_SPELL') {
     const MANA_COST = 5;
     if ((character.mana || 0) < MANA_COST) {
@@ -366,5 +413,9 @@ module.exports = {
   validateCombatEncounter,
   initCombatState,
   executeCombatAction,
-  rollDice
+  rollDice,
+  hasStatusEffect,
+  evaluateSavingThrow,
+  calculateSpellSaveDC
 };
+

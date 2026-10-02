@@ -8,6 +8,8 @@ const combatEngine = require('./combatEngine');
 const itemMaster = require('./itemMaster');
 const questEngine = require('./questEngine');
 const worldLedgerService = require('./worldLedgerService');
+const savingThrowEvaluator = require('./savingThrowEvaluator');
+const aiDirectorEngine = require('./aiDirectorEngine');
 
 module.exports = {
   gameStateEngine,
@@ -15,5 +17,8 @@ module.exports = {
   itemMaster,
   questEngine,
   worldLedgerEngine: worldLedgerService,
-  worldLedgerService
+  worldLedgerService,
+  savingThrowEvaluator,
+  aiDirectorEngine
 };
+
