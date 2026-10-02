@@ -10,6 +10,7 @@ const GameSession = require('./GameSession');
 const StoryNode = require('./StoryNode');
 const StoryChoice = require('./StoryChoice');
 const StorySnapshot = require('./StorySnapshot');
+const CustomCampaign = require('./CustomCampaign');
 
 const { seedCampaigns } = require('./seeders/campaignSeeder');
 const { seedWorldData } = require('./seeders/worldDataSeeder');
@@ -23,6 +24,10 @@ GameSession.belongsTo(Character, { foreignKey: 'characterId' });
 // Campaign <-> GameSession
 Campaign.hasMany(GameSession, { foreignKey: 'campaignId', onDelete: 'CASCADE' });
 GameSession.belongsTo(Campaign, { foreignKey: 'campaignId' });
+
+// CustomCampaign <-> GameSession
+CustomCampaign.hasMany(GameSession, { foreignKey: 'customCampaignId', onDelete: 'SET NULL' });
+GameSession.belongsTo(CustomCampaign, { foreignKey: 'customCampaignId' });
 
 // Campaign <-> Location
 Campaign.hasMany(Location, { foreignKey: 'campaignId', onDelete: 'CASCADE' });
@@ -107,6 +112,7 @@ module.exports = {
   StoryNode,
   StoryChoice,
   StorySnapshot,
+  CustomCampaign,
   initDb,
   seedCampaigns,
   seedWorldData

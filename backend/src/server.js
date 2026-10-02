@@ -14,6 +14,7 @@ require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 
 const { initDb } = require('./models');
 const storyRoutes = require('./routes/storyRoutes');
+const campaignBuilderRoutes = require('./routes/campaignBuilderRoutes');
 const { errorResponse, ERROR_CODES } = require('./utils/apiResponse');
 
 const app = express();
@@ -96,6 +97,9 @@ app.get(['/api/health', '/health', '/api'], (req, res) => {
 
 // Canonical Story Routes
 app.use('/api/story', storyRoutes);
+
+// AI Director & Custom Campaign Builder Routes
+app.use('/api/campaigns', campaignBuilderRoutes);
 
 // Global error handler
 app.use((err, req, res, next) => {

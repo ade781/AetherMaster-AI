@@ -42,6 +42,10 @@ class NPCRepository {
       return [];
     }
   }
+
+  static async createNpc(data, options = {}) {
+    return await NPC.create(data, options);
+  }
 }
 
 module.exports = NPCRepository;

@@ -6,6 +6,7 @@ const WorldFactRepository = require('./WorldFactRepository');
 const StoryNodeRepository = require('./StoryNodeRepository');
 const SnapshotRepository = require('./SnapshotRepository');
 const StoryChoiceRepository = require('./StoryChoiceRepository');
+const CustomCampaignRepository = require('./CustomCampaignRepository');
 
 module.exports = {
   CampaignRepository,
@@ -15,5 +16,6 @@ module.exports = {
   WorldFactRepository,
   StoryNodeRepository,
   SnapshotRepository,
-  StoryChoiceRepository
+  StoryChoiceRepository,
+  CustomCampaignRepository
 };
