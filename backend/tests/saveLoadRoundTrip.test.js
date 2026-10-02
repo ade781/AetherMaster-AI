@@ -20,6 +20,7 @@ describe('Save/Load Round-Trip & Graph Cloning Tests (Stage 3)', () => {
   before(async () => {
     try {
       await sequelize.authenticate();
+      await sequelize.sync({ force: true });
       isDbAvailable = true;
     } catch {
       isDbAvailable = false;

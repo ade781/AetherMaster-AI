@@ -1,6 +1,16 @@
 const path = require('path');
 const { Sequelize } = require('sequelize');
 
+const isTest = process.env.NODE_ENV === 'test'
+  || process.env.npm_lifecycle_event === 'test'
+  || process.env.npm_lifecycle_event?.includes('test')
+  || (typeof process.env.NODE_TEST_CONTEXT !== 'undefined')
+  || process.argv.some(arg => typeof arg === 'string' && (/tests?[\\/]/.test(arg) || arg.includes('test')));
+
+if (isTest) {
+  process.env.NODE_ENV = 'test';
+}
+
 // Load environment configuration
 const isProduction = process.env.NODE_ENV === 'production';
 const envFile = isProduction
@@ -33,6 +43,14 @@ if (process.env.DATABASE_URL) {
     },
     pool,
     logging
+  });
+} else if (process.env.NODE_ENV === 'test') {
+  // In-Memory SQLite for automated test suites
+  sequelize = new Sequelize({
+    dialect: 'sqlite',
+    storage: ':memory:',
+    logging,
+    dialectModule: require('sqlite3')
   });
 } else {
   // Local or standard connection: MySQL (default) or PostgreSQL based on DB_DIALECT
