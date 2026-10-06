@@ -1,4 +1,4 @@
-# AetherMaster AI
+# AetherMaster AI (visual novel)
 
 > Platform RPG visual novel berbasis web dengan graf cerita bercabang (DAG), sistem pertarungan taktis berbasis aturan D&D 5E, orkestrasi narasi Google Gemini beserta fallback deterministik, dan sintesis audio prosedural.
 
